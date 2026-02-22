@@ -1,0 +1,63 @@
+﻿@model IEnumerable<ControleEstoqueLoja.Models.CaixaMovimentacao>
+
+<div class="container mt-4">
+    <h2>📊 Detalhamento de Movimentação</h2>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-light p-3 border-left">
+                <small>Saldo de Vendas</small>
+                <h5>@(((double)ViewBag.TotalVendas).ToString("C"))</h5>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light p-3">
+                <small>Total Suprimentos</small>
+                <h5 class="text-primary">+ @(((double)ViewBag.TotalSuprimento).ToString("C"))</h5>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light p-3">
+                <small>Total Sangrias</small>
+                <h5 class="text-danger">- @(((double)ViewBag.TotalSangria).ToString("C"))</h5>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Observação</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Data.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <span class="badge @(item.Tipo == "Sangria" ? "bg-danger" : "bg-primary")">
+                                @item.Tipo.ToUpper()
+                            </span>
+                        </td>
+                        <td class="fw-bold @(item.Tipo == "Sangria" ? "text-danger" : "text-primary")">
+                            @item.Valor.ToString("C")
+                        </td>
+                        <td>@item.Descricao</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" class="text-center">Nenhuma movimentação registrada hoje.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

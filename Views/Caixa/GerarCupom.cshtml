@@ -1,0 +1,184 @@
+﻿@model ControleEstoqueLoja.Models.Venda
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cupom Venda #@Model.Id</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Fontes mono alinham melhor em colunas */
+            width: 72mm; /* Reduzi 3mm para garantir margem de segurança física */
+            margin: 0;
+            padding: 2mm; /* Padding interno em mm para controle total */
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+            .header h1 {
+                margin: 0;
+                font-size: 16px;
+                text-transform: uppercase;
+            }
+
+        .info {
+            font-size: 11px;
+            margin-bottom: 3px;
+            line-height: 1.1;
+        }
+
+        .divisor {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        .tabela {
+            width: 100%;
+            font-size: 10px; /* Reduzi levemente para caber o nome do item */
+            border-collapse: collapse;
+            table-layout: fixed; /* Força a tabela a respeitar os 72mm */
+        }
+
+            .tabela th {
+                border-bottom: 1px solid #000;
+                padding-bottom: 2px;
+            }
+
+            .tabela td {
+                padding: 2px 0;
+                word-wrap: break-word; /* Se o nome for muito longo, ele quebra a linha em vez de empurrar a coluna */
+            }
+
+        .totais {
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        /* Trocando Flexbox por Tabela de totais para evitar que o valor "fuja" para a direita */
+        .tabela-totais {
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .valor-final {
+            font-size: 15px;
+            font-weight: bold;
+            border-top: 1px solid #000;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 10px;
+        }
+
+        .nao-fiscal {
+            font-size: 10px;
+            font-weight: bold;
+            border: 1px solid #000;
+            padding: 2px;
+            margin: 5px 0;
+            display: inline-block;
+        }
+
+        @@media print {
+            .no-print {
+                display: none;
+            }
+
+            body {
+                width: 72mm;
+                padding: 0;
+                margin: 0;
+            }
+            /* Isso remove o cabeçalho/rodapé que o navegador tenta colocar */
+            @@page {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="header">
+        <h1>Cereais Brasil</h1>
+        <div class="info">
+            CNPJ: 00.000.000/0001-00<br>
+            Rua Exemplo, 123 - Centro<br>
+            Tel: (11) 99999-9999
+        </div>
+    </div>
+
+    <div class="divisor"></div>
+    <div class="info">
+        <strong>VENDA: @Model.Id.ToString("D6")</strong><br>
+        DATA: @Model.DataVenda.ToString("dd/MM/yyyy HH:mm:ss")<br>
+        CPF: @(string.IsNullOrEmpty(Model.CPFCliente) ? "CONSUMIDOR NÃO IDENTIFICADO" : Model.CPFCliente)
+    </div>
+    <div class="divisor"></div>
+
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th style="text-align: left; width: 45%;">ITEM</th>
+                <th style="text-align: center; width: 15%;">QTD</th>
+                <th style="text-align: right; width: 20%;">UNIT</th>
+                <th style="text-align: right; width: 20%;">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                var i = 1;
+            }
+            @foreach (var item in Model.Itens)
+            {
+                <tr>
+                    <td>@((i++).ToString("D2")) @item.Produto.Nome.ToUpper()</td>
+                    <td style="text-align: center;">@item.Quantidade.ToString("N2")</td>
+                    <td style="text-align: right;">@item.PrecoUnitario.ToString("N2")</td>
+                    <td style="text-align: right;">@((item.Quantidade * item.PrecoUnitario).ToString("N2"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="divisor"></div>
+
+    <table class="tabela-totais">
+        <tr>
+            <td style="text-align: left;">Subtotal:</td>
+            <td style="text-align: right;">@Model.TotalVenda.ToString("N2")</td>
+        </tr>
+        <tr>
+            <td style="text-align: left;">Pagamento:</td>
+            <td style="text-align: right;">@Model.MetodoPagamento.ToUpper()</td>
+        </tr>
+        <tr class="valor-final">
+            <td style="text-align: left; padding-top: 5px;">TOTAL R$:</td>
+            <td style="text-align: right; padding-top: 5px;">@Model.TotalVenda.ToString("N2")</td>
+        </tr>
+    </table>
+
+    <div class="header">
+        <span class="nao-fiscal">DOCUMENTO SEM VALOR FISCAL</span>
+    </div>
+
+    <div class="footer">
+        Obrigado pela preferência!<br>
+        <strong>www.cereaisbrasil.com.br</strong>
+    </div>
+
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 10px;">IMPRIMIR NOVAMENTE</button>
+    </div>
+
+</body>
+</html>

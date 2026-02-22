@@ -1,0 +1,93 @@
+﻿@model IEnumerable<ControleEstoqueLoja.Models.Venda>
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Relatório de Vendas - Hoje</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 72mm; /* Segurança para não cortar a direita */
+            margin: 0;
+            padding: 2mm;
+            font-size: 12px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .divisor {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        @@media print {
+            .no-print {
+                display: none;
+            }
+
+            @@page {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <strong>CEREAIS BRASIL</strong><br>
+        RELATÓRIO DE VENDAS DIÁRIO<br>
+        Data: @DateTime.Now.ToString("dd/MM/yyyy")
+    </div>
+    <div class="divisor"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">ID</th>
+                <th style="width: 40%;">PAGTO</th>
+                <th style="width: 40%;" class="text-right">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var venda in Model)
+            {
+                <tr>
+                    <td>@venda.Id.ToString("D3")</td>
+                    <td>@venda.MetodoPagamento</td>
+                    <td class="text-right">@venda.TotalVenda.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="divisor"></div>
+    <div style="font-weight: bold;">
+        <span>TOTAL GERAL:</span>
+        <span style="float: right;">R$ @Model.Sum(v => v.TotalVenda).ToString("N2")</span>
+    </div>
+
+    <div class="no-print" style="margin-top: 20px; text-align: center;">
+        <button onclick="window.print()">Imprimir</button>
+    </div>
+</body>
+</html>

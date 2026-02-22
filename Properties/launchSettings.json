@@ -1,0 +1,24 @@
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5236"
+    },
+    "https": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\Sistema de Estoque\\ControleEstoqueLoja",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:7059;http://localhost:5236"
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json"
+}

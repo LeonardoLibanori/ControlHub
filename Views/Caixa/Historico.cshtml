@@ -1,0 +1,166 @@
+﻿@model IEnumerable<ControleEstoqueLoja.Models.Venda>
+
+<div class="container py-4">
+    <br> <br />
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-6 text-center">
+            <div class="p-4 shadow" style="background: linear-gradient(135deg, #004d1a 0%, #008f32 100%); border-radius: 20px; border: 2px solid #ffd700;">
+                <h6 class="text-white text-uppercase fw-light mb-2" style="letter-spacing: 2px;">Vendas de Hoje</h6>
+                <h1 class="display-4 fw-bold mb-0" style="color: #ffd700;">
+                    @{
+                        var totalHoje = Model?.Where(v => v.DataVenda.Date == DateTime.Today).Sum(v => v.TotalVenda) ?? 0;
+                    }
+                    @totalHoje.ToString("C")
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 justify-content-center mb-5">
+        <div class="col-md-4 col-lg-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #008f32 !important;">
+                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Esta Semana</small>
+                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoSemana?.ToString("C") ?? "R$ 0,00")</h3>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-lg-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #ffd700 !important;">
+                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Este Mês</small>
+                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoMes?.ToString("C") ?? "R$ 0,00")</h3>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-lg-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #004d1a !important;">
+                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Este Ano</small>
+                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoAno?.ToString("C") ?? "R$ 0,00")</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <form method="get" class="d-flex gap-3 align-items-center bg-white p-3 rounded-pill shadow-sm border">
+                <span class="ps-3 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; white-space: nowrap;">Filtrar Dia:</span>
+
+                <input type="date"
+                       name="data"
+                       class="form-control border-0 fw-bold"
+                       value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       style="font-size: 1.1rem;">
+
+                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold text-uppercase shadow-sm">
+                    Buscar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="main-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold mb-0">📜 HISTÓRICO DE VENDAS</h1>
+    </div>
+
+    <div class="tabela-card p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Qtd. Itens</th>
+                    <th>Total</th>
+                    <th>Pagamento</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var venda in Model)
+                    {
+                        <tr>
+                            <td>@venda.Id</td>
+                            <td>@venda.DataVenda.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@venda.TotalVenda.ToString("C")</td>
+                            <td>@venda.MetodoPagamento</td>
+                            <td class="text-center" style="vertical-align: middle;">
+                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                    <button class="btn btn-info btn-sm d-flex align-items-center justify-content-center"
+                                            onclick="verDetalhes(@venda.Id)"
+                                            style="width: 40px; height: 35px; border-radius: 6px;">
+                                        <span style="font-size: 1.2rem;">🔍</span>
+                                    </button>
+
+                                    <button class="btn btn-dark btn-sm d-flex align-items-center justify-content-center gap-2"
+                                            onclick="reimprimirVenda(@venda.Id)"
+                                            style="height: 35px; border-radius: 6px; padding: 0 10px;">
+                                        <span style="font-size: 1.1rem;">🖨️</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center">Nenhuma venda encontrada para este período.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modalDetalhes" class="modal-overlay">
+    <div class="modal-box" style="width: 500px; max-height: 80vh; overflow-y: auto;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0" style="color: #004d1a;">DETALHES DA COMPRA</h4>
+            <button class="btn-close" onclick="fecharDetalhes()"></button>
+        </div>
+
+        <div id="conteudoDetalhes" class="text-start">
+        </div>
+
+        <button class="btn btn-secondary w-100 mt-4" onclick="fecharDetalhes()">FECHAR</button>
+    </div>
+</div>
+
+<script>
+           function verDetalhes(id) {
+        fetch('/Caixa/ObterDetalhesVenda/' + id)
+            .then(response => response.json())
+            .then(data => {
+                let itensHtml = '<table class="table table-sm text-start"><thead><tr><th>Produto</th><th>Qtd</th><th>Total</th></tr></thead><tbody>';
+
+                data.itens.forEach(item => {
+                    itensHtml += `<tr>
+                        <td>${item.produto}</td>
+                        <td>${item.quantidade}</td>
+                        <td>R$ ${item.total.toFixed(2)}</td>
+                    </tr>`;
+                });
+                itensHtml += '</tbody></table>';
+
+                Swal.fire({
+                    title: `Venda #${id}`,
+                    html: `
+                        <div class="text-start mb-2">
+                            <strong>Vendedor (Cupom):</strong> ${data.vendedor}
+                        </div>
+                        ${itensHtml}
+                    `,
+                    icon: 'info',
+                    width: '500px'
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
+            });
+    }
+</script>

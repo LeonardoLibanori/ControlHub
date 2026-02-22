@@ -1,0 +1,53 @@
+﻿@model ControleEstoqueLoja.Models.Produto
+
+<div class="main-container">
+    <div class="text-center mb-4">
+        <h1 class="fw-bold" style="color: #004d1a;">@Model.Nome</h1>
+        <p class="text-muted">Gerenciamento de Estoque Individual</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="tabela-card text-center">
+                <h4 class="mb-3">Estoque Atual</h4>
+                <div class="display-1 fw-bold @(Model.Quantidade <= 5 ? "text-danger" : "text-success")">
+                    @if (Model.Tipo.ToString() == "Unidade" || Model.Tipo.ToString() == "Prateleira")
+                    {
+                        @Model.Quantidade.ToString("0") @* Tira as casas decimais *@
+                    }
+                    else
+                    {
+                        @Model.Quantidade.ToString("N1") @* Mantém uma casa decimal para Granel/Quilos *@
+                    }
+                </div>
+                <p class="fs-5 text-muted">@(Model.Tipo.ToString() == "Granel" ? "Quilos" : "Unidades")</p>
+
+                <hr />
+
+                <form asp-action="AjustarEstoque" method="post" class="p-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">QUANTIDADE PARA AJUSTE</label>
+                        <input type="number" name="quantidadeAjuste" class="form-control form-control-lg text-center" placeholder="0" min="1" step="any" required />
+                    </div>
+
+                    <div class="d-flex gap-3 justify-content-center">
+                        <button type="submit" name="operacao" value="adicionar" class="btn-ajuste btn-add">
+                            + ADICIONAR
+                        </button>
+                        <button type="submit" name="operacao" value="remover" class="btn-ajuste btn-rem">
+                            - REMOVER
+                        </button>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <a asp-action="Index" class="btn-voltar-borda">
+                            Voltar ao Estoque
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

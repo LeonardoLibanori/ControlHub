@@ -1,0 +1,106 @@
+﻿@model IEnumerable<ControleEstoqueLoja.Models.Venda>
+
+    @{
+    ViewData["Title"] = "Histórico de Vendas";
+    }
+    
+        <div class="container-fluid min-vh-100 py-4" style="background-color: #2e7d32;">
+            
+            <div class="container mb-5">
+                <div class="row justify-content-center mb-5">
+                    <div class="col-md-6 text-center">
+                        <div class="p-4 shadow" style="background: linear-gradient(135deg, #004d1a 0%, #008f32 100%); border-radius: 20px; border: 2px solid #ffd700;">
+                            <h6 class="text-white text-uppercase fw-light mb-2" style="letter-spacing: 2px;">Vendas de Hoje</h6>
+                            <h1 class="display-4 fw-bold mb-0" style="color: #ffd700;">
+                                @Model.Where(v => v.DataVenda.Date == DateTime.Today).Sum(v => v.TotalVenda).ToString("C")
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 justify-content-center mb-5">
+                    <div class="col-md-4 col-lg-3 text-center">
+                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #008f32 !important;">
+                            <small class="text-muted fw-bold text-uppercase d-block mb-3">Esta Semana</small>
+                            <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoSemana.ToString("C")</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 text-center">
+                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #ffd700 !important;">
+                            <small class="text-muted fw-bold text-uppercase d-block mb-3">Este Mês</small>
+                            <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoMes.ToString("C")</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 text-center">
+                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #004d1a !important;">
+                            <small class="text-muted fw-bold text-uppercase d-block mb-3">Este Ano</small>
+                            <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoAno.ToString("C")</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <form method="get" class="d-flex gap-3 align-items-center bg-white p-3 rounded-pill shadow-sm border">
+                            <span class="ps-3 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; white-space: nowrap;">Filtrar Dia:</span>
+                            <input type="date" name="data" class="form-control border-0 fw-bold"
+                                   value="@(Context.Request.Query[" data"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd"))"
+                                   max="@DateTime.Today.ToString(" yyyy-MM-dd")">
+                            <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold text-uppercase shadow-sm">Buscar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow border-0" style="border-radius: 15px; overflow: hidden;">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                    <h4 class="mb-0">📜 LISTAGEM DE VENDAS</h4>
+                    <a href="/Caixa" class="btn btn-outline-light btn-sm rounded-pill px-3">Voltar ao Caixa</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">ID</th>
+                                    <th>Data e Hora</th>
+                                    <th>Pagamento</th>
+                                    <th>Total</th>
+                                    <th class="text-center pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var venda in Model)
+                                {
+                                <tr>
+                                    <td class="ps-4">#@venda.Id</td>
+                                    <td>@venda.DataVenda.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td><span class="badge bg-light text-dark border">@venda.MetodoPagamento</span></td>
+                                    <td class="fw-bold text-success">@venda.TotalVenda.ToString("C2")</td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-info btn-sm rounded-pill px-3"
+                                                onclick="verDetalhes('@venda.Id')">
+                                            🔍 Detalhes
+                                        </button>
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Usamos aspas simples ao redor do parâmetro para o VS não achar que é erro de sintaxe
+        function verDetalhes(id) {
+            Swal.fire({
+                title: 'Venda #' + id,
+                text: 'Funcionalidade de detalhes em desenvolvimento.',
+                icon: 'info',
+                confirmButtonColor: '#004d1a'
+            });
+        }
+    </script>

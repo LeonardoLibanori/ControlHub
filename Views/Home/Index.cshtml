@@ -1,0 +1,74 @@
+﻿@model List<ControleEstoqueLoja.Models.Produto>
+
+@* QUADRÃO PRINCIPAL (O EXTERNO) *@
+<div class="main-container">
+
+    <h1 class="text-center fw-bold">ESTOQUE - CEREAIS BRASIL</h1>
+
+    <div class="busca-container">
+        <form method="get" asp-controller="Home" asp-action="Index" class="busca-form">
+            <input type="text" name="busca" placeholder="Procurar produto..." />
+            <button type="submit">Pesquisar</button>
+        </form>
+    </div>
+
+    <div class="mb-4 text-start">
+        <a asp-controller="Home" asp-action="Novo" class="btn-novo">+ Novo Produto</a>
+    </div>
+
+    @* QUADRADO DA TABELA (ESTE FICA DENTRO DO MAIN-CONTAINER) *@
+    <div class="tabela-card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Tipo</th>
+                    <th>Estoque</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.Id" class="produto-link">@item.Nome</a>
+                        </td>
+                        <td>@item.Tipo</td>
+                        <td>
+                                     @if (item.Tipo.ToString() == "Unidade" || item.Tipo.ToString() == "Prateleira")
+                                        {
+                                            @* Exibe como número inteiro *@ 
+                                            @item.Quantidade.ToString("0") <span>un</span>
+                                        }
+                                     else
+                                        {
+                                            @* Mantém uma casa decimal para produtos a Granel *@
+                                            @item.Quantidade.ToString("N1") <span>kg</span>
+                                        }
+                        </td>
+                        <td>
+                            <div class="acoes">
+                                <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
+                                <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn-excluir">Excluir</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div> @* <--- ESSE FECHAMENTO É O QUE COLOCA A TABELA DENTRO DO BRANCO *@
+
+<script>
+    function confirmarExclusao(event, form) {
+        event.preventDefault();
+        if (confirm("Tem certeza que deseja excluir este produto?")) {
+            form.submit();
+        }
+    }
+</script>

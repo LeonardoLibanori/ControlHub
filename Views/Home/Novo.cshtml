@@ -1,0 +1,116 @@
+﻿@using ControleEstoqueLoja.Models
+@{
+    ViewData["Title"] = "Novo Produto";
+}
+
+<div class="container mt-4">
+    <div style="max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h2 class="text-center mb-4">📦 Novo Produto</h2>
+
+        <form method="post" action="/Home/Novo">
+            <div class="mb-3">
+                <label class="fw-bold">Nome do produto:</label>
+                <input type="text" name="nome" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">CÓDIGO DE BARRAS (BIPE O PRODUTO)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-upc-scan"></i>
+                    </span>
+                    <input type="text"
+                           name="codigoBarras"
+                           id="inputCodigo"
+                           class="form-control form-control-lg"
+                           placeholder="Clique aqui e use o leitor..."
+                           autocomplete="off" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="fw-bold">Tipo do produto:</label>
+                <select name="tipo" id="tipoProduto" class="form-select" required onchange="atualizarQuantidade()">
+                    <option value="Granel">Granel</option>
+                    <option value="Prateleira">Prateleira</option>
+                    <option value="Geladeira">Geladeira</option>
+                    <option value="Freezer">Freezer</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="fw-bold">Preço Unitário:</label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required
+                           oninput="formatarMoeda(this, 'precoReal')" />
+                </div>
+                <input type="hidden" name="preco" id="precoReal">
+            </div>
+
+            <div class="mb-4">
+                <label id="labelQuantidade" class="fw-bold">Quantidade inicial (kg):</label>
+                <input type="text" id="quantidadeVisual" class="form-control" required oninput="atualizarQuantidade()" />
+                <input type="hidden" name="quantidade" id="quantidadeReal" />
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 btn-lg">SALVAR PRODUTO</button>
+        </form>
+
+        <div class="text-center mt-3">
+            <a href="/Home/Index" class="btn btn-outline-secondary btn-sm">Voltar</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function atualizarQuantidade() {
+        const tipo = document.getElementById('tipoProduto').value;
+        const input = document.getElementById('quantidadeVisual');
+        const hidden = document.getElementById('quantidadeReal');
+        const label = document.getElementById('labelQuantidade');
+
+        let valor = input.value.replace(/\D/g, '');
+
+        if (tipo === 'Granel') {
+            label.innerText = "Quantidade inicial (kg):";
+            if (valor === '') return;
+            let numero = (parseInt(valor) / 10).toFixed(1);
+            input.value = numero.replace('.', ',') + ' kg';
+            hidden.value = numero.replace(',', '.');
+        } else {
+            label.innerText = "Quantidade inicial (un):";
+            input.value = valor;
+            hidden.value = valor;
+        }
+    }
+
+        function formatarMoeda(input, idOculto) {
+        let valor = input.value.replace(/\D/g, "");
+        if (valor === "") {
+            input.value = "";
+            if(idOculto) document.getElementById(idOculto).value = "";
+            return;
+        }
+        // Exibe formatado no input que o usuário vê (ex: 12,20)
+        input.value = (parseInt(valor) / 100).toFixed(2).replace(".", ",");
+
+        // Se houver um ID oculto (como precoReal), guarda o valor puro (ex: 1220)
+        if(idOculto) {
+            document.getElementById(idOculto).value = valor;
+        }
+
+        // Retorna o valor limpo para uso em funções que não usam campos ocultos
+        return valor;
+    }
+
+        // Previne que o leitor de código de barras envie o formulário antes da hora
+    document.getElementById("inputCodigo").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault(); // Não deixa o formulário ser enviado
+
+            // Opcional: foca no campo Nome após o bip para agilizar
+            document.querySelector('input[name="nome"]').focus();
+        }
+    });
+</script>

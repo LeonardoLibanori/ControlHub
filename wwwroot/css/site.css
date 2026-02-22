@@ -1,0 +1,318 @@
+/* ===== 1. FUNDO E ESTRUTURA GLOBAL ===== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* O seu gradiente oficial */
+    background: linear-gradient(110deg, #002b10 0%, #004d1a 20%, #1f8f4a 45%, #f3d46a 75%, #1f8f4a 90%, #002b10 100%) !important;
+    background-attachment: fixed !important;
+    background-size: cover !important;
+    background-repeat: no-repeat;
+}
+
+/* Reset do container do Bootstrap para não esmagar o conteúdo */
+.container {
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+/* ===== 2. O QUADRADO BRANCO (UNIVERSAL) ===== */
+.main-container {
+    background: #ffffff !important; /* Branco sólido */
+    border-radius: 25px;
+    padding: 40px;
+    margin: 40px auto;
+    width: 95%;
+    max-width: 1200px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+}
+
+    /* Títulos dentro do quadrado */
+    .main-container h1, .main-container h2 {
+        color: #004d1a !important;
+        margin-top: 0;
+        margin-bottom: 25px;
+        text-align: center;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+h1.text-center {
+    margin-top: 30px;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.3);
+}
+/* ===== 3. BUSCA E BOTÕES PRINCIPAIS ===== */
+.busca-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.busca-form {
+    display: flex;
+    gap: 10px;
+}
+
+    .busca-form input {
+        padding: 12px 18px;
+        width: 320px;
+        border-radius: 25px;
+        border: 1px solid #ccc;
+        outline: none;
+    }
+
+    .busca-form button {
+        padding: 12px 22px;
+        border-radius: 25px;
+        border: none;
+        background: #ffd966;
+        color: #004d1a;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+.btn-novo {
+    display: inline-block;
+    padding: 10px 26px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #ffd966, #fff2b3);
+    color: #004d1a;
+    text-decoration: none;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+}
+
+    .btn-novo:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+    }
+
+/* ===== 4. TABELA E AÇÕES ===== */
+/* O quadrado que demarca a tabela (interno) */
+.tabela-card {
+    background-color: #fff9db; /* Um branco levemente diferente para destacar */
+    border: 1px solid #ddd; /* Borda cinza clara que você pediu */
+    border-radius: 15px;
+    padding: 15px;
+    margin-top: 10px; /* Espaço entre o botão "+ Novo" e a tabela */
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+}
+
+    /* Ajuste para a tabela dentro desse card */
+    .tabela-card table {
+        background-color: transparent !important;
+        margin-bottom: 0
+    }
+
+    /* Remove a linha da última célula para não encostar na borda de baixo do card */
+    .tabela-card tr:last-child td {
+        border-bottom: none !important;
+    }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #bbb !important;
+    text-align: center;
+    vertical-align: middle;
+}
+
+tr:hover {
+    background: #f1f7f3;
+}
+
+.produto-link {
+    text-decoration: none;
+    color: #004d1a;
+    font-weight: 600;
+}
+
+.acoes {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-editar, .btn-excluir {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.btn-editar {
+    background: #ffd966;
+    color: #004d1a;
+}
+
+.btn-excluir {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+}
+
+/* ===== 5. MODAIS E OUTROS ===== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+footer {
+    width: 100%;
+    margin-top: auto;
+    padding: 20px 0;
+    color: #eaffea;
+    text-align: center;
+}
+
+#sugestoes {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 0 0 5px 5px;
+}
+
+/* Garante que os botões de ajuste tenham exatamente o mesmo tamanho */
+.btn-ajuste {
+    flex: 1; /* Faz ambos ocuparem o mesmo espaço disponível */
+    max-width: 200px; /* Limita a largura para não ficarem gigantes em telas largas */
+    height: 50px;
+    border: none;
+    border-radius: 25px;
+    font-weight: bold;
+    color: white;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-add {
+    background: linear-gradient(135deg, #28a745, #1f8f4a);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+.btn-rem {
+    background: #ff6b6b;
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+}
+
+.btn-ajuste:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* Estilo do Botão Voltar com Borda */
+.btn-voltar-borda {
+    display: inline-block;
+    padding: 8px 25px;
+    border: 2px solid #004d1a;
+    border-radius: 20px;
+    color: #004d1a;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+    .btn-voltar-borda:hover {
+        background-color: #004d1a;
+        color: white;
+        text-decoration: none;
+    }
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-box {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    width: 350px;
+    text-align: center;
+}
+
+.btn-pagamento {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+    .btn-pagamento:hover {
+        background: #004d1a;
+        color: white;
+    }
+
+.btn-metodo-sel {
+    padding: 15px;
+    border: 2px solid #ddd;
+    background: #f8f9fa;
+    border-radius: 12px;
+    font-weight: bold;
+    color: #004d1a;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+    .btn-metodo-sel:hover {
+        border-color: #004d1a;
+    }
+
+.btn-metodo-sel {
+    padding: 15px;
+    border: 2px solid #ddd;
+    background: #f8f9fa;
+    border-radius: 12px;
+    font-weight: bold;
+    color: #004d1a;
+    transition: all 0.2s;
+    text-align: left; /* Ícone na esquerda, texto alinhado */
+    cursor: pointer;
+}
+/* Garante que os avisos fiquem na frente do modal de pagamento */
+#modalAvisoErro, #modalConfirmacaoFinal {
+    z-index: 10000;
+}
+
+.modal-box b {
+    color: #004d1a;
+}
