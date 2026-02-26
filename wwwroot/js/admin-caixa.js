@@ -1,5 +1,4 @@
-﻿
-// 1. MOTOR DO ATALHO
+﻿// 1. MOTOR DO ATALHO
 let modalAtalhosInstance = null;
 document.addEventListener('keydown', function(e) {
     if (e.altKey && (e.key === 'm' || e.key === 'M')) {
@@ -38,11 +37,11 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
 
         // LIMPEZA SEGURA:
         // 1. Remove "R$" e espaços
-        // 2. Remove o ponto (.) que é separador de milhar
+        // 2. Removes o ponto (.) que é separador de milhar
         // 3. Troca a vírgula (,) por ponto (.) que é o separador decimal do C#
         let valorLimpo = valorRaw.replace("R$", "").trim();
-        valorLimpo = valorLimpo.split('.').join(''); // Remove pontos de milhar
-        valorLimpo = valorLimpo.replace(',', '.');   // Troca vírgula decimal por ponto
+        valorLimpo = valorLimpo.split('.').join(''); // Removes thousands separator
+        valorLimpo = valorLimpo.replace(',', '.');   // Replaces decimal comma with point
 
         const valorNumerico = parseFloat(valorLimpo);
 
@@ -53,7 +52,7 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
 
         const data = new URLSearchParams();
         data.append('tipo', tipo);
-        data.append('valor', valorNumerico.toFixed(2)); // Envia sempre formato 100.00
+        data.append('valor', valorNumerico.toFixed(2)); // Always sends format 100.00
         data.append('obs', obs);
 
         const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data });
@@ -319,48 +318,44 @@ async function buscarProdutoPorCodigo(codigo) {
         const resp = await fetch(`/Caixa/BuscarPorCodigo?codigo=${codigo}`);
         const data = await resp.json();
 
-        console.log("DADOS QUE CHEGARAM DO C#:", data); // Deve mostrar o 777 aqui!
+        console.log("DADOS QUE CHEGARAM DO C#:", data);
 
         if (data.success) {
-            // Pegamos o valor exato vindo do Controller
-            let estoqueVindoDoServidor = data.estoque ?? 0;
-
+            // Preenche itemAtual com os dados reais (inclui estoque)
             itemAtual = {
                 id: data.id,
                 nome: data.nome,
                 preco: parseFloat(data.preco),
                 regra: data.regra,
-                estoque: estoqueVindoDoServidor // AQUI O 777 ENTRA!
+                estoque: data.estoque ?? 0
             };
 
-            // Preenche o Modal com os dados reais
-            if (document.getElementById("modalNomeProduto"))
-                document.getElementById("modalNomeProduto").innerText = itemAtual.nome;
+            // Atualiza a UI principal (sem abrir modal)
+            const displayNome = document.getElementById("displayNome");
+            const exibirPreco = document.getElementById("exibirPreco");
+            const campoQtd = document.getElementById("modalCampoQtd");
 
-            if (document.getElementById("modalEstoqueDisponivel"))
-                document.getElementById("modalEstoqueDisponivel").innerText = itemAtual.estoque;
-
-            if (document.getElementById("produtoIdVenda"))
-                document.getElementById("produtoIdVenda").value = itemAtual.id;
-
-            // Abre o modal de confirmação
-            const modalEl = document.getElementById('modalVendaConfirmacao');
-            if (modalEl) {
-                new bootstrap.Modal(modalEl).show();
+            if (displayNome) displayNome.innerText = itemAtual.nome;
+            if (exibirPreco) exibirPreco.innerText = "R$ " + (itemAtual.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            if (campoQtd) {
+                // Se for UNIDADE, já coloca 1; se for GRANEL, limpa para o operador informar
+                campoQtd.value = (String(itemAtual.regra || "").toUpperCase() === "UNIDADE") ? "1" : "";
+                campoQtd.focus();
+                campoQtd.select();
             }
 
-            // Foca na quantidade
-            setTimeout(() => {
-                const cq = document.getElementById("campoQtd");
-                if (cq) { cq.value = "1"; cq.focus(); cq.select(); }
-            }, 500);
+            // Guarda o estoque visível (opcional)
+            const modalEstoque = document.getElementById("modalEstoqueDisponivel");
+            if (modalEstoque) modalEstoque.innerText = itemAtual.estoque;
 
-            // Limpa busca
-            document.getElementById("campoBusca").value = "";
+            // Limpa o campo de busca (visual)
+            const campoBusca = document.getElementById("campoBusca");
+            if (campoBusca) campoBusca.value = "";
 
         } else {
             Swal.fire('Ops!', 'Produto não encontrado.', 'warning');
-            document.getElementById("campoBusca").value = "";
+            const campoBusca = document.getElementById("campoBusca");
+            if (campoBusca) campoBusca.value = "";
         }
     } catch (e) {
         console.error("Erro na busca:", e);
@@ -405,3 +400,430 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    const inputBusca = document.getElementById("campoBusca");
+    const sugestoesDiv = document.getElementById("sugestoes");
+    const dadosProdutos = document.querySelectorAll("#dadosProdutos div");
+
+    if (!inputBusca || !sugestoesDiv) return;
+
+    inputBusca.focus();
+
+    inputBusca.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            buscarProdutoPorCodigo(this.value);
+        }
+    });
+
+    inputBusca.addEventListener("input", function () {
+        const termo = this.value.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        sugestoesDiv.innerHTML = "";
+
+        if (!termo) {
+            sugestoesDiv.style.display = "none";
+            return;
+        }
+
+        let encontrados = 0;
+        dadosProdutos.forEach(div => {
+            const nomeOriginal = (div.dataset.nome || "").toString();
+            const nomeSemAcento = nomeOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+            if (nomeSemAcento.startsWith(termo) && encontrados < 8) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "list-group-item list-group-item-action py-2";
+                btn.innerHTML = `<strong>${nomeOriginal}</strong> <small class="text-muted float-end">R$ ${div.dataset.preco}</small>`;
+
+                btn.onclick = () => {
+                    // Busca dados reais (inclui estoque) e preenche o campo quantidade
+                    buscarProdutoPorCodigo(div.dataset.id);
+                    sugestoesDiv.style.display = "none";
+                    inputBusca.value = div.dataset.nome;
+                };
+
+                sugestoesDiv.appendChild(btn);
+                encontrados++;
+            }
+        });
+
+        sugestoesDiv.style.display = encontrados > 0 ? "block" : "none";
+    });
+});
+
+// Adicione isto ao final de wwwroot/js/admin-caixa.js (antes do fechamento do arquivo)
+// Garante que a função exista no escopo global e renderize o carrinho usando a variável `carrinho`.
+
+function renderCarrinho() {
+    const tbody = document.getElementById("carrinho");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    let totalGeral = 0;
+
+    carrinho.forEach((item, index) => {
+        const preco = parseFloat(item.preco || 0);
+        const qtd = parseFloat(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0) || 0;
+        const subtotal = parseFloat(item.subtotal ?? (preco * qtd)) || 0;
+        totalGeral += subtotal;
+
+        const labelQtd = item.labelQtd ?? (item.qtd ?? item.Quantidade ?? item.quantidade) ?? qtd;
+        const precoDisplay = preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const subtotalDisplay = subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        tbody.insertAdjacentHTML('beforeend', `
+            <tr>
+                <td>${item.nome || 'Sem nome'}</td>
+                <td>${labelQtd}</td>
+                <td>R$ ${precoDisplay}</td>
+                <td class="fw-bold">R$ ${subtotalDisplay}</td>
+                <td>
+                    <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">x</button>
+                </td>
+            </tr>
+        `);
+    });
+
+    const displayTotal = document.getElementById("displayTotal");
+    if (displayTotal) {
+        displayTotal.innerText = totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+}
+
+// Se não existir, definimos uma função removerItem global para manter consistência
+if (typeof removerItem === 'undefined') {
+    function removerItem(i) {
+        carrinho.splice(i, 1);
+        renderCarrinho();
+    }
+}
+
+// Substitua a função que abre o modal de pagamento para garantir que backdrops do Bootstrap não bloqueiem os botões
+function abrirModalPagamento() {
+    if (carrinho.length === 0) {
+        Swal.fire('Aviso', 'O carrinho está vazio!', 'info');
+        return;
+    }
+
+    // Validação de estoque (mantida)
+    let errosEstoque = [];
+    carrinho.forEach(item => {
+        const qtdPedida = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
+        const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
+        if (qtdPedida > estoqueReal) {
+            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
+        }
+    });
+
+    if (errosEstoque.length > 0) {
+        Swal.fire({
+            title: 'Indisponibilidade de Estoque',
+            html: `<div style="text-align: center;">${errosEstoque.join('<br><hr>')}</div>`,
+            icon: 'warning',
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
+    // Remove backdrops restantes do Bootstrap e estado modal
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+
+    // Mostra o modal custom com z-index alto para garantir interatividade
+    const modal = document.getElementById("modalPagamento");
+    if (modal) {
+        modal.style.display = "flex";
+        modal.style.zIndex = "11000"; // acima de eventuais overlays (ex.: SweetAlert)
+        const box = modal.querySelector('.modal-box');
+        if (box) {
+            box.style.zIndex = "11001";
+            box.style.pointerEvents = "auto";
+        }
+        // foco no primeiro botão de método para acessibilidade
+        setTimeout(() => {
+            const primeiro = modal.querySelector('.btn-metodo-sel');
+            if (primeiro) primeiro.focus();
+        }, 60);
+    }
+}
+
+function fecharModal() {
+    const modal = document.getElementById("modalPagamento");
+    if (modal) {
+        modal.style.display = "none";
+        modal.style.zIndex = "";
+        const box = modal.querySelector('.modal-box');
+        if (box) {
+            box.style.zIndex = "";
+            box.style.pointerEvents = "";
+        }
+    }
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+}
+
+// Função adicionada para selecionar método de pagamento (preserve padrão visual que você tinha)
+function marcarMetodo(btn, metodo) {
+    // Restaura estilo padrão em todos
+    document.querySelectorAll('.btn-metodo-sel').forEach(b => {
+        b.style.background = "#f8f9fa";
+        b.style.color = "#004d1a";
+    });
+
+    // Destaca o selecionado
+    if (btn) {
+        btn.style.background = "#004d1a";
+        btn.style.color = "white";
+    }
+
+    // Atualiza variável global e campo oculto (se presente)
+    metodoSelecionado = metodo;
+    const inputMetodo = document.getElementById("inputMetodoPagamento");
+    if (inputMetodo) inputMetodo.value = metodo;
+
+    // Mostra/oculta section de troco quando for Dinheiro
+    const divTroco = document.getElementById("secaoTroco");
+    if (divTroco) {
+        if (String(metodo).toLowerCase().includes('dinheiro')) {
+            divTroco.style.display = "block";
+            setTimeout(() => document.getElementById("valorRecebidoInput")?.focus(), 100);
+        } else {
+            divTroco.style.display = "none";
+            const valRec = document.getElementById("valorRecebidoInput");
+            const displayTroco = document.getElementById("displayTroco");
+            if (valRec) valRec.value = "";
+            if (displayTroco) displayTroco.innerText = "R$ 0,00";
+            const hiddenTroco = document.getElementById("valorTrocoInput");
+            if (hiddenTroco) hiddenTroco.value = "0";
+        }
+    }
+}
+
+// Abre a etapa do CPF / valida cupom vendedor
+async function irParaCPF() {
+    if (!metodoSelecionado || metodoSelecionado === "") {
+        Swal.fire('Atenção', 'Escolha o método de pagamento!', 'warning');
+        return;
+    }
+
+    // Fecha temporariamente o modal custom para exibir o SweetAlert do cupom
+    fecharModal();
+
+    // Pede o código do vendedor via SweetAlert
+    const { value: cupom } = await Swal.fire({
+        title: 'CÓDIGO DO VENDEDOR',
+        input: 'text',
+        inputLabel: 'Identifique o vendedor para continuar',
+        inputPlaceholder: 'Digite o código (ex: LEO)',
+        showCancelButton: true,
+        confirmButtonText: 'Validar',
+        cancelButtonText: 'Cancelar',
+        allowOutsideClick: false,
+        inputValidator: (value) => {
+            if (!value) return 'O cupom é obrigatório!';
+        }
+    });
+
+    if (!cupom) {
+        // Cancelou: reabre a tela de seleção de método
+        abrirModalPagamento();
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(cupom)}`);
+        const data = await resp.json();
+
+        if (data.exists) {
+            codigoVendedorInformado = cupom;
+
+            // Mostra a seção CPF dentro do mesmo modal custom
+            const modal = document.getElementById("modalPagamento");
+            if (modal) {
+                // garante que o modal esteja visível e em foco
+                modal.style.display = "flex";
+                modal.style.zIndex = "11000";
+            }
+
+            // Esconde a seção de pagamento e mostra a do CPF
+            const secaoPagamento = document.getElementById("secaoPagamento");
+            const secaoCPF = document.getElementById("secaoCPF");
+            if (secaoPagamento) secaoPagamento.style.display = "none";
+            if (secaoCPF) secaoCPF.style.display = "block";
+
+            // Foca no campo de CPF
+            setTimeout(() => document.getElementById("cpfClienteInput")?.focus(), 100);
+        } else {
+            await Swal.fire('Erro', 'Cupom não encontrado!', 'error');
+            // Reabre e pede novamente
+            irParaCPF();
+        }
+    } catch (e) {
+        console.error("Erro validando cupom:", e);
+        Swal.fire('Erro', 'Falha ao validar cupom. Tente novamente.', 'error').then(() => abrirModalPagamento());
+    }
+}
+
+// Volta para a seção de seleção de método dentro do modal de pagamento
+function voltarParaPagamento() {
+    const secaoPagamento = document.getElementById("secaoPagamento");
+    const secaoCPF = document.getElementById("secaoCPF");
+    if (secaoPagamento) secaoPagamento.style.display = "block";
+    if (secaoCPF) secaoCPF.style.display = "none";
+
+    // Reabre o modal custom (caso esteja fechado)
+    const modal = document.getElementById("modalPagamento");
+    if (modal) {
+        modal.style.display = "flex";
+        modal.style.zIndex = "11000";
+    }
+}
+
+// 5) enviarVendaDeVez - normaliza shape e formatação antes de enviar
+async function enviarVendaDeVez() {
+    if (carrinho.length === 0) {
+        Swal.fire('Carrinho Vazio', 'Adicione produtos antes de finalizar.', 'warning');
+        return;
+    }
+
+    const metodo = metodoSelecionado;
+    const cpf = document.getElementById("cpfClienteInput")?.value || "";
+    const vendedor = typeof codigoVendedorInformado !== 'undefined' ? codigoVendedorInformado : "";
+    const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
+    const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
+
+    const data = new URLSearchParams();
+    data.append("metodoPagamento", metodo);
+    data.append("cpfCliente", cpf);
+    data.append("codigoVendedor", vendedor);
+    data.append("valorRecebido", String(valorRec).replace(',', '.'));
+    data.append("valorTroco", String(valorTro).replace(',', '.'));
+
+    carrinho.forEach((item, i) => {
+        const prefixo = `itens[${i}]`;
+
+        const produtoId = item.ProdutoId ?? item.id ?? "";
+        data.append(`${prefixo}.ProdutoId`, produtoId.toString());
+
+        let qtdRaw = item.Quantidade ?? item.qtd ?? item.quantidade ?? "0";
+        qtdRaw = (typeof qtdRaw === "number") ? qtdRaw.toString() : String(qtdRaw);
+        qtdRaw = qtdRaw.replace(',', '.');
+
+        let precoRaw = item.Preco ?? item.preco ?? "0";
+        precoRaw = (typeof precoRaw === "number") ? precoRaw.toString() : String(precoRaw);
+        precoRaw = precoRaw.replace(',', '.');
+
+        data.append(`${prefixo}.Quantidade`, qtdRaw);
+        data.append(`${prefixo}.Preco`, precoRaw);
+    });
+
+    try {
+        Swal.showLoading();
+
+        const response = await fetch('/Caixa/FinalizarVenda', {
+            method: 'POST',
+            body: data,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        });
+
+        const res = await response.json();
+
+        if (res.success) {
+            // Fecha nosso modal custom e garante que não existam backdrops bloqueando
+            try { fecharModal(); } catch (e) { /* noop se não existir */ }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+
+            // Abre SweetAlert garantindo z-index acima do modal
+            Swal.fire({
+                title: 'Venda Finalizada!',
+                text: 'Sucesso ao processar a venda.',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    const c = document.querySelector('.swal2-container');
+                    if (c) c.style.zIndex = '12000';
+                }
+            }).then(() => {
+                if (res.vendaId) window.open('/Caixa/GerarCupom?id=' + res.vendaId, '_blank');
+                location.reload();
+            });
+        } else {
+            // Em caso de erro, também fecha o modal custom antes de mostrar o erro
+            try { fecharModal(); } catch (e) { /* noop */ }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+
+            Swal.fire({
+                title: 'Erro no Estoque',
+                html: res.message.replace(/\n/g, '<br>'),
+                icon: 'error',
+                confirmButtonColor: '#d33',
+                didOpen: () => {
+                    const c = document.querySelector('.swal2-container');
+                    if (c) c.style.zIndex = '12000';
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Erro crítico no envio:", e);
+        try { fecharModal(); } catch (ex) { /* noop */ }
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
+    }
+}
+
+// Calcula o troco a partir do carrinho e do valor recebido pelo operador
+function calcularTroco() {
+    const valorRecebidoEl = document.getElementById("valorRecebidoInput");
+    const displayTroco = document.getElementById("displayTroco");
+    const valorTrocoInput = document.getElementById("valorTrocoInput");
+
+    if (!displayTroco || !valorTrocoInput) return;
+
+    // Pega valor recebido (normaliza vírgula/point)
+    let valorRecebidoRaw = (valorRecebidoEl?.value ?? "0").toString().replace(',', '.').trim();
+    let valorRecebido = parseFloat(valorRecebidoRaw);
+    if (isNaN(valorRecebido)) valorRecebido = 0;
+
+    // Calcula total do carrinho (seguro contra formatos mistos)
+    let total = 0;
+    (carrinho || []).forEach(item => {
+        const preco = parseFloat(String(item.preco ?? item.Preco ?? 0).replace(',', '.')) || 0;
+        const qtd = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
+        total += preco * qtd;
+    });
+
+    // Troco lógico
+    const diff = (valorRecebido - total);
+    if (diff >= 0.0005) {
+        // Tem troco para devolver
+        const troco = diff;
+        displayTroco.innerText = "R$ " + troco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        displayTroco.classList.remove('text-danger');
+        displayTroco.classList.add('text-success');
+        valorTrocoInput.value = troco.toFixed(2).replace(',', '.');
+    } else {
+        // Valor insuficiente ou igual -> mostra quanto falta em vermelho
+        const falta = Math.abs(diff);
+        if (falta < 0.0005) {
+            displayTroco.innerText = "R$ 0,00";
+        } else {
+            displayTroco.innerText = "Faltam R$ " + falta.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        displayTroco.classList.remove('text-success');
+        displayTroco.classList.add('text-danger');
+        valorTrocoInput.value = "0";
+    }
+}

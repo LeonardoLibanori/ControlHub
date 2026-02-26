@@ -15,6 +15,10 @@ namespace ControleEstoqueLoja.Models
 
         public string? CPFCliente { get; set; }
 
+        // Novos campos para imprimir na nota
+        public decimal ValorRecebido { get; set; } = 0m;
+        public decimal ValorTroco { get; set; } = 0m;
+
         public List<VendaItem> Itens { get; set; }
         public bool IsFechado { get; set; } = false;
 

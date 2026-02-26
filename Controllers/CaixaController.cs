@@ -54,6 +54,8 @@ namespace ControleEstoqueLoja.Controllers
                 CPFCliente = cpfCliente,
                 CodigoVendedor = codigoVendedor,
                 TotalVenda = 0,
+                ValorRecebido = valorRecebido,   // <--- grava valor recebido
+                ValorTroco = valorTroco,         // <--- grava troco dado
                 Itens = new List<VendaItem>()
             };
 

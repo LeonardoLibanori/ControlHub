@@ -316,3 +316,8 @@ footer {
 .modal-box b {
     color: #004d1a;
 }
+
+/* Garante SweetAlert acima do modal custom */
+.swal2-container {
+    z-index: 12000 !important;
+}

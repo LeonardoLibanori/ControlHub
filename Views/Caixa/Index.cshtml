@@ -24,7 +24,7 @@
 </style>
 
 <div class="main-container">
-    <h1 class="text-center fw-bold">CAIXA - CEREAIS BRASIL</h1>
+    <h1 class="text-center fw-bold">CAIXA - LOJA</h1>
 
     <div class="row">
         <div class="col-md-5">
@@ -58,7 +58,8 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Quantidade:</label>
-                                        <input type="number" id="campoQtd" class="form-control" value="1">
+                                        <!-- ALTERADO: id distinto para o campo do modal -->
+                                        <input type="number" id="modalCampoQtd" class="form-control" value="1">
                                     </div>
                                 </div>
                                 <div class="modal-footer">
@@ -258,1054 +259,245 @@
         }
     });
 
-        // Substitua ou adicione este evento no seu código
-    document.getElementById("btnConfirmar").onclick = () => {
-        const campoQtd = document.getElementById("campoQtd");
-        const quantidade = parseFloat(campoQtd.value.replace(',', '.')) || 0;
-
-        if (!itemAtual) {
-            alert("Selecione um produto primeiro!");
-            return;
-        }
-
-        if (quantidade <= 0) {
-            alert("Informe uma quantidade válida!");
-            return;
-        }
-
-        // Criando o objeto com as chaves EXATAS que sua renderCarrinho usa
-        const novoItem = {
-            id: itemAtual.id,
-            ProdutoId: itemAtual.id,
-            nome: itemAtual.nome,
-            preco: itemAtual.preco,
-            qtd: quantidade,
-            labelQtd: quantidade.toString(),
-            subtotal: itemAtual.preco * quantidade
-        };
-
-        carrinho.push(novoItem);
-        renderCarrinho();
-
-        // Limpar campos para o próximo
-        document.getElementById("campoBusca").value = "";
-        document.getElementById("campoQtd").value = "";
-        document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
-        document.getElementById("exibirPreco").innerText = "R$ 0,00";
-        itemAtual = null;
-        document.getElementById("campoBusca").focus();
-    };
-
-
-            // Sugestões de busca dinâmica
-    campoBusca.addEventListener("input", function() {
-        const busca = this.value.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const listaProdutos = document.querySelectorAll("#dadosProdutos div");
-        const sugestoesDiv = document.getElementById("sugestoes");
-
-        sugestoesDiv.innerHTML = "";
-
-        // Se apagar o campo, esconde a lista
-        if (busca.length < 1) {
-            sugestoesDiv.style.display = "none";
-            return;
-        }
-
-        let encontrados = 0;
-        listaProdutos.forEach(div => {
-            // Pega o nome e trata nulos para não travar o código
-            const nomeOriginal = div.getAttribute("data-nome") || "";
-            const nomeSemAcento = nomeOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-            // REGRA: SÓ O COMEÇO
-            if (nomeSemAcento.startsWith(busca) && encontrados < 8) {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = "list-group-item list-group-item-action py-2";
-                btn.innerHTML = `<strong>${nomeOriginal}</strong> <small class="text-muted float-end">R$ ${div.getAttribute("data-preco")}</small>`;
-
-                btn.onclick = () => {
-                    campoBusca.value = nomeOriginal;
-                    sugestoesDiv.style.display = "none";
-                    executarBuscaDinamica(div.getAttribute("data-id"));
-                };
-                sugestoesDiv.appendChild(btn);
-                encontrados++;
-            }
-        });
-
-        // Só mostra se achou algo
-        sugestoesDiv.style.display = encontrados > 0 ? "block" : "none";
-    });
-
-        // Atalhos de teclado no campo de busca (Enter para buscar/confirmar)
-        campoBusca.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                if (campoBusca.value.trim() !== "") {
-                    executarBuscaDinamica();
-                }
-            }
-        });
-
-        // Atalho de teclado no campo de Quantidade
-        campoQtd.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                confirmarItem();
-            }
-        });
-
-        // Clique no botão confirmar
-        if(btnConfirmar) btnConfirmar.onclick = confirmarItem;
-
-        // --- ATALHOS GLOBAIS (ALT+M e F8) ---
-        // Criamos uma variável fora para controlar a instância única do modal
-        let modalAtalhosInstance = null;
-
-        document.addEventListener('keydown', function(e) {
-            if (e.altKey && (e.key === 'm' || e.key === 'M')) {
-                e.preventDefault();
-
-                const modalElement = document.getElementById('modalAtalhos');
-
-                // VERIFICAÇÃO 1: Se o modal já estiver aberto, não faz nada (ou fecha)
-                if (modalElement.classList.contains('show')) {
-                    return; // Sai da função para não criar outra camada escura
-                }
-
-                // VERIFICAÇÃO 2: Reutiliza a instância se ela já existir, ou cria uma nova
-                if (!modalAtalhosInstance) {
-                    modalAtalhosInstance = new bootstrap.Modal(modalElement);
-                }
-
-                modalAtalhosInstance.show();
-            }
-
-            if (e.key === 'F8') {
-                e.preventDefault();
-                verRelatorioCaixa();
-            }
-        });
-
-
-        // ADIÇÃO EXTRA: "Limpeza de Emergência"
-        // Esse código abaixo limpa qualquer fundo escuro travado sempre que UM modal for fechado
-        document.addEventListener('hidden.bs.modal', function() {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(b => b.remove()); // Remove todos os fundos escuros extras
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = ''; // Devolve o scroll da tela
-        });
-
-    }); // <--- FIM DO DOMCONTENTLOADED (Crucial fechar aqui!)
-
-    // --- 3. FUNÇÕES DE BUSCA E CARRINHO ---
-
-                function executarBuscaDinamica(idManual) {
-        const input = document.getElementById("campoBusca");
-        const termo = idManual ? idManual.toString() : input.value.toLowerCase().trim();
-        const divs = document.querySelectorAll("#dadosProdutos div");
-
-        let divEncontrada = null;
-        for (let div of divs) {
-            if (div.dataset.id === termo || div.dataset.codigo === termo || div.dataset.nome.toLowerCase() === termo) {
-                divEncontrada = div;
-                break;
-            }
-        }
-
-        if (divEncontrada) {
-            itemAtual = {
-                id: divEncontrada.dataset.id,
-                nome: divEncontrada.dataset.nome,
-                preco: parseFloat(divEncontrada.dataset.preco),
-                regra: divEncontrada.dataset.tipo === "0" ? "GRANEL" : "UNIDADE"
-            };
-
-            // Atualiza os displays visuais (ajusta o 'feio')
-            if(document.getElementById("displayNome")) document.getElementById("displayNome").innerText = itemAtual.nome;
-            document.getElementById("exibirPreco").innerText = "R$ " + itemAtual.preco.toLocaleString('pt-br', {minimumFractionDigits: 2});
-
-            input.value = itemAtual.nome;
-
+        // 1) Handler do botão confirmar (DOM Loaded)
+        document.getElementById("btnConfirmar").onclick = () => {
             const campoQtd = document.getElementById("campoQtd");
-            campoQtd.focus();
+            const quantidade = parseFloat((campoQtd.value || "0").toString().replace(',', '.')) || 0;
 
-            if(itemAtual.regra === "UNIDADE") {
-                campoQtd.value = "1";
-            } else {
-                campoQtd.value = "";
-            }
-        }
-    }
-
-                 // 1. A BUSCA BLINDADA
-                async function buscarProdutoPorCodigo(codigo) {
-        if (!codigo) return;
-        try {
-            const resp = await fetch(`/Caixa/BuscarPorCodigo?codigo=${codigo}`);
-            const data = await resp.json();
-
-            console.log("DADOS QUE CHEGARAM DO C#:", data); // Verifique o 777 aqui!
-
-            if (data.success) {
-                // CORREÇÃO 1: Pegamos o valor real que veio do servidor (o 777)
-                let estoqueVindoDoServidor = data.estoque ?? 0;
-
-                itemAtual = {
-                    id: data.id,
-                    nome: data.nome,
-                    preco: parseFloat(data.preco),
-                    regra: data.regra,
-                    // CORREÇÃO 2: Substituímos o '99' fixo pela variável que contém o dado do banco
-                    estoque: estoqueVindoDoServidor
-                };
-
-                // Exibição na tela principal (se houver esses elementos)
-                if(document.getElementById("nomeProdutoExibicao")) {
-                    document.getElementById("nomeProdutoExibicao").innerText = itemAtual.nome;
-                }
-
-                // CORREÇÃO 3: Se você estiver usando o Modal de confirmação que criamos:
-                if(document.getElementById("modalEstoqueDisponivel")) {
-                    document.getElementById("modalEstoqueDisponivel").innerText = itemAtual.estoque;
-                    document.getElementById("modalNomeProduto").innerText = itemAtual.nome;
-
-                    // Abre o modal de forma automática
-                    var meuModal = new bootstrap.Modal(document.getElementById('modalVendaConfirmacao'));
-                    meuModal.show();
-                }
-
-                // Focar no campo de quantidade
-                const campoQtd = document.getElementById("campoQtd");
-                if(campoQtd) {
-                    campoQtd.value = "1";
-                    setTimeout(() => { campoQtd.focus(); campoQtd.select(); }, 150);
-                }
-
-                // Limpa o campo de busca (usando o nome correto: campoBusca)
-                if(document.getElementById("campoBusca")) {
-                    document.getElementById("campoBusca").value = "";
-                }
-
-            } else {
-                Swal.fire('Ops!', 'Produto não encontrado.', 'warning');
-                if(document.getElementById("campoBusca")) document.getElementById("campoBusca").value = "";
-            }
-        } catch (e) {
-            console.error("Erro na busca:", e);
-        }
-    }
-
-        // Quando o operador apertar ENTER no campo de quantidade
-    document.getElementById("campoQtd").addEventListener("keydown", function(e) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            adicionarItemAoCarrinho();
-        }
-    });
-
-        document.getElementById("campoQtd").addEventListener("keydown", function(e) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            adicionarItemAoCarrinho();
-        }
-    });
-
-    function adicionarItemAoCarrinho() {
-        const qtdInput = document.getElementById("campoQtd");
-        const quantidade = parseFloat(qtdInput.value.replace(',', '.'));
-
-        if (!itemAtual || isNaN(quantidade) || quantidade <= 0) {
-            Swal.fire('Ops', 'Selecione o produto e a quantidade corretamente.', 'warning');
-            return;
-        }
-
-        // Monta o objeto final
-        const novoItem = {
-            ProdutoId: itemAtual.id,
-            nome: itemAtual.nome,
-            preco: itemAtual.preco,
-            quantidade: quantidade,
-            total: itemAtual.preco * quantidade
-        };
-
-        // Adiciona ao seu array global
-        carrinho.push(novoItem);
-
-        // Atualiza a tabela na tela
-        renderizarCarrinho();
-
-        // Limpa tudo para o próximo produto
-        itemAtual = null;
-        document.getElementById("campoBusca").value = "";
-        document.getElementById("campoQtd").value = "";
-        document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
-        document.getElementById("exibirPreco").innerText = "R$ 0,00";
-        document.getElementById("campoBusca").focus();
-    }
-
-    // 2. CONFIRMAÇÃO CORRIGIDA
-            function confirmarItem() {
-        const campoQtd = document.getElementById("campoQtd");
-        const qtdDigitada = campoQtd.value.replace(',', '.');
-        const qtdNumerica = parseFloat(qtdDigitada) || 0;
-
-        if (!itemAtual) {
-            Swal.fire('Erro', 'Selecione um produto primeiro!', 'error');
-            return;
-        }
-
-        if (qtdNumerica <= 0) {
-            Swal.fire('Erro', 'Informe a quantidade!', 'error');
-            campoQtd.focus();
-            return;
-        }
-
-        const novoItem = {
-            ProdutoId: itemAtual.id.toString(), // ID puro para o C#
-            nome: itemAtual.nome,
-            preco: itemAtual.preco,             // Número para o JS
-            qtd: qtdNumerica,                   // Número para o JS
-            Quantidade: qtdDigitada,            // String com ponto para o C#
-            Preco: itemAtual.preco.toString(),  // String com ponto para o C#
-            subtotal: itemAtual.preco * qtdNumerica
-        };
-
-        carrinho.push(novoItem);
-        renderCarrinho();
-
-        // Limpa para o próximo item
-        itemAtual = null;
-        document.getElementById("campoBusca").value = "";
-        campoQtd.value = "";
-        document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
-        document.getElementById("exibirPreco").innerText = "R$ 0,00";
-        document.getElementById("campoBusca").focus();
-    }
-
-    function limparCamposAposConfirmar() {
-        itemAtual = null;
-        document.getElementById("campoBusca").value = "";
-        document.getElementById("campoQtd").value = "";
-        document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
-        document.getElementById("exibirPreco").innerText = "R$ 0,00";
-        document.getElementById("campoBusca").focus();
-    }
-
-                function renderCarrinho() {
-        const tbody = document.getElementById("carrinho");
-        if (!tbody) return;
-        tbody.innerHTML = "";
-        let totalGeral = 0;
-
-        carrinho.forEach((item, index) => {
-            // Garante que o subtotal existe para não aparecer 0.00 errado
-            const sub = item.subtotal || (item.preco * item.qtd);
-            totalGeral += sub;
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>${item.nome || 'Sem nome'}</td>
-                    <td>${item.labelQtd || item.qtd}</td>
-                        
-    <td>R$ ${parseFloat(item.preco || 0).toFixed(2)}</td>
-    <td class="fw-bold">R$ ${parseFloat(item.subtotal || 0).toFixed(2)}</td>
-                    <td class="fw-bold">R$ ${sub.toFixed(2)}</td>
-                    <td>
-                        <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">x</button>
-                    </td>
-                </tr>`;
-        });
-
-        const displayTotal = document.getElementById("displayTotal");
-        if (displayTotal) {
-            displayTotal.innerText = totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-    }
-
-    function removerItem(i) { carrinho.splice(i, 1); renderCarrinho(); }
-
-        function limparEntrada() {
-        itemAtual = null;
-        const dNome = document.getElementById("displayNome");
-        const dPreco = document.getElementById("exibirPreco"); // O ID correto é exibirPreco
-        if (dNome) dNome.innerText = "---";
-        if (dPreco) dPreco.innerText = "R$ 0,00";
-        document.getElementById("campoBusca").value = "";
-        document.getElementById("campoQtd").value = "0";
-        document.getElementById("campoBusca").focus();
-    }
-
-                function adicionarViaBip(produto, qtdSolicitada = 1) {
-        // 1. SINCRONIZAÇÃO GLOBAL (Forçando a barra para o sistema inteiro saber quem é o item)
-        // Usamos || 0 para que, se o banco mandar nulo, o sistema entenda como zero e não dê erro de sistema
-        itemAtual = {
-            id: produto.id,
-            nome: produto.nome,
-            preco: produto.preco,
-            regra: produto.regra,
-            estoque: (produto.estoque !== undefined && produto.estoque !== null) ? parseFloat(produto.estoque) : 0
-        };
-
-        // 2. LÓGICA DE DIRECIONAMENTO
-        // Se a quantidade solicitada for diferente de 1, significa que veio da BALANÇA
-        if (qtdSolicitada !== 1) {
-            // Preenche o campo de quantidade da tela
-            document.getElementById("campoQtd").value = qtdSolicitada.toFixed(3).replace('.', ',');
-
-            // CHAMA O CONFIRMAR: É aqui que a validação de estoque que você colou antes vai rodar!
-            confirmarItem();
-        } else {
-            // Se for UNIDADE (Bip comum), apenas prepara o campo para o usuário dar Enter
-            document.getElementById("campoQtd").value = "1";
-            document.getElementById("campoQtd").focus();
-            document.getElementById("campoQtd").select();
-
-            // Dica: Se quiser que a unidade adicione direto sem apertar Enter,
-            // descomente a linha abaixo:
-            // confirmarItem();
-        }
-
-        console.log("Item sincronizado para confirmação:", itemAtual);
-    }
-
-    // --- 4. FLUXO DE FECHAMENTO DE VENDA ---
-
-            function abrirModalPagamento() {
-        // 1. O Carrinho está vazio?
-        if (carrinho.length === 0) {
-            Swal.fire('Aviso', 'O carrinho está vazio!', 'info');
-            return;
-        }
-
-        // 2. A NOVA CHECAGEM (A barreira de segurança)
-        let errosEstoque = [];
-        carrinho.forEach(item => {
-            let qtdPedida = parseFloat(item.qtd || item.Quantidade || 0);
-            let estoqueReal = parseFloat(item.estoque || 0);
-
-            if (qtdPedida > estoqueReal) {
-                let unidade = (item.tipo === "PESO" || item.tipo === "GRANEL") ? "kg" : "un";
-                errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
-            }
-        });
-
-        // 3. Se houver erro, mostramos o modal FORMAL e PARAMOS aqui
-        if (errosEstoque.length > 0) {
-            Swal.fire({
-                title: 'Indisponibilidade de Estoque',
-                html: `
-                    <div style="text-align: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                        <p>Prezado operador, identificamos que alguns itens no carrinho excedem o saldo disponível em estoque:</p>
-                        <div style="margin: 20px 0; padding: 15px; background-color: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; color: #c53030;">
-                            ${errosEstoque.join('<br><hr style="border: 0.5px solid #feb2b2; margin: 10px 0;">')}
-                        </div>
-                        <p>Por gentileza, realize o ajuste das quantidades antes de prosseguir com o pagamento.</p>
-                    </div>
-                `,
-                icon: 'warning',
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Retornar ao Caixa',
-                allowOutsideClick: false
-            });
-            return; // IMPORTANTE: Esse return impede que as linhas abaixo (abrir modal) executem
-        }
-
-        // 4. Se NÃO houver erro, aí sim ele abre a tela de pagamento
-        document.getElementById("modalPagamento").style.display = "flex";
-        voltarParaPagamento();
-    }
-
-    function fecharModal() { document.getElementById("modalPagamento").style.display = "none"; }
-
-        function marcarMetodo(btn, metodo) {
-        // 1. Sua lógica de cores (mantida)
-        document.querySelectorAll('.btn-metodo-sel').forEach(b => {
-            b.style.background = "#f8f9fa";
-            b.style.color = "#004d1a";
-        });
-        btn.style.background = "#004d1a";
-        btn.style.color = "white";
-
-        // 2. Atualiza os valores (mantido)
-        metodoSelecionado = metodo;
-        document.getElementById("inputMetodoPagamento").value = metodo;
-
-        // 3. NOVA LÓGICA DO TROCO
-        const divTroco = document.getElementById("secaoTroco");
-        if (divTroco) {
-            if (metodo === 'Dinheiro') {
-                divTroco.style.display = "block"; // Mostra o campo
-                // Foca no input do valor recebido após aparecer
-                setTimeout(() => document.getElementById("valorRecebidoInput").focus(), 100);
-            } else {
-                divTroco.style.display = "none"; // Esconde se for Cartão/Pix
-                // Limpa o valor para não confundir a próxima venda
-                document.getElementById("valorRecebidoInput").value = "";
-                document.getElementById("displayTroco").innerText = "R$ 0,00";
-            }
-        }
-    }
-
-        // Alteramos o botão "Próximo" da tela de pagamento para chamar esta lógica
-              async function irParaCPF() {
-        if (!metodoSelecionado) {
-            Swal.fire('Atenção', 'Escolha o pagamento!', 'warning');
-            return;
-        }
-
-        // 1. FECHA O MODAL DE PAGAMENTO PRIMEIRO
-        fecharModal();
-
-        // 2. Aguarda um "respiro" de 200ms para o modal sumir totalmente da memória
-        setTimeout(async () => {
-            const { value: cupom } = await Swal.fire({
-                title: 'CÓDIGO DO VENDEDOR',
-                input: 'text',
-                inputLabel: 'Identifique o vendedor para continuar',
-                inputPlaceholder: 'Digite o código (ex: LEO)',
-                showCancelButton: true,
-                confirmButtonText: 'Validar',
-                cancelButtonText: 'Cancelar',
-                allowOutsideClick: false,
-                inputValidator: (value) => {
-                    if (!value) return 'O cupom é obrigatório!';
-                }
-            });
-
-            if (cupom) {
-                // Validação imediata
-                const resp = await fetch(`/Caixa/ValidarCupom?codigo=${cupom}`);
-                const data = await resp.json();
-
-                if (data.exists) {
-                    codigoVendedorInformado = cupom;
-                    // Abre a próxima tela (CPF) que está na DIV da página
-                    document.getElementById("secaoPagamento").style.display = "none";
-                    document.getElementById("secaoCPF").style.display = "block";
-
-                    // Reabre o modal agora na aba do CPF
-                    document.getElementById("modalPagamento").style.display = "flex";
-                } else {
-                    Swal.fire('Erro', 'Cupom não encontrado!', 'error').then(() => {
-                        // Se errou, volta a pedir o cupom
-                            irParaCPF();
-                    });
-                }
-            } else {
-                // Se cancelou o cupom, volta para a tela de pagamento
-                abrirModalPagamento();
-            }
-        }, 200);
-        }
-        
-
-    function voltarParaPagamento() {
-        document.getElementById("secaoPagamento").style.display = "block";
-        document.getElementById("secaoCPF").style.display = "none";
-    }
-
-               async function enviarVendaDeVez() {
-        // 1. Validação inicial
-        if (carrinho.length === 0) {
-            Swal.fire('Carrinho Vazio', 'Adicione produtos antes de finalizar.', 'warning');
-            return;
-        }
-
-        // 2. Coleta de dados da interface
-        const metodo = metodoSelecionado; // Variável global que você já usa
-        const cpf = document.getElementById("cpfClienteInput")?.value || "";
-        const vendedor = typeof codigoVendedorInformado !== 'undefined' ? codigoVendedorInformado : "";
-        const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
-        const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
-
-        // 3. Montagem do Payload para o C#
-        const data = new URLSearchParams();
-        data.append("metodoPagamento", metodo);
-        data.append("cpfCliente", cpf);
-        data.append("codigoVendedor", vendedor);
-        data.append("valorRecebido", valorRec.replace('.', ','));
-        data.append("valorTroco", valorTro.replace('.', ','));
-
-        // 4. Mapeamento dos Itens (Onde dava o erro de estoque)
-        carrinho.forEach((item, i) => {
-            // O nome deve ser EXATAMENTE 'itens' para bater com o parâmetro do C#
-            const prefixo = `itens[${i}]`;
-
-            data.append(`${prefixo}.ProdutoId`, item.ProdutoId || item.id);
-
-            // Enviamos com ponto (.), pois o seu C# usa CultureInfo.InvariantCulture
-            const qtdParaEnvio = item.Quantidade || item.qtd.toString();
-            const precoParaEnvio = item.Preco || item.preco.toString();
-
-            data.append(`${prefixo}.Quantidade`, qtdParaEnvio);
-            data.append(`${prefixo}.Preco`, precoParaEnvio);
-        });
-
-        try {
-            // Exibe um carregando para evitar cliques duplos
-            Swal.showLoading();
-
-            const response = await fetch('/Caixa/FinalizarVenda', {
-                method: 'POST',
-                body: data,
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            });
-
-            const res = await response.json();
-
-            if (res.success) {
-                // Fecha modais e limpa tudo
-                $('.modal').modal('hide');
-
-                Swal.fire({
-                    title: 'Venda Finalizada!',
-                    text: 'Sucesso ao processar a venda.',
-                    icon: 'success',
-                    confirmButtonText: 'OK'
-                }).then(() => {
-                    if (res.vendaId) {
-                        window.open('/Caixa/GerarCupom?id=' + res.vendaId, '_blank');
-                    }
-                    location.reload(); // Reinicia o caixa para a próxima venda
-                });
-            } else {
-                // Aqui o C# devolve o erro de estoque insuficiente
-                Swal.fire({
-                    title: 'Erro no Estoque',
-                    html: res.message.replace(/\n/g, '<br>'),
-                    icon: 'error',
-                    confirmButtonColor: '#d33'
-                });
-            }
-        } catch (e) {
-            console.error("Erro crítico no envio:", e);
-            Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
-        }
-    }
-    // --- 5. FUNÇÕES ADMINISTRATIVAS (ALT+M) ---
-
-    function prepararSangria() { abrirModalOperacao('Sangria'); }
-    function prepararSuprimento() { abrirModalOperacao('Suprimento'); }
-
-            function abrirModalOperacao(tipo) {
-        const mAtalhos = bootstrap.Modal.getInstance(document.getElementById('modalAtalhos'));
-        if(mAtalhos) mAtalhos.hide();
-
-        // Limpa rastro de valores antigos e coloca R$ fixo
-        document.getElementById("valorOperacao").value = "R$ 0,00";
-        document.getElementById("obsOperacao").value = "";
-
-        document.getElementById("tipoOperacao").value = tipo;
-        document.getElementById("tituloOperacao").innerText = tipo.toUpperCase();
-        const header = document.getElementById("headerOperacao");
-        header.className = tipo === 'Sangria' ? "modal-header bg-danger text-white" : "modal-header bg-success text-white";
-
-        new bootstrap.Modal(document.getElementById('modalOperacao')).show();
-    }
-
-    async function salvarMovimentacao() {
-        const tipo = document.getElementById("tipoOperacao").value;
-        const valorRaw = document.getElementById("valorOperacao").value; // Ex: "R$ 100,00"
-        const obs = document.getElementById("obsOperacao").value;
-
-        // LIMPEZA SEGURA:
-        // 1. Remove "R$" e espaços
-        // 2. Remove o ponto (.) que é separador de milhar
-        // 3. Troca a vírgula (,) por ponto (.) que é o separador decimal do C#
-        let valorLimpo = valorRaw.replace("R$", "").trim();
-        valorLimpo = valorLimpo.split('.').join(''); // Remove pontos de milhar
-        valorLimpo = valorLimpo.replace(',', '.');   // Troca vírgula decimal por ponto
-
-        const valorNumerico = parseFloat(valorLimpo);
-
-        if (isNaN(valorNumerico) || valorNumerico <= 0) {
-            Swal.fire('Erro', 'Por favor, insira um valor válido!', 'error');
-            return;
-        }
-
-        const data = new URLSearchParams();
-        data.append('tipo', tipo);
-        data.append('valor', valorNumerico.toFixed(2)); // Envia sempre formato 100.00
-        data.append('obs', obs);
-
-        const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data });
-        const res = await resp.json();
-
-        if (res.success) {
-            Swal.fire('Sucesso!', 'Operação registrada.', 'success').then(() => location.reload());
-        } else {
-            // Se der erro, vamos ver o que o C# diz
-            Swal.fire('Erro', res.message, 'error');
-        }
-    }
-
-        async function verStatusCaixa() {
-        try {
-            const response = await fetch('/Caixa/ObterStatusAtual');
-            const dados = await response.json();
-
-            Swal.fire({
-                title: '🏧 CONFERÊNCIA DE CAIXA',
-                html: `
-                    <div style="text-align: left;">
-                        <p><b>(+) Suprimento (Abertura):</b> R$ ${dados.suprimento.toFixed(2)}</p>
-                        <p><b>(+) Total Vendas:</b> R$ ${dados.vendas.toFixed(2)}</p>
-                        <p><b>(-) Total Sangrias:</b> <span style="color:red">R$ ${dados.sangrias.toFixed(2)}</span></p>
-                        <hr>
-                        <h3 style="color:green"><b>SALDO EM GAVETA: R$ ${dados.saldo.toFixed(2)}</b></h3>
-                    </div>
-                `,
-                icon: 'info'
-            });
-        } catch (e) {
-            Swal.fire('Erro', 'Não foi possível consultar o saldo.', 'error');
-        }
-    }
-
-                      async function verRelatorioCaixa() {
-        const modalAtalhos = bootstrap.Modal.getInstance(document.getElementById('modalAtalhos'));
-        if (modalAtalhos) modalAtalhos.hide();
-
-        try {
-            const resp = await fetch('/Caixa/ObterRelatorioResumido');
-            if (!resp.ok) throw new Error("Erro na rota");
-
-            const dados = await resp.json();
-
-            let tabelaHtml = `
-                <div style="max-height: 300px; overflow-y: auto;">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Hora</th>
-                                <th>Descrição</th>
-                                <th class="text-end">Valor</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            dados.movimentacoes.forEach(m => {
-                // 1. Pega o tipo de forma segura (se vier nulo, vira texto vazio)
-                const tipoTexto = m.tipo || "";
-                const descricaoTexto = m.descricao || "";
-
-                // 2. REGRA DE OURO: Se no Tipo ou na Descrição estiver escrito "Sangria",
-                // ou se o valor for negativo, a gente pinta de vermelho.
-                const ehSangria = tipoTexto.toLowerCase().includes('sangria') ||
-                    descricaoTexto.toLowerCase().includes('sangria') ||
-                    m.valor < 0;
-
-                const cor = ehSangria ? 'text-danger' : 'text-success';
-                const sinal = ehSangria ? '-' : '+';
-
-                // 3. Formata o valor sempre positivo (o sinal a gente definiu acima)
-                const valorDisplay = Math.abs(m.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-
-                tabelaHtml += `
-            <tr>
-                <td>${m.hora || '--:--'}</td>
-                <td>${descricaoTexto || tipoTexto}</td>
-                <td class="${cor} text-end"><strong>${sinal} R$ ${valorDisplay}</strong></td>
-                <td class="text-center">
-                    ${m.vendaId ? `<button onclick="reimprimirVenda(${m.vendaId})" class="btn btn-sm btn-primary">🖨️</button>` : ''}
-                </td>
-            </tr>`;
-            });
-
-            // --- AS LINHAS QUE FALTAVAM ESTÃO ABAIXO ---
-            tabelaHtml += `</tbody></table></div>`;
-
-            Swal.fire({
-                title: '📊 RELATÓRIO DE MOVIMENTAÇÕES',
-                html: tabelaHtml,
-                width: '600px',
-                confirmButtonText: 'FECHAR'
-            });
-
-        } catch (e) {
-            Swal.fire('Erro', 'Falha ao carregar relatório: ' + e.message, 'error');
-        }
-    } // <--- FECHAMENTO FINAL DA FUNÇÃO
-
-    function reimprimirVenda(vendaId) {
-        if (!vendaId || vendaId === "null") {
-            Swal.fire('Erro', 'ID de venda inválido.', 'error');
-            return;
-        }
-        const url = `/Caixa/GerarCupom?id=${vendaId}`;
-        window.open(url, "ImpressaoCupom", "width=400,height=600");
-    }
-
-    async function reimprimirUltimaVenda() {
-        // Esconde o modal de atalhos antes de abrir o SweetAlert
-        const modalAtalhos = bootstrap.Modal.getInstance(document.getElementById('modalAtalhos'));
-        if (modalAtalhos) modalAtalhos.hide();
-
-        const { value: opcao } = await Swal.fire({
-            title: '🖨️ IMPRESSÃO',
-            html: `
-                <div style="text-align: left; margin-bottom: 10px;">
-                    <b>1</b> - Última Venda<br>
-                    <b>2</b> - Por ID da Venda<br>
-                    <b>3</b> - Relatório do Dia (Resumo)
-                </div>
-                <input type="number" id="swal-input-opcao" class="form-control" placeholder="Digite 1, 2 ou 3" autofocus>
-            `,
-            showCancelButton: true,
-            preConfirm: () => document.getElementById('swal-input-opcao').value
-        });
-
-        if (opcao === "1") {
-            const resp = await fetch('/Caixa/ObterUltimaVendaId');
-            const id = (await resp.text()).trim();
-            if (id && id !== "") {
-                reimprimirVenda(id);
-            } else {
-                Swal.fire('Aviso', 'Nenhuma venda encontrada hoje.', 'info');
-            }
-        } else if (opcao === "2") {
-            const { value: idBusca } = await Swal.fire({ title: 'Digite o ID:', input: 'number', showCancelButton: true });
-            if (idBusca) reimprimirVenda(idBusca);
-        } else if (opcao === "3") {
-            window.open('/Caixa/ImprimirRelatorioHoje', '_blank');
-        }
-    }
-
-            // FUNÇÃO 1: O Menu que você abre pelo Atalho (Opções 1, 2 e 3)
-async function reimprimirMenu() {
-    const modalAtalhos = bootstrap.Modal.getInstance(document.getElementById('modalAtalhos'));
-    if (modalAtalhos) modalAtalhos.hide();
-
-    const { value: opcao } = await Swal.fire({
-        title: '🖨️ IMPRESSÃO',
-        html: `
-            <div style="text-align: left; margin-bottom: 10px;">
-                <b>1</b> - Última Venda<br>
-                <b>2</b> - Por ID da Venda<br>
-                <b>3</b> - Relatório do Dia (Resumo)
-            </div>
-            <input type="number" id="swal-input-opcao" class="form-control" placeholder="Digite 1, 2 ou 3" autofocus>
-        `,
-        showCancelButton: true,
-        preConfirm: () => document.getElementById('swal-input-opcao').value
-    });
-
-       if (opcao === "1") {
-        const resp = await fetch('/Caixa/ObterUltimaVendaId');
-        const id = (await resp.text()).trim(); // Adicione o .trim() para garantir que não vá espaço
-        if(id) reimprimirVenda(id);
-    } else if (opcao === "2") {
-        const { value: idBusca } = await Swal.fire({ title: 'Digite o ID:', input: 'number', showCancelButton: true });
-        reimprimirVenda(idBusca); // Chama a função técnica
-    } else if (opcao === "3") {
-        window.open('/Caixa/ImprimirRelatorioHoje', '_blank');
-    }
-}
-
-        async function realizarFechamento() {
-        try {
-            // 1. Busca os dados do que aconteceu no dia (sem zerar nada ainda)
-            const resp = await fetch('/Caixa/ObterDadosFechamento');
-            const d = await resp.json();
-
-            if (d.erro) {
-                Swal.fire('Aviso', 'Não há movimentações para fechar hoje.', 'info');
+            if (!itemAtual) {
+                alert("Selecione um produto primeiro!");
                 return;
             }
 
-            // 2. Monta a tabela de conferência de estoque
-            let itensHtml = d.produtosSaida.map(p => `
-                <tr>
-                    <td class="text-start">${p.produto}</td>
-                    <td class="text-end"><b>${p.quantidade.toFixed(3).replace('.', ',')} KG</b></td>
-                </tr>
-            `).join('');
+            if (quantidade <= 0) {
+                alert("Informe uma quantidade válida!");
+                return;
+            }
 
-            // 3. Abre a tela de conferência (O "Checkpoint")
-            Swal.fire({
-                title: '📊 CONFERÊNCIA DE FECHAMENTO',
-                html: `
-                    <div style="font-size: 14px; text-align: left;">
-                        <div class="alert alert-secondary p-2"><b>📦 SAÍDAS DE ESTOQUE</b></div>
-                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">
-                            <table class="table table-sm table-striped mb-0">
-                                <thead><tr class="table-dark"><th>Item</th><th class="text-end">Qtd</th></tr></thead>
-                                <tbody>${itensHtml || '<tr><td colspan="2">Sem vendas</td></tr>'}</tbody>
-                            </table>
-                        </div>
+            const qtdString = quantidade.toString().replace(',', '.');
+            const precoString = (itemAtual.preco ?? 0).toString().replace(',', '.');
 
-                        <div class="alert alert-info p-2"><b>💰 RESUMO FINANCEIRO</b></div>
-                        <div class="px-2">
-                            <div class="d-flex justify-content-between"><span>Vendas:</span> <span>R$ ${d.totalVendas.toFixed(2)}</span></div>
-                            <div class="d-flex justify-content-between"><span>Suprimentos:</span> <span>R$ ${d.suprimentos.toFixed(2)}</span></div>
-                            <div class="d-flex justify-content-between text-danger"><span>Sangrias:</span> <span>- R$ ${d.sangrias.toFixed(2)}</span></div>
-                            <hr class="my-1">
-                            <div class="d-flex justify-content-between fw-bold text-success" style="font-size: 18px;">
-                                <span>SALDO GAVETA:</span> <span>R$ ${d.saldoFinal.toFixed(2)}</span>
-                            </div>
-                        </div>
+            const novoItem = {
+                id: itemAtual.id,
+                ProdutoId: itemAtual.id,
+                nome: itemAtual.nome,
+                preco: itemAtual.preco,
+                qtd: quantidade,
+                Quantidade: qtdString,
+                Preco: precoString,
+                labelQtd: qtdString,
+                subtotal: (itemAtual.preco || 0) * quantidade,
+                estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
+            };
+
+            carrinho.push(novoItem);
+            renderCarrinho();
+
+            document.getElementById("campoBusca").value = "";
+            document.getElementById("campoQtd").value = "";
+            document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
+            document.getElementById("exibirPreco").innerText = "R$ 0,00";
+            itemAtual = null;
+            document.getElementById("campoBusca").focus();
+        }; // <-- fim do handler dentro do DOMContentLoaded
+
+}); // <-- ADICIONAR ESTA LINHA: fecha o document.addEventListener("DOMContentLoaded", ...)
+
+// 2) adicionarItemAoCarrinho - garante shape consistente
+function adicionarItemAoCarrinho() {
+    const qtdInput = document.getElementById("campoQtd");
+    const quantidade = parseFloat((qtdInput.value || "0").toString().replace(',', '.'));
+
+    if (!itemAtual || isNaN(quantidade) || quantidade <= 0) {
+        Swal.fire('Ops', 'Selecione o produto e a quantidade corretamente.', 'warning');
+        return;
+    }
+
+    const qtdString = quantidade.toString().replace(',', '.');
+    const precoString = (itemAtual.preco ?? 0).toString().replace(',', '.');
+
+    const novoItem = {
+        ProdutoId: itemAtual.id,
+        id: itemAtual.id,
+        nome: itemAtual.nome,
+        preco: itemAtual.preco,
+        qtd: quantidade,
+        Quantidade: qtdString,
+        Preco: precoString,
+        subtotal: (itemAtual.preco || 0) * quantidade,
+        estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
+    };
+
+    carrinho.push(novoItem);
+    // Chamada corrigida: usar a função existente `renderCarrinho`
+    renderCarrinho();
+
+    itemAtual = null;
+    document.getElementById("campoBusca").value = "";
+    document.getElementById("campoQtd").value = "";
+    document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
+    document.getElementById("exibirPreco").innerText = "R$ 0,00";
+    document.getElementById("campoBusca").focus();
+}
+
+// 3) confirmarItem - adiciona propriedade estoque e normaliza strings
+function confirmarItem() {
+    const campoQtd = document.getElementById("campoQtd");
+    const qtdDigitada = (campoQtd.value || "0").toString().replace(',', '.');
+    const qtdNumerica = parseFloat(qtdDigitada) || 0;
+
+    if (!itemAtual) {
+        Swal.fire('Erro', 'Selecione um produto primeiro!', 'error');
+        return;
+    }
+
+    if (qtdNumerica <= 0) {
+        Swal.fire('Erro', 'Informe a quantidade!', 'error');
+        campoQtd.focus();
+        return;
+    }
+
+    const precoString = (itemAtual.preco ?? 0).toString().replace(',', '.');
+
+    const novoItem = {
+        ProdutoId: itemAtual.id.toString(),
+        nome: itemAtual.nome,
+        preco: itemAtual.preco,
+        qtd: qtdNumerica,
+        Quantidade: qtdDigitada,
+        Preco: precoString,
+        subtotal: (itemAtual.preco || 0) * qtdNumerica,
+        estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
+    };
+
+    carrinho.push(novoItem);
+    renderCarrinho();
+
+    itemAtual = null;
+    document.getElementById("campoBusca").value = "";
+    campoQtd.value = "";
+    document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
+    document.getElementById("exibirPreco").innerText = "R$ 0,00";
+    document.getElementById("campoBusca").focus();
+}
+
+// 4) abrirModalPagamento - validação de estoque mais robusta (normaliza vírgula/ponto)
+function abrirModalPagamento() {
+    if (carrinho.length === 0) {
+        Swal.fire('Aviso', 'O carrinho está vazio!', 'info');
+        return;
+    }
+
+    let errosEstoque = [];
+    carrinho.forEach(item => {
+        const qtdPedida = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
+        const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
+
+        if (qtdPedida > estoqueReal) {
+            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
+        }
+    });
+
+    if (errosEstoque.length > 0) {
+        Swal.fire({
+            title: 'Indisponibilidade de Estoque',
+            html: `
+                <div style="text-align: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <p>Prezado operador, identificamos que alguns itens no carrinho excedem o saldo disponível em estoque:</p>
+                    <div style="margin: 20px 0; padding: 15px; background-color: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; color: #c53030;">
+                        ${errosEstoque.join('<br><hr style="border: 0.5px solid #feb2b2; margin: 10px 0;">')}
                     </div>
-                `,
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonText: '✅ TUDO CERTO, FECHAR DIA',
-                cancelButtonText: 'CANCELAR',
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#dc3545',
-                width: '500px'
-            }).then((result) => {
-                // 4. SÓ AQUI, se ele clicar no "OK", chamamos a função que ZERA TUDO
-                if (result.isConfirmed) {
-                    confirmarZeramentoFinal();
-                }
-            });
-
-        } catch (e) {
-            Swal.fire('Erro', 'Falha ao carregar fechamento.', 'error');
-        }
-    }
-
-        async function confirmarZeramentoFinal() {
-        // Pergunta de segurança para não zerar por acidente
-        const seguranca = await Swal.fire({
-            title: 'Tem certeza?',
-            text: "Isso vai zerar o caixa para o próximo dia e você não poderá desfazer!",
+                    <p>Por gentileza, realize o ajuste das quantidades antes de prosseguir com o pagamento.</p>
+                </div>
+            `,
             icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'SIM, ZERAR AGORA',
-            confirmButtonColor: '#d33'
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Retornar ao Caixa',
+            allowOutsideClick: false
         });
-
-        if (seguranca.isConfirmed) {
-            try {
-                // Chama a rota no C# que faz o UPDATE ou DELETE no banco
-                const response = await fetch('/Caixa/ZerarCaixaParaProximoDia', { method: 'POST' });
-                const resultado = await response.json();
-
-                if (resultado.success) {
-                    Swal.fire('Fechado!', 'Caixa zerado com sucesso. Bom descanso!', 'success')
-                        .then(() => location.reload()); // Recarrega a página limpa
-                } else {
-                    Swal.fire('Erro', 'Não foi possível zerar: ' + resultado.message, 'error');
-                }
-            } catch (e) {
-                Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
-            }
-        }
+        return;
     }
 
-            // Substitua sua função formatarMoedaParaSweet por esta:
-    function formatarMoedaParaSweet(input) {
-        let valor = input.value.replace(/\D/g, "");
-        if (valor === "" || valor === "0") {
-            input.value = "R$ 0,00";
-            return;
-        }
-        let resultado = (parseInt(valor) / 100).toFixed(2).replace(".", ",");
-        input.value = "R$ " + resultado;
+    document.getElementById("modalPagamento").style.display = "flex";
+    voltarParaPagamento();
+}
+
+// 5) enviarVendaDeVez - normaliza shape e formatação antes de enviar
+async function enviarVendaDeVez() {
+    if (carrinho.length === 0) {
+        Swal.fire('Carrinho Vazio', 'Adicione produtos antes de finalizar.', 'warning');
+        return;
     }
 
-                    function filtrarSugestoes() {
-        const input = document.getElementById("campoBusca");
-        const busca = input.value.toLowerCase().trim();
-        const sugestoesDiv = document.getElementById("sugestoes");
-        const listaProdutos = document.querySelectorAll("#dadosProdutos div");
+    const metodo = metodoSelecionado;
+    const cpf = document.getElementById("cpfClienteInput")?.value || "";
+    const vendedor = typeof codigoVendedorInformado !== 'undefined' ? codigoVendedorInformado : "";
+    const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
+    const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
 
-        sugestoesDiv.innerHTML = "";
-        if (busca.length < 1) {
-            sugestoesDiv.style.display = "none";
-            return;
-        }
+    const data = new URLSearchParams();
+    data.append("metodoPagamento", metodo);
+    data.append("cpfCliente", cpf);
+    data.append("codigoVendedor", vendedor);
+    data.append("valorRecebido", String(valorRec).replace(',', '.'));
+    data.append("valorTroco", String(valorTro).replace(',', '.'));
 
-        let encontrados = 0;
-        listaProdutos.forEach(div => {
-            const nome = div.dataset.nome;
-            if (nome.toLowerCase().includes(busca) && encontrados < 6) {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = "list-group-item list-group-item-action";
-                btn.innerHTML = `<strong>${nome}</strong>`;
+    carrinho.forEach((item, i) => {
+        const prefixo = `itens[${i}]`;
 
-                btn.onclick = () => {
-                    // APENAS PREPARA O ITEM (Não adiciona ao carrinho ainda)
-                    itemAtual = {
-                        id: div.dataset.id,
-                        nome: div.dataset.nome,
-                        preco: parseFloat(div.dataset.preco)
-                    };
+        const produtoId = item.ProdutoId ?? item.id ?? "";
+        data.append(`${prefixo}.ProdutoId`, produtoId.toString());
 
-                    // Atualiza a interface visual
-                    document.getElementById("displayNome").innerText = itemAtual.nome;
-                    document.getElementById("exibirPreco").innerText = "R$ " + itemAtual.preco.toFixed(2);
-                    document.getElementById("campoBusca").value = itemAtual.nome;
+        let qtdRaw = item.Quantidade ?? item.qtd ?? item.quantidade ?? "0";
+        qtdRaw = (typeof qtdRaw === "number") ? qtdRaw.toString() : String(qtdRaw);
+        qtdRaw = qtdRaw.replace(',', '.');
 
-                    sugestoesDiv.style.display = "none";
-                    document.getElementById("campoQtd").focus(); // Foca na quantidade
-                };
+        let precoRaw = item.Preco ?? item.preco ?? "0";
+        precoRaw = (typeof precoRaw === "number") ? precoRaw.toString() : String(precoRaw);
+        precoRaw = precoRaw.replace(',', '.');
 
-                sugestoesDiv.appendChild(btn);
-                encontrados++;
+        data.append(`${prefixo}.Quantidade`, qtdRaw);
+        data.append(`${prefixo}.Preco`, precoRaw);
+    });
+
+    try {
+        Swal.showLoading();
+
+        const response = await fetch('/Caixa/FinalizarVenda', {
+            method: 'POST',
+            body: data,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
         });
-        sugestoesDiv.style.display = encontrados > 0 ? "block" : "none";
-    }
 
-         
-    
+        const res = await response.json();
 
-    // 1. Chame esta função quando o botão "DINHEIRO" for clicado
-function selecionarDinheiro() {
-    metodoSelecionado = "DINHEIRO";
-    
-    // Mostra a seção de troco
-    document.getElementById("secaoTroco").style.display = "block";
-    
-    // Dá foco automático no campo para o operador não precisar usar o mouse
-    setTimeout(() => {
-        document.getElementById("valorRecebidoInput").focus();
-    }, 200);
-}
-
-// 2. Chame esta para as outras formas (PIX, CARTÃO) para esconder o troco
-function selecionarOutroPagamento(metodo) {
-    metodoSelecionado = metodo;
-    document.getElementById("secaoTroco").style.display = "none";
-    document.getElementById("valorRecebidoInput").value = "";
-    document.getElementById("valorTrocoInput").value = "0";
-}
-
-// 3. A mágica do cálculo automático
-function calcularTroco() {
-    // Busca o total da venda. 
-    // Certifique-se que o id 'displayTotal' é onde aparece o valor final (ex: R$ 50,00)
-    const textoTotal = document.getElementById("displayTotal").innerText;
-    
-    // Limpa o texto (R$, pontos e vírgulas) para virar um número decimal
-    const totalVenda = parseFloat(textoTotal.replace("R$", "").replace(/\./g, "").replace(",", "."));
-    
-    const recebido = parseFloat(document.getElementById("valorRecebidoInput").value) || 0;
-    const troco = recebido - totalVenda;
-
-    const display = document.getElementById("displayTroco");
-    const inputTrocoHidden = document.getElementById("valorTrocoInput");
-
-    if (recebido > 0 && troco >= 0) {
-        display.innerText = troco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        display.style.color = "#28a745"; // Verde se tiver troco
-        if(inputTrocoHidden) inputTrocoHidden.value = troco.toFixed(2);
-    } else {
-        display.innerText = "R$ 0,00";
-        display.style.color = "#dc3545"; // Vermelho se faltar dinheiro
-        if(inputTrocoHidden) inputTrocoHidden.value = "0";
+        if (res.success) {
+            $('.modal').modal('hide');
+            Swal.fire({
+                title: 'Venda Finalizada!',
+                text: 'Sucesso ao processar a venda.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                if (res.vendaId) window.open('/Caixa/GerarCupom?id=' + res.vendaId, '_blank');
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Erro no Estoque',
+                html: res.message.replace(/\n/g, '<br>'),
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
+        }
+    } catch (e) {
+        console.error("Erro crítico no envio:", e);
+        Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
     }
 }
-    
-    
 </script>
 
 @if (Context.Request.Query.ContainsKey("imprimirId"))
