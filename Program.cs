@@ -11,8 +11,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
-// Isso vai imprimir no console do Visual Studio exatamente onde o arquivo est�
-Console.WriteLine($"O BANCO ATIVO �: {connectionString}");
+// Isso vai imprimir no console do Visual Studio exatamente onde o arquivo est�
+Console.WriteLine($"O BANCO ATIVO �: {connectionString}");
 // ----------------------------------------------
 
 // Adicione isso ANTES do builder.Build()
@@ -33,13 +33,18 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 // --- GARANTE QUE O BANCO E AS TABELAS EXISTAM ---
+// BUG-19: EnsureCreated() criava o schema a partir do MODELO ATUAL e ignorava
+// as migrations. Numa base já existente, EnsureCreated() não altera nada: as
+// colunas/índices/FKs criados por migrations posteriores nunca eram aplicados e a
+// aplicação quebrava em runtime. Migrate() aplica as migrations pendentes e cria
+// a base do zero apenas quando ela ainda não existe.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
     }
     catch (Exception ex)
     {
