@@ -1,4 +1,4 @@
-# Relatório de QA — Sistema de Controle de Estoque
+﻿# Relatório de QA — Sistema de Controle de Estoque
 
 **Branch:** `fix/fase1-dinheiro` · **HEAD:** `1016148` · **Data da recriação:** 28/09/2026
 
@@ -21,39 +21,55 @@ ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 | Métrica | Valor |
 |---|---|
 | Total de testes | **55** |
-| ✅ Aprovados (comportamento correto) | **32** |
-| ❌ Falhando (bug presente) | **23** |
+| ✅ Aprovados (comportamento correto) | **39** |
+| ❌ Falhando (bug presente) | **16** |
+
+Última atualização: **28/09/2026** — corrigidos os 6 bugs de **Caixa** (BUG-01 a BUG-06).
+Ficou vermelho: Produtos, Vendedores, Dados, Segurança e Lacunas (16 casos).
 
 Os testes são de **caracterização**: falham enquanto o bug existir e passam quando for
 corrigido. Nenhum código de produção foi alterado para fazê-los passar.
 
+> ⚠️ **Nota sobre contagem:** `RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` é um
+> `[Theory]` com 2 casos (`"0"` e `"-50"`). Por isso 6 *bugs* de Caixa correspondem a
+> **7 casos de teste**. Os números acima são de **casos**, não de métodos.
+
 ---
 
-## Severidade Crítica
+## ✅ Corrigido em 28/09/2026 — Caixa (Fase 2, parte 1)
 
-### BUG-01 — Sinal da sangria invertido no fechamento
-`CaixaController.ObterDadosFechamento` (linha 456)
+Fonte única de verdade em `CaixaController`:
 
 ```csharp
-decimal saldoFinal = (totalVendas + suprimentos) - sangrias;
+public const string MetodoPagamentoDinheiro = "Dinheiro";
+
+public static decimal CalcularSaldoEmGaveta(decimal vendasDinheiro, decimal suprimentos, decimal sangrias)
+    => vendasDinheiro + suprimentos + sangrias;
 ```
 
-`RegistrarMovimentacao` grava a sangria **já negativa** (`-Math.Abs(valor)`). A subtração
-inverte o sinal e a sangria **soma** ao saldo. Ex.: venda R$ 100 + sangria R$ 50
-→ esperado R$ 50, obtido **R$ 150**. O fechamento superestima o dinheiro da gaveta.
+A sangria é gravada **negativa** (`-Math.Abs`), então entra por **adição** — subtrair
+inverteria o sinal.
 
-→ `CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo`
+| ID | O que foi corrigido | Onde | Teste |
+|---|---|---|---|
+| BUG-01 | Sinal da sangria invertido: `(total + suprimentos) - sangrias` somava a sangria | `ObterDadosFechamento` | `CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo` |
+| BUG-02 | Saldo da gaveta incluía vendas em cartão | `ObterStatusAtual` | `CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro` |
+| BUG-03 | Saldo do relatório incluía vendas em cartão | `RelatorioDados` | `CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro` |
+| BUG-04 | Saldo do fechamento incluía vendas em cartão | `ObterDadosFechamento` | `CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro` |
+| BUG-05 | Sangria maior que o saldo era aceita | `RegistrarMovimentacao` | `CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo` |
+| BUG-06 | Valor `<= 0` gerava movimentação fantasma | `RegistrarMovimentacao` | `CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` |
 
-### BUG-02 / 03 / 04 — Saldo em gaveta inclui todas as formas de pagamento
-`ObterStatusAtual`, `RelatorioDados` e `ObterDadosFechamento`
+**Comportamento não alterado:** `RegistrarMovimentacao` continua **síncrona** (assinatura
+inalterada) e o vazamento de `ex.Message` (BUG-17, Segurança) segue **pendente** por estar
+fora do escopo desta etapa.
 
-O saldo físico da gaveta soma `Vendas.TotalVenda` **sem filtrar `MetodoPagamento`**. Uma
-venda de R$ 500 no cartão entra no saldo como se houvesse R$ 500 em dinheiro.
-**Complemento A:** o saldo deve considerar **apenas `Dinheiro`**.
+`qa/http-parte1.ps1` valida os mesmos pontos por HTTP real (primeira execução em
+28/09/2026): **todas as verificações passaram** e o `controleestoque.db` versionado
+permaneceu com o hash `D38374DA...1609`.
 
-→ `CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro`
-→ `CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro`
-→ `CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro`
+---
+
+## Severidade Crítica (pendentes)
 
 ### BUG-07 — Editar produto zera o estoque
 `HomeController.Editar` (linha 134)
@@ -91,12 +107,10 @@ busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
 
 ---
 
-## Severidade Alta
+## Severidade Alta (pendentes)
 
 | ID | Descrição | Teste |
 |---|---|---|
-| BUG-05 | `RegistrarMovimentacao` aceita sangria maior que o saldo (sem validação de saldo) | `CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo` |
-| BUG-06 | `RegistrarMovimentacao` aceita valor `<= 0`, gerando movimentação fantasma | `CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` |
 | BUG-09 | Cadastro aceita código de barras duplicado | `ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado` |
 | BUG-10 | Cadastro aceita preço negativo | `ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo` |
 | BUG-11 | Cadastro aceita estoque negativo | `ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo` |

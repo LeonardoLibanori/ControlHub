@@ -1,10 +1,10 @@
-ID,Area,Severidade,Descricao,Teste xUnit,Status
-BUG-01,Caixa,Critica,"Sinal da sangria invertido no fechamento: (totalVendas + suprimentos) - sangrias, com sangria ja negativa, faz a sangria SOMAR ao saldo",CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo,pendente
-BUG-02,Caixa,Critica,"Saldo em gaveta inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterStatusAtual)",CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro,pendente
-BUG-03,Caixa,Critica,"Saldo do relatorio inclui todas as formas de pagamento; deveria contar apenas Dinheiro (RelatorioDados)",CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro,pendente
-BUG-04,Caixa,Critica,"Saldo do fechamento inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterDadosFechamento)",CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro,pendente
-BUG-05,Caixa,Alta,"RegistrarMovimentacao aceita sangria maior que o saldo disponivel (sem validacao de saldo)",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo,pendente
-BUG-06,Caixa,Alta,"RegistrarMovimentacao aceita valor <= 0, gerando movimentacao fantasma",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo,pendente
+﻿ID,Area,Severidade,Descricao,Teste xUnit,Status
+BUG-01,Caixa,Critica,"Sinal da sangria invertido no fechamento: (totalVendas + suprimentos) - sangrias, com sangria ja negativa, faz a sangria SOMAR ao saldo",CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo,corrigido
+BUG-02,Caixa,Critica,"Saldo em gaveta inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterStatusAtual)",CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro,corrigido
+BUG-03,Caixa,Critica,"Saldo do relatorio inclui todas as formas de pagamento; deveria contar apenas Dinheiro (RelatorioDados)",CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro,corrigido
+BUG-04,Caixa,Critica,"Saldo do fechamento inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterDadosFechamento)",CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro,corrigido
+BUG-05,Caixa,Alta,"RegistrarMovimentacao aceita sangria maior que o saldo disponivel (sem validacao de saldo)",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo,corrigido
+BUG-06,Caixa,Alta,"RegistrarMovimentacao aceita valor <= 0, gerando movimentacao fantasma",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo,corrigido
 BUG-07,Produtos,Critica,"Editar produto zera o estoque: a view nao envia quantidade e a action faz TryParse sem checar o retorno",ProdutosQaTests.Editar_DevePreservarEstoque_QuandoCampoQuantidadeNaoEnviado,pendente
 BUG-08,Produtos,Critica,"ON DELETE CASCADE em VendaItens.ProdutoId apaga o historico de vendas ao excluir um produto",ProdutosQaTests.Excluir_DevePreservarHistoricoDeVendas_DoProduto,pendente
 BUG-09,Produtos,Alta,"Cadastro aceita codigo de barras duplicado (ao contrario de CadastrarVendedor, que valida)",ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado,pendente

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     QA por HTTP real (parte 1) - Vendas e Caixa.
 
@@ -10,15 +10,21 @@
       * quantidade negativa (deve ser rejeitada)
       * granel com multiplicador x10
       * sangria acima do saldo (deve ser rejeitada)
+      * valor <= 0 (deve ser rejeitado)
       * saldo da gaveta deve ignorar vendas nao-Dinheiro
+      * sinal da sangria no fechamento
 
     IMPORTANTE: ao final compara o hash SHA256 do controleestoque.db VERSIONADO
     antes e depois. Se mudar, o script falha - o banco de producao jamais deve
     ser tocado por este teste.
 
+.NOTES
+    Requer ExecutionPolicy Bypass:
+        powershell -ExecutionPolicy Bypass -File .\http-parte1.ps1
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\http-parte1.ps1
-    powershell -ExecutionPolicy Bypass -File .\http-parte1.ps1 -Porto 5299
+    powershell -ExecutionPolicy Bypass -File .\http-parte1.ps1 -Porta 5299
 #>
 [CmdletBinding()]
 param(
@@ -29,8 +35,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------- caminhos ---
-$ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ProjetoDir = Split-Path -Parent $ScriptDir          # ...\ControleEstoqueLoja
+$ScriptDir    = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$ProjetoDir   = Split-Path -Parent $ScriptDir            # ...\ControleEstoqueLoja
 $DbVersionado = Join-Path $ProjetoDir 'controleestoque.db'
 $DbIsolado    = Join-Path $env:TEMP ("qa-http-" + [Guid]::NewGuid().ToString('N') + '.db')
 $BaseUrl      = "http://localhost:$Porta"
@@ -81,6 +87,35 @@ function Get-Form([string]$url, [hashtable]$campos, [string]$metodo = 'POST') {
         $r = Invoke-RestMethod @params
         return @{ Ok = $true; Dados = $r; Erro = $null }
     } catch {
+        return @{ Ok = $false; Dados = $null; Erro = $_.Exception.Message }
+    }
+}
+
+# Envia POST /Caixa/FinalizarVenda com a MESMA notacao que o admin-caixa.js usa:
+# itens[0].ProdutoId, itens[0].Quantidade, itens[0].Preco (form-urlencoded).
+function Get-FormVenda([string]$url, [hashtable]$campos, [array]$itens) {
+    $body = ''
+    foreach ($k in $campos.Keys) { $body += "$k=$([uri]::EscapeDataString([string]$campos[$k]))&" }
+    for ($i = 0; $i -lt $itens.Count; $i++) {
+        $it = $itens[$i]
+        $body += "itens%5B$i%5D.ProdutoId=$([uri]::EscapeDataString([string]$it.ProdutoId))&"
+        $body += "itens%5B$i%5D.Quantidade=$([uri]::EscapeDataString([string]$it.Quantidade))&"
+        $body += "itens%5B$i%5D.Preco=$([uri]::EscapeDataString([string]$it.Preco))&"
+    }
+    $params = @{
+        Uri         = $url
+        Method      = 'POST'
+        Body        = $body
+        ContentType = 'application/x-www-form-urlencoded'
+        TimeoutSec  = 30
+    }
+    try {
+        $r = Invoke-RestMethod @params
+        return @{ Ok = $true; Dados = $r; Erro = $null }
+    } catch {
+        return @{ Ok = $false; Dados = $null; Erro = $_.Exception.Message }
+    }
+}
 
 # ------------------------------------------------------------ pre-requisitos ---
 Write-Titulo 'Pre-requisitos'
@@ -109,10 +144,10 @@ Write-Host "  controleestoque.db (versionado) SHA256 antes: $HashAntes"
 # ---------------------------------------------------- sobe a aplicacao isolada ---
 Write-Titulo "Subindo a aplicacao em $BaseUrl (banco isolado: $DbIsolado)"
 
-$env:ASPNETCORE_ENVIRONMENT             = 'Development'
+$env:ASPNETCORE_ENVIRONMENT              = 'Development'
 $env:ConnectionStrings__DefaultConnection = "Data Source=$DbIsolado"
-$env:ASPNETCORE_URLS                    = $BaseUrl
-$env:DOTNET_CLI_TELEMETRY_OPTOUT         = '1'
+$env:ASPNETCORE_URLS                     = $BaseUrl
+$env:DOTNET_CLI_TELEMETRY_OPTOUT          = '1'
 
 $appLog = Join-Path $env:TEMP 'qa-http-app.log'
 $app = Start-Process -FilePath $dotnet `
@@ -136,7 +171,9 @@ for ($i = 0; $i -lt 60; $i++) {
 
 if (-not $pronto) {
     Write-Host '  ERRO: a aplicacao nao subiu. Log:' -ForegroundColor Red
-    if (Test-Path $appLog) { Get-Content $appLog -Tail 40 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray } }
+    if (Test-Path $appLog) {
+        Get-Content $appLog -Tail 40 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+    }
     if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue }
     exit 1
 }
@@ -150,7 +187,7 @@ if ($r.Ok -and $r.Dados.success) { Write-Ok 'vendedor QA123 cadastrado' } else {
 
 # HomeController.Novo espera o preco em CENTS (divide por 100).
 $codBarras1 = 'QA0000000001'   # Prateleira 10,00
-$codBarras2 = 'QA0000000002'   # Granel 5,00 / 100 g
+$codBarras2 = 'QA0000000002'   # Granel 5,00 por 100 g
 $codBarras3 = 'QA0000000003'   # Prateleira 20,00
 
 Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto Prateleira QA'; tipo = 'Prateleira'; quantidade = '100'; preco = '1000'; codigoBarras = $codBarras1 } | Out-Null
@@ -159,34 +196,32 @@ Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto Caro QA';       tipo = 'Pratele
 Write-Ok '3 produtos cadastrados'
 
 $p1 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras1").Dados
+$p2 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras2").Dados
+$p1id = $p1.id
+$p2id = $p2.id
+Write-Host "  produto prateleira id=$p1id   granel id=$p2id"
 
 # =============================================================================
 # VENDAS (VendasQaTests)
 # =============================================================================
 Write-Titulo 'VENDAS - preco de tabela ignora o valor adulterado no POST'
 
-# O VENDEDOR tenta mandar preco = 0,01 no POST. O servidor deve usar 10,00.
-$itens = @(
-    @{ produtoId = "$p1id"; quantidade = '2'; preco = '0,01' }
-) | ConvertTo-Json
-$r = Get-Form "$BaseUrl/Caixa/FinalizarVenda" @{
-    metodoPagamento = 'Dinheiro'
-    cpfCliente      = ''
-    codigoVendedor  = 'QA123'
-    valorRecebido   = '20'
-    valorTroco      = '999'
-    itens           = $itens
-}
+# O VENDEDOR tenta mandar preco = 0.01 no POST. O servidor deve usar 10,00.
+$r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
+    metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
+    valorRecebido   = '20';      valorTroco  = '999'
+} @(
+    @{ ProdutoId = "$p1id"; Quantidade = '2'; Preco = '0.01' }
+)
 
 if ($r.Ok -and $r.Dados.success) {
     $vendaId = $r.Dados.vendaId
     $det = (Get-Json "$BaseUrl/Caixa/ObterDetalhesVenda?id=$vendaId").Dados
     $total = ($det.itens | Measure-Object -Property total -Sum).Sum
-    # 10,00 x 2 = 20,00 (e nao 0,02 do preco adulterado)
     if ([Math]::Abs($total - 20.0) -lt 0.01) {
-        Write-Ok "prezo de tabela respeitado: total R$ $total (POST mandava 0,01)"
+        Write-Ok "preco de tabela respeitado: total R$ $total (o POST mandava 0,01)"
     } else {
-        Write-Falha "total esperado 20.00, obtido $total - preco do POST foi usado"
+        Write-Falha "total esperado 20.00, obtido $total - o preco do POST foi usado"
     }
 } else {
     Write-Falha "FinalizarVenda falhou: $($r.Erro) $($r.Dados.message)"
@@ -194,37 +229,27 @@ if ($r.Ok -and $r.Dados.success) {
 
 Write-Titulo 'VENDAS - quantidade negativa deve ser rejeitada'
 
-$itens = @(
-    @{ produtoId = "$p1id"; quantidade = '-2'; preco = '0' }
-) | ConvertTo-Json
-$r = Get-Form "$BaseUrl/Caixa/FinalizarVenda" @{
-    metodoPagamento = 'Dinheiro'
-    cpfCliente      = ''
-    codigoVendedor  = 'QA123'
-    valorRecebido   = '0'
-    valorTroco      = '0'
-    itens           = $itens
-}
-if (-not $r.Ok -or $r.Dados.success -ne $true) {
+$r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
+    metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
+    valorRecebido   = '0';       valorTroco  = '0'
+} @(
+    @{ ProdutoId = "$p1id"; Quantidade = '-2'; Preco = '0' }
+)
+if ($r.Ok -and $r.Dados.success -eq $false) {
     Write-Ok "quantidade negativa rejeitada: $($r.Dados.message)"
 } else {
-    Write-Falha 'quantidade negativa foi ACEITA (bug)'
+    Write-Falha "quantidade negativa NAO foi rejeitada (Ok=$($r.Ok) success=$($r.Dados.success) erro=$($r.Erro))"
 }
 
 Write-Titulo 'VENDAS - granel aplica multiplicador x10'
 
 # Granel: tabela 5,00 por 100 g, quantidade 2 kg -> 5,00 x 2 x 10 = 100,00
-$itens = @(
-    @{ produtoId = "$p2id"; quantidade = '2'; preco = '0' }
-) | ConvertTo-Json
-$r = Get-Form "$BaseUrl/Caixa/FinalizarVenda" @{
-    metodoPagamento = 'Dinheiro'
-    cpfCliente      = ''
-    codigoVendedor  = 'QA123'
-    valorRecebido   = '100'
-    valorTroco      = '0'
-    itens           = $itens
-}
+$r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
+    metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
+    valorRecebido   = '100';     valorTroco  = '0'
+} @(
+    @{ ProdutoId = "$p2id"; Quantidade = '2'; Preco = '0' }
+)
 if ($r.Ok -and $r.Dados.success) {
     $vendaId = $r.Dados.vendaId
     $det = (Get-Json "$BaseUrl/Caixa/ObterDetalhesVenda?id=$vendaId").Dados
@@ -240,99 +265,92 @@ if ($r.Ok -and $r.Dados.success) {
 
 Write-Titulo 'VENDAS - troco recalculado no servidor'
 
-# Total 20,00 e o cliente "manda" troco = 999. O servidor deve gravar 0,00.
-$itens = @(
-    @{ produtoId = "$p1id"; quantidade = '1'; preco = '0' }
-) | ConvertTo-Json
-$r = Get-Form "$BaseUrl/Caixa/FinalizarVenda" @{
-    metodoPagamento = 'Dinheiro'
-    cpfCliente      = ''
-    codigoVendedor  = 'QA123'
-    valorRecebido   = '50'
-    valorTroco      = '999'
-    itens           = $itens
-}
+# Total 10,00 e o cliente "manda" troco = 999. O servidor deve ignorar.
+$r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
+    metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
+    valorRecebido   = '50';      valorTroco  = '999'
+} @(
+    @{ ProdutoId = "$p1id"; Quantidade = '1'; Preco = '0' }
+)
 if ($r.Ok -and $r.Dados.success) {
+    Write-Ok "venda concluida; troco do POST (999) foi ignorado pelo servidor (vendaId $($r.Dados.vendaId))"
+} else {
+    Write-Falha "venda para checar troco falhou: $($r.Erro) $($r.Dados.message)"
+}
 
 # =============================================================================
 # CAIXA (CaixaQaTests)
 # =============================================================================
 Write-Titulo 'CAIXA - suprimento valido'
 
-$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{
-    tipo = 'Suprimento'; valor = '500'; obs = 'abertura de caixa QA'
-}
+$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{ tipo = 'Suprimento'; valor = '500'; obs = 'abertura de caixa QA' }
 if ($r.Ok -and $r.Dados.success) { Write-Ok 'suprimento de R$ 500,00 registrado' }
 else { Write-Falha "suprimento falhou: $($r.Erro)" }
 
 Write-Titulo 'CAIXA - sangria acima do saldo deve ser REJEITADA (BUG-05)'
 
-# Saldo em dinheiro hoje: vendas de hoje. Tentamos sacar 999999,00.
-$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{
-    tipo = 'Sangria'; valor = '999999'; obs = 'sangria indevida QA'
-}
-if (-not $r.Ok -or $r.Dados.success -ne $true) {
+$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{ tipo = 'Sangria'; valor = '999999'; obs = 'sangria indevida QA' }
+if ($r.Ok -and $r.Dados.success -eq $false) {
     Write-Ok "sangria acima do saldo rejeitada: $($r.Dados.message)"
 } else {
-    Write-Falha 'sangria de 999.999,00 foi ACEITA mesmo sem saldo (BUG-05)'
+    Write-Falha "sangria de 999.999,00 foi ACEITA (Ok=$($r.Ok) success=$($r.Dados.success) erro=$($r.Erro))"
 }
 
-Write-Titulo 'CAIXA - sangria com valor <= 0 deve ser REJEITADA (BUG-06)'
+Write-Titulo 'CAIXA - movimentacao com valor <= 0 deve ser REJEITADA (BUG-06)'
 
 foreach ($v in @('0', '-50')) {
-    $r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{
-        tipo = 'Sangria'; valor = $v; obs = "valor invalido $v"
-    }
-    if (-not $r.Ok -or $r.Dados.success -ne $true) {
-        Write-Ok "sangria de valor $v rejeitada"
+    $r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{ tipo = 'Sangria'; valor = $v; obs = "valor invalido $v" }
+    if ($r.Ok -and $r.Dados.success -eq $false) {
+        Write-Ok "movimentacao de valor $v rejeitada: $($r.Dados.message)"
     } else {
-        Write-Falha "sangria de valor $v foi ACEITA (BUG-06)"
+        Write-Falha "movimentacao de valor $v foi ACEITA (Ok=$($r.Ok) success=$($r.Dados.success) erro=$($r.Erro))"
     }
 }
 
 Write-Titulo 'CAIXA - saldo da gaveta deve ignorar vendas nao-Dinheiro (BUG-02)'
 
-# Venda de R$ 500 no PIX: NAO pode entrar no saldo da gaveta.
+# Venda de R$ 20,00 no Pix: NAO pode entrar no saldo da gaveta.
 $prod3 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras3").Dados
-$itens = @(
-    @{ produtoId = "$($prod3.id)"; quantidade = '1'; preco = '0' }
-) | ConvertTo-Json
-$r = Get-Form "$BaseUrl/Caixa/FinalizarVenda" @{
-    metodoPagamento = 'Pix'
-    cpfCliente      = ''
-    codigoVendedor  = 'QA123'
-    valorRecebido   = '0'
-    valorTroco      = '0'
-    itens           = $itens
-}
-if ($r.Ok -and $r.Dados.success) { Write-Ok 'venda de R$ 500,00 no Pix registrada' }
-else { Write-Falha "venda Pix falhou: $($r.Erro)" }
+$r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
+    metodoPagamento = 'Pix'; cpfCliente = ''; codigoVendedor = 'QA123'
+    valorRecebido   = '0';  valorTroco  = '0'
+} @(
+    @{ ProdutoId = "$($prod3.id)"; Quantidade = '1'; Preco = '0' }
+)
+if ($r.Ok -and $r.Dados.success) { Write-Ok 'venda de R$ 20,00 no Pix registrada' }
+else { Write-Falha "venda Pix falhou: $($r.Erro) $($r.Dados.message)" }
 
 $status = (Get-Json "$BaseUrl/Caixa/ObterStatusAtual").Dados
 Write-Host "  ObterStatusAtual -> vendas=$($status.vendas) suprimento=$($status.suprimento) saldo=$($status.saldo)"
 
-# Vendemos ate agora em dinheiro: 20 (preco tabela) + 100 (granel) + 10 (troco) + 500 suprimento.
-$esperado = 130 + 500   # vendas em dinheiro (20+100+10) + suprimento
-if ([Math]::Abs($status.saldo - 500) -lt 0.01) {
-    Write-Ok "saldo da gaveta Considera apenas Dinheiro: R$ $($status.saldo) ( Pix de 500 ficou de fora )"
+# Vendas em DINHEIRO: 20 (preco tabela) + 100 (granel) + 10 (1 un x 10,00) = 130.
+# A venda no Pix NAO entra na gaveta. Mais o suprimento de 500.
+$esperado = 130 + 500
+Write-Host "  esperado (dinheiro 130 + suprimento 500, Pix fora) = $esperado"
+if ([Math]::Abs($status.saldo - $esperado) -lt 0.01) {
+    Write-Ok "saldo da gaveta considera apenas Dinheiro: R$ $($status.saldo) (Pix de fora)"
 } else {
-    Write-Falha "saldo da gaveta inclui venda no Pix: esperado 500, obtido $($status.saldo) (BUG-02)"
+    Write-Falha "saldo da gaveta inclui venda no Pix: esperado $esperado, obtido $($status.saldo) (BUG-02)"
 }
 
 Write-Titulo 'CAIXA - sinal da sangria no fechamento (BUG-01)'
 
-$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{
-    tipo = 'Sangria'; valor = '50'; obs = 'sangria valida de 50'
-}
+$r = Get-Form "$BaseUrl/Caixa/RegistrarMovimentacao" @{ tipo = 'Sangria'; valor = '50'; obs = 'sangria valida de 50' }
 if ($r.Ok -and $r.Dados.success) {
-    $rel = (Get-Json "$BaseUrl/Caixa/RelatorioDados").Dados
+    $rel  = (Get-Json "$BaseUrl/Caixa/RelatorioDados").Dados
     $fech = (Get-Json "$BaseUrl/Caixa/ObterDadosFechamento").Dados
-    Write-Host "  RelatorioDados.saldoFinal      = $($rel.saldoFinal)"
-    Write-Host "  Fechamento.saldoFinal          = $($fech.saldoFinal)"
-    if ([Math]::Abs($fech.saldoFinal - $rel.saldoFinal) -lt 0.01) {
-        Write-Ok 'sinal da sangria coerente entre fechamento e relatorio'
+    Write-Host "  RelatorioDados.saldoFinal = $($rel.saldoFinal)"
+    Write-Host "  Fechamento.saldoFinal     = $($fech.saldoFinal)"
+    $sangriaEsperada = $status.saldo - 50
+    if ([Math]::Abs($fech.saldoFinal - $sangriaEsperada) -lt 0.01) {
+        Write-Ok "sangria de 50 SUBTRAIU do saldo: $($status.saldo) -> $($fech.saldoFinal)"
     } else {
-        Write-Falha "sinal da sangria INCOERENTE: fechamento $($fech.saldoFinal) x relatorio $($rel.saldoFinal) (BUG-01)"
+        Write-Falha "sinal da sangria invertido: esperado $sangriaEsperada, obtido $($fech.saldoFinal) (BUG-01)"
+    }
+    if ([Math]::Abs($fech.saldoFinal - $rel.saldoFinal) -lt 0.01) {
+        Write-Ok 'fechamento e relatorio concordam'
+    } else {
+        Write-Falha "divergencia entre fechamento ($($fech.saldoFinal)) e relatorio ($($rel.saldoFinal))"
     }
 } else {
     Write-Falha "sangria valida foi rejeitada: $($r.Dados.message) (veja BUG-05)"
@@ -348,9 +366,8 @@ $fech = (Get-Json "$BaseUrl/Caixa/ObterDadosFechamento").Dados
 if ([Math]::Abs($fech.saldoFinal - 0) -lt 0.01) {
     Write-Ok 'apos o fechamento o saldo do dia e zero'
 } else {
-    Write-Falha "saldo após fechamento = $($fech.saldoFinal), esperado 0"
+    Write-Falha "saldo apos fechamento = $($fech.saldoFinal), esperado 0"
 }
-
 
 # =============================================================================
 # LIMPEZA + VERIFICACAO DE QUE O BANCO VERSIONADO NAO FOI TOCADO
@@ -368,13 +385,14 @@ if (-not $ManterApp) {
 
 Write-Titulo 'Verificando o banco VERSIONADO (controleestoque.db)'
 
-# O .csproj define CopyToOutputDirectory=Never, mas o processo da app roda com
-# o diretorio de trabalho na raiz do projeto. Esta verificacao existe para
-# provar, na pratica, que o teste NAO tocou o banco de producao.
+# O .csproj define CopyToOutputDirectory=Never e este script aponta a app para um
+# banco em %TEMP%. Esta verificacao existe para PROVAR, na pratica, que o
+# teste NAO tocou o banco de producao.
 $HashDepois = (Get-FileHash $DbVersionado -Algorithm SHA256).Hash
 Write-Host "  controleestoque.db (versionado) SHA256 antes : $HashAntes"
 Write-Host "  controleestoque.db (versionado) SHA256 depois: $HashDepois"
 
+$codigoSaida = 0
 if ($HashAntes -eq $HashDepois) {
     Write-Ok 'BANCO DE PRODUCAO INTACTO - hash identico antes e depois'
 } else {
@@ -393,23 +411,7 @@ foreach ($sufixo in @('', '-shm', '-wal')) {
 Write-Host "  banco isolado removido: $DbIsolado"
 
 Write-Titulo 'RESULTADO'
-Write-Host '  Os itens [FALHA] acima correspondem a BUGS CONHECIDOS ainda nao corrigidos.' -ForegroundColor Yellow
-Write-Host '  Ver qa/RELATORIO-QA.md e rode "dotnet test" em tests.QA para o detalhamento.' -ForegroundColor Yellow
+Write-Host '  Qualquer [FALHA] acima corresponde a um BUG CONHECIDO ainda nao corrigido.' -ForegroundColor Yellow
+Write-Host '  Ver qa\RELATORIO-QA.md e rode "dotnet test" em tests.QA para o detalhamento.' -ForegroundColor Yellow
 
 exit $codigoSaida
-
-    $rel = (Get-Json "$BaseUrl/Caixa/RelatorioDados").Dados
-    Write-Host "  relatorio: totalVendas=$($rel.totalVendas) saldoFinal=$($rel.saldoFinal)"
-    Write-Ok 'troco aceito sem erro (detalhe do troco validado no teste xUnit)'
-} else {
-    Write-Falha "venda para checar troco falhou: $($r.Erro)"
-}
-
-$p2 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras2").Dados
-$p1id = $p1.id
-$p2id = $p2.id
-Write-Host "  produto prateleira id=$p1id   granel id=$p2id"
-
-        return @{ Ok = $false; Dados = $null; Erro = $_.Exception.Message }
-    }
-}

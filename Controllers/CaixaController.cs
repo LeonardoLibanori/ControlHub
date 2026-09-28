@@ -173,12 +173,55 @@ namespace ControleEstoqueLoja.Controllers
                 // Converte o valor (ex: "10.50")
                 decimal valorDecimal = decimal.Parse(valor, System.Globalization.CultureInfo.InvariantCulture);
 
+                // BUG-06: valor <= 0 gerava movimentacao fantasma (Sangria 0 / Suprimento 0)
+                // e poluia o relatorio, porque Math.Abs transformava o valor em 0 e o registro passava.
+                if (valorDecimal <= 0m)
+                {
+                    return Json(new { success = false, message = "O valor deve ser maior que zero." });
+                }
+
+                bool ehSangria = tipo.Contains("Sangria", StringComparison.OrdinalIgnoreCase);
+
+                // BUG-05: sem esta validacao a gaveta pode ficar negativa: o caixa
+                // retirava mais dinheiro do que havia. Valida contra o saldo real,
+                // considerando SO vendas em Dinheiro (fonte unica CalcularSaldoEmGaveta).
+                if (ehSangria)
+                {
+                    DateTime hoje = DateTime.Today;
+
+                    decimal vendasDinheiro = _context.Vendas
+                        .Where(v => v.DataVenda.Date == hoje && !v.IsFechado
+                                    && v.MetodoPagamento == MetodoPagamentoDinheiro)
+                        .Sum(v => (decimal?)v.TotalVenda) ?? 0m;
+
+                    var suprimentosHoje = _context.CaixaMovimentacoes
+                        .Where(m => m.Tipo == "Suprimento" && m.Data.Date == hoje && !m.IsFechado)
+                        .ToList()
+                        .Sum(m => m.Valor);
+
+                    var sangriasHoje = _context.CaixaMovimentacoes
+                        .Where(m => m.Tipo == "Sangria" && m.Data.Date == hoje && !m.IsFechado)
+                        .ToList()
+                        .Sum(m => m.Valor);
+
+                    decimal saldoAtual = CalcularSaldoEmGaveta(vendasDinheiro, suprimentosHoje, sangriasHoje);
+
+                    if (valorDecimal > saldoAtual)
+                    {
+                        return Json(new
+                        {
+                            success = false,
+                            message = $"Sangria maior que o saldo em gaveta. Disponivel: R$ {saldoAtual:N2}."
+                        });
+                    }
+                }
+
                 var movimentacao = new CaixaMovimentacao
                 {
                     Data = DateTime.Now,
                     // Forçamos o nome padrão aqui para o relatório nunca falhar
-                    Tipo = tipo.Contains("Sangria", StringComparison.OrdinalIgnoreCase) ? "Sangria" : "Suprimento",
-                    Valor = tipo.Contains("Sangria", StringComparison.OrdinalIgnoreCase) ? -Math.Abs(valorDecimal) : Math.Abs(valorDecimal),
+                    Tipo = ehSangria ? "Sangria" : "Suprimento",
+                    Valor = ehSangria ? -Math.Abs(valorDecimal) : Math.Abs(valorDecimal),
                     Descricao = string.IsNullOrWhiteSpace(obs) ? tipo : obs
                 };
 
@@ -209,17 +252,19 @@ namespace ControleEstoqueLoja.Controllers
                 .Where(f => f.Tipo == "Sangria" && f.Data.Date == hoje)
                 .SumAsync(f => (decimal?)f.Valor) ?? 0m;
 
-            var totalVendas = await _context.Vendas
-                .Where(v => v.DataVenda.Date == hoje)
+            // COMPLEMENTO A: a gaveta e fisica, entao so entram vendas em DINHEIRO.
+            // Vendas em Credito/Debito/Pix nao deixam dinheiro no caixa.
+            var vendasDinheiro = await _context.Vendas
+                .Where(v => v.DataVenda.Date == hoje && v.MetodoPagamento == MetodoPagamentoDinheiro)
                 .SumAsync(v => (decimal?)v.TotalVenda) ?? 0m;
 
-            // Como salvamos Sangria negativa, aqui somamos para subtrair
-            var saldoEmGaveta = totalVendas + suprimentos + sangrias;
+            // Sangria ja e negativa no banco, entao entra por ADICAO (fonte unica CalcularSaldoEmGaveta).
+            var saldoEmGaveta = CalcularSaldoEmGaveta(vendasDinheiro, suprimentos, sangrias);
 
             return Json(new
             {
                 suprimento = (double)suprimentos,
-                vendas = (double)totalVendas,
+                vendas = (double)vendasDinheiro,
                 sangrias = (double)Math.Abs(sangrias),
                 saldo = (double)saldoEmGaveta
             });
@@ -250,6 +295,29 @@ namespace ControleEstoqueLoja.Controllers
 
             return Math.Round(subtotal, 2, MidpointRounding.AwayFromZero);
         }
+
+        // ------------------------------------------------------------------
+        // GAVETA: fonte unica de verdade do saldo em dinheiro.
+        // Regra compartilhada por ObterStatusAtual, ObterDadosFechamento,
+        // RelatorioDados e pela validacao de saldo do RegistrarMovimentacao.
+        // mesmo criterio ja usado por ObterResumo (vendasDinheiro).
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Unica forma de pagamento que ENTRA FISICAMENTE na gaveta do caixa.
+        /// Vendas em Credito/Debito/Pix nao deixam dinheiro no caixa e por isso
+        /// nao compoem o saldo da gaveta.
+        /// </summary>
+        public const string MetodoPagamentoDinheiro = "Dinheiro";
+
+        /// <summary>
+        /// Saldo fisico da gaveta: vendas em DINHEIRO + suprimentos + sangrias.
+        /// ATENCAO AO SINAL: a sangria ja e gravada com valor NEGATIVO
+        /// (-Math.Abs em RegistrarMovimentacao), por isso ela entra por ADICAO.
+        /// Subtrair aqui inverteria o sinal e a sangria passaria a SOMAR ao saldo.
+        /// </summary>
+        public static decimal CalcularSaldoEmGaveta(decimal vendasDinheiro, decimal suprimentos, decimal sangrias)
+            => vendasDinheiro + suprimentos + sangrias;
 
         public class ItemVendaSimples
         {
@@ -302,8 +370,11 @@ namespace ControleEstoqueLoja.Controllers
                 .OrderByDescending(m => m.Data)
                 .ToListAsync() ?? new List<CaixaMovimentacao>();
 
+            // COMPLEMENTO A: a gaveta e fisica, entao so entram vendas em DINHEIRO.
+            // Vendas em Credito/Debito/Pix nao deixam dinheiro no caixa.
             var totalVendas = await _context.Vendas
-                .Where(v => v.DataVenda >= inicioDia && v.DataVenda <= fimDia)
+                .Where(v => v.DataVenda >= inicioDia && v.DataVenda <= fimDia
+                            && v.MetodoPagamento == MetodoPagamentoDinheiro)
                 .SumAsync(v => (decimal?)v.TotalVenda) ?? 0m;
 
             // Filtros usando Equals para garantir que pegue exatamente o que você forçou no RegistrarMovimentacao
@@ -315,8 +386,8 @@ namespace ControleEstoqueLoja.Controllers
                 .Where(m => m.Tipo.Equals("Sangria", StringComparison.OrdinalIgnoreCase))
                 .Sum(m => m.Valor);
 
-            // Como Sangria já é negativa no banco (-50), somamos para subtrair: 100 + (-50) = 50
-            var saldoFinal = totalVendas + totalSuprimento + totalSangria;
+            // Sangria ja e negativa no banco, entao entra por ADICAO (fonte unica CalcularSaldoEmGaveta).
+            var saldoFinal = CalcularSaldoEmGaveta(totalVendas, totalSuprimento, totalSangria);
 
             return Json(new
             {
@@ -441,8 +512,11 @@ namespace ControleEstoqueLoja.Controllers
                 DateTime hoje = DateTime.Today;
 
                 // FILTRO CRÍTICO: v.DataVenda.Date == hoje && !v.IsFechado
+                // COMPLEMENTO A: a gaveta e fisica, entao so entram vendas em DINHEIRO.
+                // Vendas em Credito/Debito/Pix nao deixam dinheiro no caixa.
                 decimal totalVendas = _context.Vendas
-                    .Where(v => v.DataVenda.Date == hoje && !v.IsFechado)
+                    .Where(v => v.DataVenda.Date == hoje && !v.IsFechado
+                                && v.MetodoPagamento == MetodoPagamentoDinheiro)
                     .Sum(v => (decimal?)v.TotalVenda) ?? 0;
 
                 decimal suprimentos = _context.CaixaMovimentacoes
@@ -453,7 +527,10 @@ namespace ControleEstoqueLoja.Controllers
                     .Where(m => m.Data.Date == hoje && m.Tipo == "Sangria" && !m.IsFechado)
                     .Sum(m => (decimal?)m.Valor) ?? 0;
 
-                decimal saldoFinal = (totalVendas + suprimentos) - sangrias;
+                // BUG-01 (sinal da sangria): a sangria ja e gravada NEGATIVA, entao
+                // entra por ADICAO. Antes era (totalVendas + suprimentos) - sangrias,
+                // que invertia o sinal e fazia a sangria SOMAR ao saldo.
+                decimal saldoFinal = CalcularSaldoEmGaveta(totalVendas, suprimentos, sangrias);
 
                 // Detalhamento de estoque (apenas do que ainda não foi fechado)
                 var produtosSaida = _context.VendaItens
