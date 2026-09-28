@@ -36,9 +36,11 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
         {
-            // Validação do Vendedor
+            // BUG-18: valida e finaliza a venda com o MESMO critério de comparação
+            // (NormalizarCupom), senão o cupom validado seria rejeitado na venda.
+            var cupomNormalizado = NormalizarCupom(codigoVendedor);
             var vendedor = await _context.Vendedores
-                .FirstOrDefaultAsync(v => v.Codigo == codigoVendedor && v.Ativo);
+                .FirstOrDefaultAsync(v => v.Codigo.ToUpper() == cupomNormalizado && v.Ativo);
 
             if (vendedor == null)
             {
@@ -309,6 +311,17 @@ namespace ControleEstoqueLoja.Controllers
         /// nao compoem o saldo da gaveta.
         /// </summary>
         public const string MetodoPagamentoDinheiro = "Dinheiro";
+
+        /// <summary>
+        /// Normaliza o CUPOM (código do vendedor) em UM ÚNICO formato.
+        /// BUG-18: ValidarCupom comparava com ToUpper() nos dois lados (case-insensitive),
+        /// mas FinalizarVenda comparava direto com "=". No SQLite o "=" é case-SENSITIVE
+        /// (collation BINARY), então o cupom "CUPOM1" era aceito na validação como "cupom1"
+        /// e a venda era REJEITADA logo em seguida por "cupom não encontrado".
+        /// Trim remove espaços acidentais; ToUpper unifica a caixa.
+        /// </summary>
+        public static string NormalizarCupom(string? codigo)
+            => (codigo ?? string.Empty).Trim().ToUpper();
 
         /// <summary>
         /// Saldo fisico da gaveta: vendas em DINHEIRO + suprimentos + sangrias.
@@ -627,10 +640,23 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public async Task<IActionResult> CadastrarVendedor(string nome, string codigo)
         {
-            if (await _context.Vendedores.AnyAsync(v => v.Codigo == codigo))
+            // BUG-18: grava sempre o cupom NORMALIZADO e compara duplicado pelo mesmo
+            // critério das demais rotas, para que o código digitado de formas diferentes
+            // (maiúscula/minúscula/espaços) seja sempre reconhecido.
+            var cupom = NormalizarCupom(codigo);
+
+            if (string.IsNullOrWhiteSpace(cupom))
+                return Json(new { success = false, message = "Código do cupom é obrigatório." });
+
+            if (await _context.Vendedores.AnyAsync(v => v.Codigo.ToUpper() == cupom))
                 return Json(new { success = false, message = "Código já existe!" });
 
-            _context.Vendedores.Add(new Vendedor { Nome = nome, Codigo = codigo, Ativo = true });
+            _context.Vendedores.Add(new Vendedor
+            {
+                Nome = nome?.Trim(),
+                Codigo = cupom,
+                Ativo = true
+            });
             await _context.SaveChangesAsync();
             return Json(new { success = true });
         }
@@ -639,7 +665,7 @@ namespace ControleEstoqueLoja.Controllers
         public async Task<IActionResult> VerVendasVendedor(string codigo)
         {
             var vendas = await _context.Vendas
-                .Where(v => v.CodigoVendedor == codigo && v.DataVenda.Date == DateTime.Today)
+                .Where(v => v.CodigoVendedor == NormalizarCupom(codigo) && v.DataVenda.Date == DateTime.Today)
                 .Select(v => new { v.Id, Total = v.TotalVenda, v.DataVenda })
                 .ToListAsync();
             return Json(vendas);
@@ -653,9 +679,10 @@ namespace ControleEstoqueLoja.Controllers
             if (string.IsNullOrEmpty(codigo))
                 return Json(new { exists = false });
 
-            // Verifica se existe algum vendedor com esse código e que esteja ativo
+            // Verifica se existe algum vendedor com esse código e que esteja ativo.
+            // Mesmo critério (NormalizarCupom) usado no FinalizarVenda.
             var existe = await _context.Vendedores
-                .AnyAsync(v => v.Codigo.ToUpper() == codigo.ToUpper() && v.Ativo);
+                .AnyAsync(v => v.Codigo.ToUpper() == NormalizarCupom(codigo) && v.Ativo);
 
             return Json(new { exists = existe });
         }
@@ -682,7 +709,8 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public async Task<IActionResult> ExcluirVendedor(string codigo)
         {
-            var vendedor = await _context.Vendedores.FirstOrDefaultAsync(v => v.Codigo == codigo);
+            var cupom = NormalizarCupom(codigo);
+            var vendedor = await _context.Vendedores.FirstOrDefaultAsync(v => v.Codigo.ToUpper() == cupom);
             if (vendedor == null) return Json(new { success = false, message = "Vendedor não encontrado." });
 
             vendedor.Ativo = false; // Desativa em vez de deletar para manter integridade

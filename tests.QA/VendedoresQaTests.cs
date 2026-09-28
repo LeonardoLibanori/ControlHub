@@ -55,8 +55,16 @@ public class VendedoresQaTests
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }
             });
 
-        Assert.True(venda.IsSuccess(),
-            $"ValidarCupom aceitou 'cupom1' mas FinalizarVenda rejeitou: {venda.GetStr("message")}");
+        // CORRECAO DE HARNESS (28/09/2026): a expectativa deste teste está CORRETA
+        // (a venda com o cupom validado deve passar). O que estava errado era o código:
+        // em C# o argumento de mensagem do Assert.True é avaliado SEMPRE, mesmo quando a
+        // condição é verdadeira. Como o JSON de sucesso não tem a propriedade "message",
+        // GetStr("message") estourava uma exceção e o teste falhava apesar da venda
+        // ter sido concluída (success, vendaId). Assert.Fail só executa na falha.
+        if (!venda.IsSuccess())
+        {
+            Assert.Fail($"ValidarCupom aceitou 'cupom1' mas FinalizarVenda rejeitou: {venda.GetStr("message")}");
+        }
     }
 
     // CONTROLE: a validacao aceita o codigo exato.
