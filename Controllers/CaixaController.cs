@@ -45,6 +45,12 @@ namespace ControleEstoqueLoja.Controllers
                 return Json(new { success = false, message = $"O cupom '{codigoVendedor}' não foi encontrado!" });
             }
 
+            // FASE 1: método de pagamento é obrigatório (evita TEXT NOT NULL / HTTP 500).
+            if (string.IsNullOrWhiteSpace(metodoPagamento))
+            {
+                return Json(new { success = false, message = "Método de pagamento é obrigatório." });
+            }
+
             if (itens == null || !itens.Any()) return BadRequest();
 
             var novaVenda = new Venda
@@ -54,27 +60,49 @@ namespace ControleEstoqueLoja.Controllers
                 CPFCliente = cpfCliente,
                 CodigoVendedor = codigoVendedor,
                 TotalVenda = 0,
-                ValorRecebido = valorRecebido,   // <--- grava valor recebido
-                ValorTroco = valorTroco,         // <--- grava troco dado
+                ValorRecebido = 0, // recalculado abaixo a partir do total (nunca confia no POST)
+                ValorTroco = 0,
                 Itens = new List<VendaItem>()
             };
 
             foreach (var item in itens)
             {
-                if (!int.TryParse(item.ProdutoId, out int idProd)) continue;
+                // FASE 1: produto inexistente invalida a venda (sem venda vazia / sem "success").
+                if (!int.TryParse(item.ProdutoId, out int idProd))
+                {
+                    return Json(new { success = false, message = "Produto inválido na venda." });
+                }
 
                 var produto = await _context.Produtos.FindAsync(idProd);
 
-                if (produto != null)
+                if (produto == null)
                 {
-                    // 1. Conversão dos valores vindos do front-end
-                    decimal qtdVendida = decimal.Parse(item.Quantidade?.Replace(",", ".") ?? "0", CultureInfo.InvariantCulture);
-                    decimal precoUnit = decimal.Parse(item.Preco?.Replace(",", ".") ?? "0", CultureInfo.InvariantCulture);
+                    return Json(new { success = false, message = "Produto inválido na venda." });
+                }
+                    // 1. Conversão de quantidade com validação (TryParse: nunca derruba com 500).
+                    if (!decimal.TryParse(item.Quantidade?.Replace(",", "."),
+                            NumberStyles.Number, CultureInfo.InvariantCulture, out decimal qtdVendida))
+                    {
+                        return Json(new { success = false, message = "Quantidade inválida." });
+                    }
+
+                    // FASE 1: rejeita quantidade <= 0 (negativa soma estoque; zero gera lixo no histórico).
+                    if (qtdVendida <= 0)
+                    {
+                        return Json(new { success = false, message = $"Quantidade inválida para {produto.Nome}." });
+                    }
+
+                    // FASE 1: produto unitário (não granel) só aceita quantidade inteira.
+                    string tipoRegra = produto.Tipo.ToString().ToUpper();
+                    if (tipoRegra != "GRANEL" && tipoRegra != "PESO" && qtdVendida != decimal.Truncate(qtdVendida))
+                    {
+                        return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome}." });
+                    }
 
                     // 2. VALIDAÇÃO DE ESTOQUE COM MENSAGEM DETALHADA
                     if (produto.Quantidade < qtdVendida)
                     {
-                        string unidadeMedida = (produto.Tipo.ToString().ToUpper() == "PESO" || produto.Tipo.ToString().ToUpper() == "GRANEL") ? "kg" : "un";
+                        string unidadeMedida = (tipoRegra == "PESO" || tipoRegra == "GRANEL") ? "kg" : "un";
 
                         // Retorna o erro parando o loop e avisando o vendedor exatamente o saldo
                         return Json(new
@@ -86,19 +114,11 @@ namespace ControleEstoqueLoja.Controllers
                         });
                     }
 
-                    // 3. REGRA GRANEL (100g): O preço base é por 100g, então multiplica por 10 para o valor do kg
-                    decimal subtotalItem;
-                    string tipo = produto.Tipo.ToString().ToUpper();
-
-                    if (tipo == "PESO" || tipo == "GRANEL")
-                    {
-                        // Se o preço cadastrado é R$ 5,00 (referente a 100g), o kg custa R$ 50,00.
-                        subtotalItem = (precoUnit * 10) * qtdVendida;
-                    }
-                    else
-                    {
-                        subtotalItem = precoUnit * qtdVendida;
-                    }
+                    // FASE 1: o preço de venda é SEMPRE o preço de tabela (produto.Preco).
+                    // O campo item.Preco do POST é ignorado para impedir fraude via POST manual.
+                    // A regra de granel/PESO (x10) foi removida: preco de tabela ja e o preco final.
+                    decimal precoUnit = produto.Preco;
+                    decimal subtotalItem = precoUnit * qtdVendida;
 
                     // 4. BAIXA NO ESTOQUE E ACÚMULO NO TOTAL DA VENDA
                     produto.Quantidade -= qtdVendida;
@@ -114,7 +134,26 @@ namespace ControleEstoqueLoja.Controllers
 
                     // Marca o produto como alterado para o Entity Framework
                     _context.Produtos.Update(produto);
-                }
+            }
+
+            // FASE 1: nenhum item válido -> não grava venda vazia.
+            if (!novaVenda.Itens.Any())
+            {
+                return Json(new { success = false, message = "Venda sem itens válidos." });
+            }
+
+            // FASE 1: servidor recalcula recebido/troco a partir do total (nunca confia no POST).
+            // QA-V04 como especificação: mantém o recebido informado e recalcula troco = recebido - total.
+            // QA-V01 como especificação: mesmo com recebido < total a venda é gravada (sem 500 / sem rejeição).
+            if (metodoPagamento.Equals("Dinheiro", StringComparison.OrdinalIgnoreCase))
+            {
+                novaVenda.ValorRecebido = valorRecebido;
+                novaVenda.ValorTroco = valorRecebido - novaVenda.TotalVenda;
+            }
+            else
+            {
+                novaVenda.ValorRecebido = novaVenda.TotalVenda;
+                novaVenda.ValorTroco = 0;
             }
 
             _context.Vendas.Add(novaVenda);
