@@ -1,0 +1,28 @@
+@model string
+@*
+    Exibe um aviso de TempData usando o SweetAlert2 já carregado no _Layout.
+    A mensagem viaja em data-mensagem (atributo HTML), que o Razor escapa
+    automaticamente — em vez de ser interpolada dentro de um <script>, o que
+    permitiria injeção de HTML/JavaScript pelo conteúdo da mensagem.
+    DOMContentLoaded garante que o SweetAlert2 (carregado no fim do _Layout)
+    já esteja definido quando este script roda.
+*@
+@if (!string.IsNullOrWhiteSpace(Model))
+{
+    <div data-aviso-qa data-mensagem="@Model" hidden></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-aviso-qa]').forEach(function (el) {
+                var msg = el.getAttribute('data-mensagem');
+                if (!msg) return;
+                Swal.fire({
+                    title: 'Atenção!',
+                    text: msg,
+                    icon: 'warning',
+                    confirmButtonText: 'ENTENDI',
+                    confirmButtonColor: '#ffc107'
+                });
+            });
+        });
+    </script>
+}

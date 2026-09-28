@@ -1,4 +1,15 @@
 ﻿@model ControleEstoqueLoja.Models.Produto
+@{
+    // BUG-21: AjustarEstoque define TempData["Erro"] (ex.: "Estoque insuficiente!") ao
+    // barrar a remoção, mas nenhuma view o exibia — o operador achava que o botão não
+    // funcionava. O partial _Aviso transforma o TempData em um alerta SweetAlert2.
+    var mensagemErro = TempData["Erro"] as string;
+}
+
+@if (!string.IsNullOrWhiteSpace(mensagemErro))
+{
+    <partial name="_Aviso" model="mensagemErro" />
+}
 
 <div class="main-container">
     <div class="text-center mb-4">

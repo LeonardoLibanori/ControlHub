@@ -21,18 +21,51 @@ ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 | Métrica | Valor |
 |---|---|
 | Total de testes | **55** |
-| ✅ Aprovados (comportamento correto) | **39** |
-| ❌ Falhando (bug presente) | **16** |
+| ✅ Aprovados (comportamento correto) | **47** |
+| ❌ Falhando (bug presente) | **8** |
 
-Última atualização: **28/09/2026** — corrigidos os 6 bugs de **Caixa** (BUG-01 a BUG-06).
-Ficou vermelho: Produtos, Vendedores, Dados, Segurança e Lacunas (16 casos).
+Última atualização: **28/09/2026** — segunda etapa da Fase 2 (Produtos, Vendedores e
+Lacunas) sem migration. Juntando com a etapa anterior (Caixa), são **13 bugs corrigidos**.
+Ficou vermelho: 1 CASCADE + 2 Dados + 5 Segurança (8 casos de teste).
 
 Os testes são de **caracterização**: falham enquanto o bug existir e passam quando for
 corrigido. Nenhum código de produção foi alterado para fazê-los passar.
 
-> ⚠️ **Nota sobre contagem:** `RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` é um
-> `[Theory]` com 2 casos (`"0"` e `"-50"`). Por isso 6 *bugs* de Caixa correspondem a
-> **7 casos de teste**. Os números acima são de **casos**, não de métodos.
+> ⚠️ **Nota sobre contagem:** dois testes são `[Theory]` com 2 casos cada
+> (`RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` e `Novo_DeveRejeitarPrecoNegativo`).
+> Por isso **13 bugs** correspondem a **14 casos de teste**. Os números acima são de
+> **casos**, não de métodos.
+
+---
+
+## ✅ Corrigido em 28/09/2026 — Produtos, Vendedores e Lacunas (Fase 2, parte 2)
+
+Sem migration, sem tocar em Segurança.
+
+| ID | O que foi corrigido | Onde | Teste |
+|---|---|---|---|
+| BUG-07 | Editar produto zerava o estoque: `TryParse` sem checar o retorno fazia `Quantidade = 0` quando a view não envia o campo | `HomeController.Editar` | `ProdutosQaTests.Editar_DevePreservarEstoque_QuandoCampoQuantidadeNaoEnviado` |
+| BUG-09 | Cadastro aceitia código de barras duplicado (quebrava o PDV ao bipar) | `HomeController.Novo` | `ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado` |
+| BUG-10 | Cadastro aceitia preço negativo | `HomeController.Novo` | `ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo` |
+| BUG-11 | Cadastro aceitava estoque negativo | `HomeController.Novo` | `ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo` |
+| BUG-18 | `ValidarCupom` (ToUpper) e `FinalizarVenda` (=) divergiam em caixa | `CaixaController` | `VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas` |
+| BUG-21 | `TempData["Erro"]` nunca exibido em nenhuma view | `Views/Shared/_Aviso.cshtml` + `Produto.cshtml`/`Index.cshtml` | `LacunasQaTests.TempDataErro_DeveSerExibidoNaView` |
+| BUG-22 | `HomeController` sem action `Error` (handler global apontava para 404) | `HomeController.Error` + `Views/Home/Error.cshtml` | `LacunasQaTests.HomeController_DevePossuirActionError` |
+
+**Detalhes:**
+
+- **BUG-07:** `Quantidade` só é sobrescrita quando o campo foi de fato enviado e é um
+  número válido. O ajuste continua sendo feito por `AjustarEstoque`.
+- **BUG-09/10/11:** as rejeições usam `TempData["Erro"]` + redirect, o mesmo padrão já
+  usado por `AjustarEstoque`, e aparecem ao operador via SweetAlert2 (ver BUG-21).
+- **BUG-18:** novo `CaixaController.NormalizarCupom()` (`Trim().ToUpper()`) é aplicado em
+  `ValidarCupom`, `FinalizarVenda`, `CadastrarVendedor` (grava normalizado e bloqueia
+  duplicado normalizado), `ExcluirVendedor` e `VerVendasVendedor`.
+- **BUG-21:** novo partial `Views/Shared/_Aviso.cshtml` renderiza o `TempData` como alerta
+  SweetAlert2 (já carregado no layout), sem duplicar HTML entre as views. A mensagem viaja
+  em atributo `data-mensagem` (escapado pelo Razor), não interpolada em `<script>`.
+- **BUG-22:** a action `Error` + view em português **não expõem stack trace nem
+  `ex.Message`** — apenas o identificador da requisição para correlacionar com o log.
 
 ---
 
@@ -71,19 +104,6 @@ permaneceu com o hash `D38374DA...1609`.
 
 ## Severidade Crítica (pendentes)
 
-### BUG-07 — Editar produto zera o estoque
-`HomeController.Editar` (linha 134)
-
-```csharp
-decimal.TryParse(quantidade?..., out decimal qtd);   // retorno ignorado
-produto.Quantidade = qtd;                            // = 0 quando a view não envia
-```
-
-`Views/Home/Editar.cshtml` não tem o campo `quantidade`, então `qtd` vira **0** e salvar a
-edição **apaga todo o estoque**, silenciosamente.
-
-→ `ProdutosQaTests.Editar_DevePreservarEstoque_QuandoCampoQuantidadeNaoEnviado`
-
 ### BUG-08 — `ON DELETE CASCADE` apaga histórico de vendas
 `Migrations/20260220171624_Inicial_Nova.cs` (linhas 111–116)
 
@@ -115,7 +135,6 @@ busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
 | BUG-10 | Cadastro aceita preço negativo | `ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo` |
 | BUG-11 | Cadastro aceita estoque negativo | `ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo` |
 | BUG-14 | POSTs sem `[ValidateAntiForgeryToken]` (CSRF) | `SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery` |
-| BUG-18 | Case-sensitivity entre `ValidarCupom` (`.ToUpper()`) e `FinalizarVenda` (`==`): no SQLite o `=` é case-sensitive, então o cupom é **validado** e depois **rejeitado** | `VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas` |
 | BUG-19 | `Program.cs` usa `EnsureCreated()` em vez de `Migrate()` — migrations novas nunca são aplicadas em base existente | `DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated` |
 | BUG-20 | `decimal` mapeado como `TEXT` no SQLite — `ORDER BY` fica lexicográfico (`"10,00" < "9,00"`), quebrando relatórios | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
 
@@ -128,8 +147,6 @@ busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
 | BUG-15 | `ListarVendedores` vaza `ex.Message` ao cliente | `SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao` |
 | BUG-16 | `ObterDadosFechamento` vaza `ex.Message` ao cliente | `SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao` |
 | BUG-17 | `RegistrarMovimentacao` vaza `FormatException` ao cliente | `SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao` |
-| BUG-21 | `TempData["Erro"]` definido em `AjustarEstoque` **nunca é exibido** — o usuário recebe a tela sem aviso | `LacunasQaTests.TempDataErro_DeveSerExibidoNaView` |
-| BUG-22 | `HomeController` não tem a action `Error`, mas `Program.cs` aponta `UseExceptionHandler("/Home/Error")` → **404** em produção | `LacunasQaTests.HomeController_DevePossuirActionError` |
 
 > **Filtro de data do Histórico:** `CaixaController.Historico` **aplica corretamente** o
 > filtro no controller, então `LacunasQaTests.Historico_DeveRespeitarOFiltroDeData` **passa**.

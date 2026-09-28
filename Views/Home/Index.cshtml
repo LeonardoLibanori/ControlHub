@@ -1,5 +1,19 @@
 ﻿@model List<ControleEstoqueLoja.Models.Produto>
 
+@*
+    Exibe os avisos de TempData vindos das validações de Novo/Editar
+    (preço negativo, estoque negativo, código de barras duplicado).
+    Mesmo partial _Aviso usado em Produto.cshtml — sem duplicar HTML.
+*@
+@{
+    var mensagemErro = TempData["Erro"] as string;
+}
+
+@if (!string.IsNullOrWhiteSpace(mensagemErro))
+{
+    <partial name="_Aviso" model="mensagemErro" />
+}
+
 @* QUADRÃO PRINCIPAL (O EXTERNO) *@
 <div class="main-container">
 
