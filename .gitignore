@@ -285,6 +285,13 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+controleestoque.db
+
 # Visual Studio 6 build log
 *.plg
 
