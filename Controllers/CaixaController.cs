@@ -116,9 +116,10 @@ namespace ControleEstoqueLoja.Controllers
 
                     // FASE 1: o preço de venda é SEMPRE o preço de tabela (produto.Preco).
                     // O campo item.Preco do POST é ignorado para impedir fraude via POST manual.
-                    // A regra de granel/PESO (x10) foi removida: preco de tabela ja e o preco final.
-                    decimal precoUnit = produto.Preco;
-                    decimal subtotalItem = precoUnit * qtdVendida;
+                    // Granel: a tabela guarda o preço por 100 g -> o preço efetivo por kg é preco*10.
+                    // Regra centralizada em CalcularSubtotalItem (única fonte de verdade).
+                    decimal precoUnit = CalcularSubtotalItem(produto, 1m);
+                    decimal subtotalItem = CalcularSubtotalItem(produto, qtdVendida);
 
                     // 4. BAIXA NO ESTOQUE E ACÚMULO NO TOTAL DA VENDA
                     produto.Quantidade -= qtdVendida;
@@ -232,6 +233,23 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         // --- CLASSES AUXILIARES ---
+
+        /// <summary>
+        /// REGRA ÚNICA de subtotal de item de venda (fonte de verdade para FinalizarVenda,
+        /// cupom e ObterDetalhesVenda).
+        /// O preço vem SEMPRE da tabela (produto.Preco), nunca do POST.
+        /// Granel: o cadastro (Novo.cshtml) guarda o preço por 100 g e a quantidade em kg,
+        /// então multiplica por 10 (R$ 5,00/100 g = R$ 50,00/kg x qtd em kg).
+        /// </summary>
+        public static decimal CalcularSubtotalItem(Produto produto, decimal quantidade)
+        {
+            decimal subtotal = produto.Preco * quantidade;
+
+            if (produto.Tipo == TipoProduto.Granel)
+                subtotal *= 10;
+
+            return Math.Round(subtotal, 2, MidpointRounding.AwayFromZero);
+        }
 
         public class ItemVendaSimples
         {
