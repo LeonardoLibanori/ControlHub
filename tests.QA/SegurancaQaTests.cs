@@ -84,7 +84,10 @@ public class SegurancaQaTests
         // 1) O cadastro deve rejeitar/sanitizar o nome.
         using (var qa = new QaContext())
         {
-            var controller = new HomeController(qa.Context);
+            // Sem HttpContext o TempData não pode ser escrito; ComTempData() é apenas
+            // infraestrutura de teste. NÃO altera o que este teste verifica: o nome
+            // com payload de XSS continua sendo gravado (o teste segue vermelho por isso).
+            var controller = new HomeController(qa.Context).ComTempData();
             controller.Novo(nomeMalicioso, "Prateleira", "1", "100", "XSS001");
 
             var salvo = qa.Context.Produtos.AsNoTracking()
