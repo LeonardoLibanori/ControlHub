@@ -19,6 +19,15 @@
     <Compile Remove="Models\Class.cs" />
   </ItemGroup>
 
+  <!-- A suite de QA fica dentro do repo, mas NAO faz parte do app:
+       sem estas exclusoes o Web SDK compila os .cs de tests.QA no projeto web. -->
+  <ItemGroup>
+    <Compile Remove="tests.QA\**" />
+    <Content Remove="tests.QA\**" />
+    <EmbeddedResource Remove="tests.QA\**" />
+    <None Remove="tests.QA\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Remove="Views\Caixa\Index1.cshtml" />
     <Content Remove="Views\Caixa\Index2.cshtml" />
