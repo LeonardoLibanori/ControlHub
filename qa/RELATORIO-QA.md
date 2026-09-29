@@ -16,6 +16,21 @@ dotnet test
 Cada teste cria um **banco SQLite isolado em `%TEMP%`** (`qa-teste-<guid>.db`) e o remove
 ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 
+### Testes por HTTP real (aplicação de verdade, banco isolado)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\qa\http-authz.ps1
+```
+
+Os scripts sobem a aplicação com `dotnet run` apontando para um banco descartável em
+`%TEMP%` e conferem o hash SHA256 do `controleestoque.db` **antes e depois** — falham se
+o banco versionado mudar.
+
+| Script | Escopo | Estado |
+|---|---|---|
+| `qa/http-authz.ps1` | Autorização dos 3 perfis (anônimo / Operador / Dono) — **BUG-13** | ✅ **66/66** checagens, 0 falhas |
+| `qa/http-parte1.ps1` | Vendas e caixa da Fase 1 (BUG-01/02/05/06) | ⚠️ **histórico/superado**: foi escrito **antes** do BUG-14 (não envia token anti-forgery), do BUG-13 (não faz login) e da divisão de `RegistrarMovimentacao` (a rota antiga hoje responde 405). Acumula **14 falhas de preparação que não são bugs atuais**; para voltar a valer precisa do mesmo preâmbulo de Setup/login e das rotas novas de sangria/suprimento. |
+
 ## Estado atual
 
 | Métrica | Valor |
@@ -30,6 +45,9 @@ gestão de usuários só-Dono (`702ae85`). Antes destas duas, três correções 
 segurança **sem** autenticação: XSS armazenado (BUG-12), vazamento de
 `ex.Message` (BUG-15/16/17) e token anti-forgery em todos os POSTs (BUG-14).
 Ficou vermelho apenas `Decimal_NaoDeveSerPersistidoComoText` (**BUG-20**).
+O teste HTTP dos 3 perfis, que até então era um script descartável em `%TEMP%`,
+passou a ser **versionado** em `qa/http-authz.ps1` (66/66 checagens) — ver
+*Como executar*.
 
 Os 2 testes de concorrência foram recuperados do notebook antigo em 29/09/2026
 (commit `11b88f0`): ambos passam, porque a branch atual já rejeita a venda
@@ -43,6 +61,20 @@ corrigido. Nenhum código de produção foi alterado para fazê-los passar.
 > (`RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` e `Novo_DeveRejeitarPrecoNegativo`).
 > Por isso **15 bugs** correspondem a **16 casos de teste**. Os números acima são de
 > **casos**, não de métodos.
+
+---
+
+## Lacunas conhecidas
+
+Comportamentos que **não são bugs** — o sistema funciona como foi projetado — mas
+que são limitações conscientes da versão atual. Ficam registrados aqui para não
+serem confundidos com falhas nem redescobertos como "novidade" em uma próxima fase:
+
+- **Gestão de usuários não permite editar/desativar conta existente** — hoje só é
+  possível criar e listar. Desativação de Operador que saiu da empresa exigiria
+  alteração direta no banco. A tela `/Usuarios` mostra a situação de cada conta
+  (Ativo/Bloqueado por tentativas erradas), mas não tem ação de editar, trocar
+  senha ou inativar.
 
 ---
 
@@ -153,9 +185,11 @@ inverteria o sinal.
 inalterada) e o vazamento de `ex.Message` (BUG-17, Segurança) segue **pendente** por estar
 fora do escopo desta etapa.
 
-`qa/http-parte1.ps1` valida os mesmos pontos por HTTP real (primeira execução em
+`qa/http-parte1.ps1` validou os mesmos pontos por HTTP real (primeira execução em
 28/09/2026): **todas as verificações passaram** e o `controleestoque.db` versionado
-permaneceu com o hash `D38374DA...1609`.
+permaneceu com o hash `D38374DA...1609`. **Atenção:** esse script é anterior ao
+BUG-14/BUG-13 e hoje não roda mais contra a aplicação atual — ver o aviso em
+*Como executar*.
 
 ---
 
@@ -182,7 +216,9 @@ _Nenhum pendente. BUG-15/16/17 (vazamento de `ex.Message`) foram corrigidos em
 > **Filtro de data do Histórico:** `CaixaController.Historico` **aplica corretamente** o
 > filtro no controller, então `LacunasQaTests.Historico_DeveRespeitarOFiltroDeData` **passa**.
 > O sintoma percebido na tela está na camada de rota/view e não é coberto por teste
-> unitário — ver `qa/http-parte1.ps1`.
+> unitário — o script `qa/http-parte1.ps1` que cobria esse caminho é
+> **histórico/superado** (ver *Como executar*), então o ponto continua **aberto**
+> e sem reprodução automatizada.
 
 ---
 
@@ -290,10 +326,14 @@ policy**. Três entregas, nesta ordem:
 
 ### Evidência HTTP — 3 perfis (66/66 checagens)
 
-Script manual em `%TEMP%\manual-authz.ps1` (não versionado, por higiene — ver
-`qa/http-parte1.ps1`), banco **isolado** em `%TEMP%\qa-estoque\manual-authz\`:
-o `controleestoque.db` versionado **não foi aberto** em nenhum momento. Três
-sessões de cookie independentes, aplicação real na porta 5400:
+Script **versionado** em `qa/http-authz.ps1` (mesmo padrão do `qa/http-parte1.ps1`:
+`-Porta`, `-ManterApp`, banco isolado em `%TEMP%` e conferência do hash do banco
+versionado no início e no fim), banco **isolado** em `%TEMP%\qa-authz-<guid>.db`:
+o `controleestoque.db` versionado **não é aberto** em nenhum momento — o script falha
+se o hash mudar. Três sessões de cookie independentes, aplicação real na porta 5400
+(o Dono nasce em `/Account/Setup`, o Operador é criado pela tela `/Usuarios`); a
+execução versionada terminou com **66/66 checagens e 0 falhas** e o hash
+`80D3F707…A8B8A` idêntico antes e depois:
 
 | Perfil | Resultado |
 |---|---|
