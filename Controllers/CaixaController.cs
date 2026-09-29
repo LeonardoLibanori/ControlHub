@@ -18,8 +18,9 @@ namespace ControleEstoqueLoja.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // 1. Busca os produtos no banco de dados
-            var produtos = await _context.Produtos.ToListAsync();
+            // 1. Busca os produtos ATIVOS no banco de dados
+            // (BUG-08: produtos desativados por soft delete nao aparecem no PDV)
+            var produtos = await _context.Produtos.Where(p => p.Ativo).ToListAsync();
 
             // 2. Alimenta a ViewBag que o seu HTML (o @foreach) está procurando
             ViewBag.Produtos = produtos;
@@ -75,9 +76,10 @@ namespace ControleEstoqueLoja.Controllers
                     return Json(new { success = false, message = "Produto inválido na venda." });
                 }
 
+                // BUG-08: um produto desativado (soft delete) nao pode mais ser vendido.
                 var produto = await _context.Produtos.FindAsync(idProd);
 
-                if (produto == null)
+                if (produto == null || !produto.Ativo)
                 {
                     return Json(new { success = false, message = "Produto inválido na venda." });
                 }
@@ -726,7 +728,7 @@ namespace ControleEstoqueLoja.Controllers
             // ignorando qualquer "cache" ou memória antiga.
             var p = await _context.Produtos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .FirstOrDefaultAsync(x => x.Id == id && x.Ativo);
 
             if (p == null) return Json(new { success = false });
 
@@ -746,7 +748,7 @@ namespace ControleEstoqueLoja.Controllers
         {
             var p = await _context.Produtos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.CodigoBarras == codigo || x.Id.ToString() == codigo);
+                .FirstOrDefaultAsync(x => x.Ativo && (x.CodigoBarras == codigo || x.Id.ToString() == codigo));
 
             if (p == null) return Json(new { success = false });
 

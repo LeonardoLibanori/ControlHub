@@ -1,4 +1,4 @@
-using ControleEstoqueLoja.Data;
+﻿using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -20,7 +20,8 @@ namespace ControleEstoqueLoja.Controllers
         // Listagem Principal (Estoque)
         public IActionResult Index(string busca)
         {
-            var lista = _context.Produtos.ToList();
+            // BUG-08: produtos desativados (soft delete) somem do estoque.
+            var lista = _context.Produtos.Where(p => p.Ativo).ToList();
 
             if (!string.IsNullOrWhiteSpace(busca))
             {
@@ -56,19 +57,30 @@ namespace ControleEstoqueLoja.Controllers
         // Detalhes do Produto
         public IActionResult Produto(int id)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            // BUG-08: produto desativado (soft delete) nao e acessivel pela tela.
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
             return View(produto);
         }
 
         // Exclus�o Real no Banco
+        /// <summary>
+        /// Exclusao LOGICA (soft delete) do produto.
+        ///
+        /// BUG-08: antes isto fazia _context.Produtos.Remove(produto) e a FK
+        /// FK_VendaItens_Produtos_ProdutoId era ON DELETE CASCADE - o SQLite apagava em
+        /// cascata TODOS os VendaItens daquele produto e o historico financeiro sumia.
+        /// Agora a exclusao fisica e bloqueada pelo banco (ON DELETE RESTRICT) e o produto
+        /// e apenas DESATIVADO: some das listagens (filtramos por Ativo) mas continua no
+        /// banco com todo o historico de vendas preservado.
+        /// </summary>
         [HttpPost]
         public IActionResult Excluir(int id)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto != null)
             {
-                _context.Produtos.Remove(produto);
+                produto.Ativo = false;  // BUG-08 soft delete: NUNCA Remove() aqui
                 _context.SaveChanges(); // Salva a exclus�o no arquivo .db
             }
 
@@ -79,7 +91,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public IActionResult Movimentar(int id, string valor, string tipo)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
 
             if (produto == null) return NotFound();
 
@@ -135,7 +147,7 @@ namespace ControleEstoqueLoja.Controllers
             // e o PDV passa a vender o produto errado quando o operador bipa.
             codigoBarras = codigoBarras?.Trim();
             if (!string.IsNullOrWhiteSpace(codigoBarras) &&
-                _context.Produtos.Any(p => p.CodigoBarras == codigoBarras))
+                _context.Produtos.Any(p => p.CodigoBarras == codigoBarras && p.Ativo))
             {
                 TempData["Erro"] = $"Já existe um produto cadastrado com o código de barras {codigoBarras}.";
                 return RedirectToAction("Index");
@@ -158,7 +170,7 @@ namespace ControleEstoqueLoja.Controllers
         public IActionResult Editar(int id)
         {
             // Procura o produto pelo ID
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
 
             // Se n�o achar, avisa que n�o existe
             if (produto == null) return NotFound();
@@ -169,7 +181,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco)
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
 
             // 1. Quantidade
@@ -213,7 +225,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         public async Task<IActionResult> AjustarEstoque(int id, decimal quantidadeAjuste, string operacao)
         {
-            var produto = await _context.Produtos.FindAsync(id);
+            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
 
             if (operacao == "adicionar")
