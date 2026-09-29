@@ -1,52 +1,51 @@
-﻿ID,Area,Severidade,Descricao,Teste xUnit,Status
-BUG-01,Caixa,Critica,"Sinal da sangria invertido no fechamento: (totalVendas + suprimentos) - sangrias, com sangria ja negativa, faz a sangria SOMAR ao saldo",CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo,corrigido
-BUG-02,Caixa,Critica,"Saldo em gaveta inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterStatusAtual)",CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro,corrigido
-BUG-03,Caixa,Critica,"Saldo do relatorio inclui todas as formas de pagamento; deveria contar apenas Dinheiro (RelatorioDados)",CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro,corrigido
-BUG-04,Caixa,Critica,"Saldo do fechamento inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterDadosFechamento)",CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro,corrigido
-BUG-05,Caixa,Alta,"RegistrarMovimentacao aceita sangria maior que o saldo disponivel (sem validacao de saldo)",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo,corrigido
-BUG-06,Caixa,Alta,"RegistrarMovimentacao aceita valor <= 0, gerando movimentacao fantasma",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo,corrigido
-BUG-07,Produtos,Critica,"Editar produto zera o estoque: a view nao envia quantidade e a action faz TryParse sem checar o retorno",ProdutosQaTests.Editar_DevePreservarEstoque_QuandoCampoQuantidadeNaoEnviado,corrigido
-BUG-08,Produtos,Critica,"ON DELETE CASCADE em VendaItens.ProdutoId apaga o historico de vendas ao excluir um produto",ProdutosQaTests.Excluir_DevePreservarHistoricoDeVendas_DoProduto,pendente
-BUG-09,Produtos,Alta,"Cadastro aceita codigo de barras duplicado (ao contrario de CadastrarVendedor, que valida)",ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado,corrigido
-BUG-10,Produtos,Alta,"Cadastro aceita preco negativo",ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo,corrigido
-BUG-11,Produtos,Alta,"Cadastro aceita estoque negativo",ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo,corrigido
-BUG-12,Seguranca,Critica,"XSS armazenado: nome de produto com <script> nao e sanitizado e admin-caixa.js interpola direto no innerHTML",SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML,pendente
-BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,pendente
-BUG-14,Seguranca,Alta,"POSTs sem [ValidateAntiForgeryToken] (CSRF)",SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery,pendente
-BUG-15,Seguranca,Media,"ListarVendedores vaza ex.Message ao cliente",SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao,pendente
-BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao,pendente
-BUG-17,Seguranca,Media,"RegistrarMovimentacao vaza mensagem de FormatException ao cliente",SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao,pendente
-BUG-18,Vendedores,Alta,"Case-sensitivity entre ValidarCupom (ToUpper) e FinalizarVenda (=): cupom validado e rejeitado na venda",VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas,corrigido
-BUG-19,Dados,Alta,"Program.cs usa EnsureCreated() em vez de Migrate(): migrations novas nunca sao aplicadas",DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated,pendente
-BUG-20,Dados,Alta,"decimal persistido como TEXT no SQLite: ordenacao lexicografica e aritmetica fragil em relatorios",DadosQaTests.Decimal_NaoDeveSerPersistidoComoText,pendente
-BUG-21,Lacunas,Media,"TempData[\"Erro\"] definido em AjustarEstoque nunca e exibido em nenhuma view",LacunasQaTests.TempDataErro_DeveSerExibidoNaView,corrigido
-BUG-22,Lacunas,Media,"HomeController nao possui a action Error, mas Program.cs aponta UseExceptionHandler(\"/Home/Error\") -> 404",LacunasQaTests.HomeController_DevePossuirActionError,corrigido
-FIX-01,Vendas,Ok,"Preco de venda vem sempre da tabela (POST adulterado e ignorado) - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveIgnorarPrecoAdulteradoNoPost,corrigido
-FIX-02,Vendas,Ok,"Quantidade <= 0 e rejeitada - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeNaoPositiva,corrigido
-FIX-03,Vendas,Ok,"Granel aplica multiplicador x10 via CalcularSubtotalItem - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveAplicarMultiplicadorX10EmGranel,corrigido
-FIX-04,Vendas,Ok,"Troco recalculado no servidor, nunca confiado no POST - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveCalcularTrocoNoServidor,corrigido
-FIX-05,Vendas,Ok,"Produto inexistente invalida a venda - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarProdutoInexistente,corrigido
-FIX-06,Vendas,Ok,"Vendedor inexistente/inativo invalida a venda - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarVendedorInexistente,corrigido
-FIX-07,Vendas,Ok,"Estoque insuficiente barrado com mensagem ao vendedor - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeAcimaDoEstoque,corrigido
-FIX-08,Vendas,Ok,"Metodo de pagamento vazio nao causa HTTP 500 - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarMetodoPagamentoVazio,corrigido
-FIX-09,Vendas,Ok,"Quantidade fracionada barrada em produto nao-granel - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeFracionadaEmUnitario,corrigido
-FIX-10,Caixa,Ok,"Sangria valida e gravada com sinal negativo - Fase 1 ja corrigida",CaixaQaTests.RegistrarMovimentacao_DeveGravarSangriaComSinalNegativo,corrigido
-FIX-11,Caixa,Ok,"Fechamento zera o saldo do dia - Fase 1 ja corrigida",CaixaQaTests.Fechamento_DeveZerarSaldoDoDia,corrigido
-FIX-12,Caixa,Ok,"Fechamento e idempotente - Fase 1 ja corrigida",CaixaQaTests.Fechamento_DeveSerIdempotente,corrigido
-FIX-13,Produtos,Ok,"Cadastro de produto valido funciona normalmente",ProdutosQaTests.Novo_DeveCadastrarProdutoValido,corrigido
-FIX-14,Produtos,Ok,"AjustarEstoque barra remocao maior que o saldo",ProdutosQaTests.AjustarEstoque_DeveBarrarRemocaoMaiorQueSaldo,corrigido
-FIX-15,Produtos,Ok,"AjustarEstoque mantem o estoque quando a remocao e barrada",LacunasQaTests.AjustarEstoque_DeveDefinirTempDataQuandoEstoqueInsuficiente,corrigido
-FIX-16,Vendedores,Ok,"Cadastro rejeita cupom exatamente duplicado",VendedoresQaTests.CadastrarVendedor_DeveRejeitarCupomDuplicado,corrigido
-FIX-17,Vendedores,Ok,"Exclusao de vendedor e logica e preserva o historico de vendas",VendedoresQaTests.ExcluirVendedor_DevePreservarHistoricoDeVendas,corrigido
-FIX-18,Vendedores,Ok,"Vendedor desativado nao fecha mais vendas",VendedoresQaTests.VendedorDesativado_DeveTerVendaRejeitada,corrigido
-FIX-19,Vendedores,Ok,"ValidarCupom aceita o codigo exato",VendedoresQaTests.ValidarCupom_DeveAceitarCodigoExato,corrigido
-FIX-20,Vendedores,Ok,"ValidarCupom rejeita vendedor inativo",VendedoresQaTests.ValidarCupom_DeveRejeitarVendedorInativo,corrigido
-FIX-21,Dados,Ok,"decimal e relido com precisao apos gravacao",DadosQaTests.Decimal_DeveSerLidoComPrecisaoAposGravacao,corrigido
-FIX-22,Dados,Ok,"decimal ordena numericamente",DadosQaTests.Decimal_DeveOrdenarNumericamente,corrigido
-FIX-23,Dados,Ok,"soma de decimais e exata",DadosQaTests.Decimal_DeveSomarSemPerda,corrigido
-FIX-24,Dados,Ok,"banco de teste isolado cria o esquema completo",DadosQaTests.BancoDeTeste_Isolado_DeveCriarEsquemaCompleto,corrigido
-FIX-25,Dados,Ok,"suite nao abre o controleestoque.db versionado",DadosQaTests.Suite_NaoDeveAbrirOBancoVersionado,corrigido
-FIX-26,Caixa,Ok,"suprimento valido e aceito e gravado positivo",CaixaQaTests.RegistrarMovimentacao_DeveAceitarSuprimentoValido,corrigido
-FIX-27,Vendas,Ok,"venda baixa o estoque do produto",VendasQaTests.FinalizarVenda_DeveBaixarEstoqueDoProduto,corrigido
-FIX-28,Lacunas,Ok,"Historico sem filtro traz todas as vendas",LacunasQaTests.Historico_SemFiltro_DeveTrazerTodasAsVendas,corrigido
-
+﻿ID,Area,Severidade,Descricao,Teste xUnit,Status,Commits
+BUG-01,Caixa,Critica,"Sinal da sangria invertido no fechamento: (totalVendas + suprimentos) - sangrias, com sangria ja negativa, faz a sangria SOMAR ao saldo",CaixaQaTests.ObterDadosFechamento_DeveSubtrairSangriaDoSaldo,corrigido,
+BUG-02,Caixa,Critica,"Saldo em gaveta inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterStatusAtual)",CaixaQaTests.ObterStatusAtual_SaldoDeveConsiderarSomenteDinheiro,corrigido,
+BUG-03,Caixa,Critica,"Saldo do relatorio inclui todas as formas de pagamento; deveria contar apenas Dinheiro (RelatorioDados)",CaixaQaTests.RelatorioDados_SaldoFinalDeveConsiderarSomenteDinheiro,corrigido,
+BUG-04,Caixa,Critica,"Saldo do fechamento inclui todas as formas de pagamento; deveria contar apenas Dinheiro (ObterDadosFechamento)",CaixaQaTests.ObterDadosFechamento_SaldoDeveConsiderarSomenteDinheiro,corrigido,
+BUG-05,Caixa,Alta,"RegistrarMovimentacao aceita sangria maior que o saldo disponivel (sem validacao de saldo)",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarSangriaMaiorQueOSaldo,corrigido,
+BUG-06,Caixa,Alta,"RegistrarMovimentacao aceita valor <= 0, gerando movimentacao fantasma",CaixaQaTests.RegistrarMovimentacao_DeveRejeitarValorNaoPositivo,corrigido,
+BUG-07,Produtos,Critica,"Editar produto zera o estoque: a view nao envia quantidade e a action faz TryParse sem checar o retorno",ProdutosQaTests.Editar_DevePreservarEstoque_QuandoCampoQuantidadeNaoEnviado,corrigido,
+BUG-08,Produtos,Critica,"ON DELETE CASCADE em VendaItens.ProdutoId apaga o historico de vendas ao excluir um produto",ProdutosQaTests.Excluir_DevePreservarHistoricoDeVendas_DoProduto,corrigido,f231d8b;450180d
+BUG-09,Produtos,Alta,"Cadastro aceita codigo de barras duplicado (ao contrario de CadastrarVendedor, que valida)",ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado,corrigido,
+BUG-10,Produtos,Alta,"Cadastro aceita preco negativo",ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo,corrigido,
+BUG-11,Produtos,Alta,"Cadastro aceita estoque negativo",ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo,corrigido,
+BUG-12,Seguranca,Critica,"XSS armazenado: nome de produto com <script> nao e sanitizado e admin-caixa.js interpola direto no innerHTML",SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML,pendente,
+BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,pendente,
+BUG-14,Seguranca,Alta,"POSTs sem [ValidateAntiForgeryToken] (CSRF)",SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery,pendente,
+BUG-15,Seguranca,Media,"ListarVendedores vaza ex.Message ao cliente",SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao,pendente,
+BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao,pendente,
+BUG-17,Seguranca,Media,"RegistrarMovimentacao vaza mensagem de FormatException ao cliente",SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao,pendente,
+BUG-18,Vendedores,Alta,"Case-sensitivity entre ValidarCupom (ToUpper) e FinalizarVenda (=): cupom validado e rejeitado na venda",VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas,corrigido,
+BUG-19,Dados,Alta,"Program.cs usa EnsureCreated() em vez de Migrate(): migrations novas nunca sao aplicadas",DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated,corrigido,037f8ad;b00a67e
+BUG-20,Dados,Alta,"decimal persistido como TEXT no SQLite: ordenacao lexicografica e aritmetica fragil em relatorios",DadosQaTests.Decimal_NaoDeveSerPersistidoComoText,pendente,
+BUG-21,Lacunas,Media,"TempData[\"Erro\"] definido em AjustarEstoque nunca e exibido em nenhuma view",LacunasQaTests.TempDataErro_DeveSerExibidoNaView,corrigido,
+BUG-22,Lacunas,Media,"HomeController nao possui a action Error, mas Program.cs aponta UseExceptionHandler(\"/Home/Error\") -> 404",LacunasQaTests.HomeController_DevePossuirActionError,corrigido,
+FIX-01,Vendas,Ok,"Preco de venda vem sempre da tabela (POST adulterado e ignorado) - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveIgnorarPrecoAdulteradoNoPost,corrigido,
+FIX-02,Vendas,Ok,"Quantidade <= 0 e rejeitada - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeNaoPositiva,corrigido,
+FIX-03,Vendas,Ok,"Granel aplica multiplicador x10 via CalcularSubtotalItem - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveAplicarMultiplicadorX10EmGranel,corrigido,
+FIX-04,Vendas,Ok,"Troco recalculado no servidor, nunca confiado no POST - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveCalcularTrocoNoServidor,corrigido,
+FIX-05,Vendas,Ok,"Produto inexistente invalida a venda - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarProdutoInexistente,corrigido,
+FIX-06,Vendas,Ok,"Vendedor inexistente/inativo invalida a venda - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarVendedorInexistente,corrigido,
+FIX-07,Vendas,Ok,"Estoque insuficiente barrado com mensagem ao vendedor - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeAcimaDoEstoque,corrigido,
+FIX-08,Vendas,Ok,"Metodo de pagamento vazio nao causa HTTP 500 - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarMetodoPagamentoVazio,corrigido,
+FIX-09,Vendas,Ok,"Quantidade fracionada barrada em produto nao-granel - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveRejeitarQuantidadeFracionadaEmUnitario,corrigido,
+FIX-10,Caixa,Ok,"Sangria valida e gravada com sinal negativo - Fase 1 ja corrigida",CaixaQaTests.RegistrarMovimentacao_DeveGravarSangriaComSinalNegativo,corrigido,
+FIX-11,Caixa,Ok,"Fechamento zera o saldo do dia - Fase 1 ja corrigida",CaixaQaTests.Fechamento_DeveZerarSaldoDoDia,corrigido,
+FIX-12,Caixa,Ok,"Fechamento e idempotente - Fase 1 ja corrigida",CaixaQaTests.Fechamento_DeveSerIdempotente,corrigido,
+FIX-13,Produtos,Ok,"Cadastro de produto valido funciona normalmente",ProdutosQaTests.Novo_DeveCadastrarProdutoValido,corrigido,
+FIX-14,Produtos,Ok,"AjustarEstoque barra remocao maior que o saldo",ProdutosQaTests.AjustarEstoque_DeveBarrarRemocaoMaiorQueSaldo,corrigido,
+FIX-15,Produtos,Ok,"AjustarEstoque mantem o estoque quando a remocao e barrada",LacunasQaTests.AjustarEstoque_DeveDefinirTempDataQuandoEstoqueInsuficiente,corrigido,
+FIX-16,Vendedores,Ok,"Cadastro rejeita cupom exatamente duplicado",VendedoresQaTests.CadastrarVendedor_DeveRejeitarCupomDuplicado,corrigido,
+FIX-17,Vendedores,Ok,"Exclusao de vendedor e logica e preserva o historico de vendas",VendedoresQaTests.ExcluirVendedor_DevePreservarHistoricoDeVendas,corrigido,
+FIX-18,Vendedores,Ok,"Vendedor desativado nao fecha mais vendas",VendedoresQaTests.VendedorDesativado_DeveTerVendaRejeitada,corrigido,
+FIX-19,Vendedores,Ok,"ValidarCupom aceita o codigo exato",VendedoresQaTests.ValidarCupom_DeveAceitarCodigoExato,corrigido,
+FIX-20,Vendedores,Ok,"ValidarCupom rejeita vendedor inativo",VendedoresQaTests.ValidarCupom_DeveRejeitarVendedorInativo,corrigido,
+FIX-21,Dados,Ok,"decimal e relido com precisao apos gravacao",DadosQaTests.Decimal_DeveSerLidoComPrecisaoAposGravacao,corrigido,
+FIX-22,Dados,Ok,"decimal ordena numericamente",DadosQaTests.Decimal_DeveOrdenarNumericamente,corrigido,
+FIX-23,Dados,Ok,"soma de decimais e exata",DadosQaTests.Decimal_DeveSomarSemPerda,corrigido,
+FIX-24,Dados,Ok,"banco de teste isolado cria o esquema completo",DadosQaTests.BancoDeTeste_Isolado_DeveCriarEsquemaCompleto,corrigido,
+FIX-25,Dados,Ok,"suite nao abre o controleestoque.db versionado",DadosQaTests.Suite_NaoDeveAbrirOBancoVersionado,corrigido,
+FIX-26,Caixa,Ok,"suprimento valido e aceito e gravado positivo",CaixaQaTests.RegistrarMovimentacao_DeveAceitarSuprimentoValido,corrigido,
+FIX-27,Vendas,Ok,"venda baixa o estoque do produto",VendasQaTests.FinalizarVenda_DeveBaixarEstoqueDoProduto,corrigido,
+FIX-28,Lacunas,Ok,"Historico sem filtro traz todas as vendas",LacunasQaTests.Historico_SemFiltro_DeveTrazerTodasAsVendas,corrigido,

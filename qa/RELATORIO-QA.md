@@ -21,20 +21,70 @@ ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 | Métrica | Valor |
 |---|---|
 | Total de testes | **55** |
-| ✅ Aprovados (comportamento correto) | **47** |
-| ❌ Falhando (bug presente) | **8** |
+| ✅ Aprovados (comportamento correto) | **49** |
+| ❌ Falhando (bug presente) | **6** |
 
-Última atualização: **28/09/2026** — segunda etapa da Fase 2 (Produtos, Vendedores e
-Lacunas) sem migration. Juntando com a etapa anterior (Caixa), são **13 bugs corrigidos**.
-Ficou vermelho: 1 CASCADE + 2 Dados + 5 Segurança (8 casos de teste).
+Última atualização: **28/09/2026** — terceira etapa da Fase 2 (CASCADE + Migrate),
+a primeira que envolve **migration**. Juntando as três etapas são **15 bugs
+corrigidos** (Caixa, Produtos/Vendedores/Lacunas, e agora BUG-08 e BUG-19).
+Ficou vermelho: 1 Dados (decimal como TEXT) + 5 Segurança = **6 casos**.
 
 Os testes são de **caracterização**: falham enquanto o bug existir e passam quando for
 corrigido. Nenhum código de produção foi alterado para fazê-los passar.
 
 > ⚠️ **Nota sobre contagem:** dois testes são `[Theory]` com 2 casos cada
 > (`RegistrarMovimentacao_DeveRejeitarValorNaoPositivo` e `Novo_DeveRejeitarPrecoNegativo`).
-> Por isso **13 bugs** correspondem a **14 casos de teste**. Os números acima são de
+> Por isso **15 bugs** correspondem a **16 casos de teste**. Os números acima são de
 > **casos**, não de métodos.
+
+---
+
+## ✅ Corrigido em 28/09/2026 — CASCADE e Migrate (Fase 2, etapa 3)
+
+Primeira etapa com **migration** (schema alterado no banco versionado).
+
+| ID | O que foi corrigido | Commits | Teste |
+|---|---|---|---|
+| BUG-08 | `ON DELETE CASCADE` em `VendaItens.ProdutoId` apagava o histórico de vendas | `f231d8b` (migration) · `450180d` (soft delete) | `ProdutosQaTests.Excluir_DevePreservarHistoricoDeVendas_DoProduto` |
+| BUG-19 | `EnsureCreated()` ignorava as migrations | `037f8ad` · `b00a67e` (comentário) | `DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated` |
+
+### BUG-08 — como ficou
+
+1. **Migration `20260928234611_ProdutoAtivo_ExclusaoLogica_VendaItemRestrict`:**
+   - Recria a FK `VendaItens.ProdutoId` com **`ON DELETE RESTRICT`** (era `CASCADE`).
+     O banco passa a **recusar** a exclusão física de um produto que já tem itens de venda.
+   - Adiciona `Produtos.Ativo INTEGER NOT NULL DEFAULT 1`.
+   - ⚠️ O EF gerou `defaultValue: false` (default do CLR para `bool`), o que
+     **desativaria todos os produtos cadastrados** e os faria sumir das listagens.
+     Corrigido para `true` **antes de qualquer aplicação**.
+   - O SQL recria a tabela `VendaItens` com `INSERT ... SELECT`, copiando todas as
+     linhas: **nenhum dado de venda é perdido**.
+2. **Exclusão lógica:** `HomeController.Excluir` marca `Ativo = false` (nunca
+   `Remove()`). O produto some da operação mas continua no banco com todo o histórico.
+3. **Filtros `Ativo`** em `HomeController.Index/Produto/Editar/Movimentar/AjustarEstoque`
+   e na checagem de código de barras; em `CaixaController.Index` (grid do PDV),
+   `BuscarPorId`, `BuscarPorCodigo`; e `FinalizarVenda` **recusa** produto desativado.
+
+**Validação por HTTP real (banco real, com backup feito antes):**
+- Excluir o produto com venda → **HTTP 302** (sucesso), não 500
+- `BuscarPorId` do produto desativado → `success=false`; do ativo → `success=true`
+- Grid do PDV lista **só o produto ativo**
+- **As 2 vendas permaneceram intactas**
+- Dados no banco real após a migration: 2 produtos, 1 vendedor, 2 vendas
+
+**Mudança no banco versionado:** `controleestoque.db` foi de 53.248 para 57.344 bytes
+(hash `D38374DA…1609` → `99A4CFDF…96B6`). Backup do schema anterior em
+`%TEMP%\backup-pre-migration\`.
+
+### BUG-19 — como ficou
+`Program.cs` trocou `EnsureCreated()` por `Migrate()`. Com a migration aplicada,
+`Migrate()` reporta *"No migrations were applied. The database is already up to date."*,
+confirmando que a base existente é reconhecida e preservada. O commit `b00a67e` apenas
+ajustou a redação de um comentário: o teste do BUG-19 faz `DoesNotContain` no texto do
+arquivo e o comentário citava o nome do método antigo por extenso.
+
+**Pré-requisito:** `dotnet-ef` 10.0.3 instalado e `dotnet-tools.json` versionado
+(`345b07b`).
 
 ---
 
@@ -104,15 +154,6 @@ permaneceu com o hash `D38374DA...1609`.
 
 ## Severidade Crítica (pendentes)
 
-### BUG-08 — `ON DELETE CASCADE` apaga histórico de vendas
-`Migrations/20260220171624_Inicial_Nova.cs` (linhas 111–116)
-
-`FK_VendaItens_Produtos_ProdutoId` usa `ReferentialAction.Cascade`. Ao excluir um produto o
-banco apaga **todos os `VendaItens`** dele — o histórico financeiro é perdido e o relatório
-do dia deixa de bater com o extrato.
-
-→ `ProdutosQaTests.Excluir_DevePreservarHistoricoDeVendas_DoProduto`
-
 ### BUG-12 — XSS armazenado no PDV
 `HomeController.Novo` + `wwwroot/js/admin-caixa.js` (linha 438)
 
@@ -135,7 +176,6 @@ busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
 | BUG-10 | Cadastro aceita preço negativo | `ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo` |
 | BUG-11 | Cadastro aceita estoque negativo | `ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo` |
 | BUG-14 | POSTs sem `[ValidateAntiForgeryToken]` (CSRF) | `SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery` |
-| BUG-19 | `Program.cs` usa `EnsureCreated()` em vez de `Migrate()` — migrations novas nunca são aplicadas em base existente | `DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated` |
 | BUG-20 | `decimal` mapeado como `TEXT` no SQLite — `ORDER BY` fica lexicográfico (`"10,00" < "9,00"`), quebrando relatórios | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
 
 ---
