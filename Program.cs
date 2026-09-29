@@ -161,6 +161,8 @@ builder.Services.AddAuthorizationBuilder()
         p.RequireRole(Roles.Dono))
     .AddPolicy(Policies.PodeGerenciarVendedores, p =>
         p.RequireRole(Roles.Dono))
+    .AddPolicy(Policies.PodeGerenciarUsuarios, p =>
+        p.RequireRole(Roles.Dono))
     .AddPolicy(Policies.PodeAcessarAdmin, p =>
         p.RequireRole(Roles.Dono))
     // Camada de IA: declarada e registrada agora, usada quando existir.

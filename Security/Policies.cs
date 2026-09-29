@@ -61,6 +61,17 @@ public static class Policies
     /// <summary>Cadastrar e desativar vendedores (cupons). Dono apenas.</summary>
     public const string PodeGerenciarVendedores = "PodeGerenciarVendedores";
 
+    /// <summary>
+    /// Criar contas de acesso (login) e ver quem tem qual papel. Dono apenas.
+    ///
+    /// Nao e a mesma coisa que PodeGerenciarVendedores, apesar das duas serem
+    /// "Dono apenas": Vendedor e o rotulo comercial que sai no cupom (nao
+    /// autentica nada) e Usuario e a conta que ENTRA no sistema. Quem cria
+    /// conta cria tambem a possibilidade de dar acesso de Dono a alguem -
+    /// por isso e uma policy propria, para poder ser revista sozinha.
+    /// </summary>
+    public const string PodeGerenciarUsuarios = "PodeGerenciarUsuarios";
+
     /// <summary>Ver o menu administrativo (Alt+M). Dono apenas.</summary>
     public const string PodeAcessarAdmin = "PodeAcessarAdmin";
 
