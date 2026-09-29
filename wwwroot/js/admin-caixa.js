@@ -435,7 +435,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 const btn = document.createElement("button");
                 btn.type = "button";
                 btn.className = "list-group-item list-group-item-action py-2";
-                btn.innerHTML = `<strong>${nomeOriginal}</strong> <small class="text-muted float-end">R$ ${div.dataset.preco}</small>`;
+                // BUG-23 (XSS armazenado): o nome vinha cru por innerHTML e um
+                // produto chamado "<img src=x onerror=alert(1)>" executava script
+                // no PDV. Montamos os nos via DOM (textContent escapa o texto).
+                const nomeEl = document.createElement("strong");
+                nomeEl.textContent = nomeOriginal;
+                const precoEl = document.createElement("small");
+                precoEl.className = "text-muted float-end";
+                precoEl.textContent = `R$ ${div.dataset.preco}`;
+                btn.appendChild(nomeEl);
+                btn.appendChild(document.createTextNode(" "));
+                btn.appendChild(precoEl);
 
                 btn.onclick = () => {
                     // Busca dados reais (inclui estoque) e preenche o campo quantidade
@@ -472,17 +482,38 @@ function renderCarrinho() {
         const precoDisplay = preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const subtotalDisplay = subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        tbody.insertAdjacentHTML('beforeend', `
-            <tr>
-                <td>${item.nome || 'Sem nome'}</td>
-                <td>${labelQtd}</td>
-                <td>R$ ${precoDisplay}</td>
-                <td class="fw-bold">R$ ${subtotalDisplay}</td>
-                <td>
-                    <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">x</button>
-                </td>
-            </tr>
-        `);
+        // BUG-23 (XSS armazenado): o nome do produto era interpolado em
+        // insertAdjacentHTML, executando qualquer tag HTML salva no cadastro.
+        // A linha e montada com createElement/textContent (texto sempre escapado).
+        const tr = document.createElement("tr");
+
+        const tdNome = document.createElement("td");
+        tdNome.textContent = item.nome || 'Sem nome';
+
+        const tdQtd = document.createElement("td");
+        tdQtd.textContent = String(labelQtd);
+
+        const tdPreco = document.createElement("td");
+        tdPreco.textContent = `R$ ${precoDisplay}`;
+
+        const tdSubtotal = document.createElement("td");
+        tdSubtotal.className = "fw-bold";
+        tdSubtotal.textContent = `R$ ${subtotalDisplay}`;
+
+        const tdAcoes = document.createElement("td");
+        const btnRemover = document.createElement("button");
+        btnRemover.type = "button";
+        btnRemover.className = "btn btn-sm btn-danger";
+        btnRemover.textContent = "x";
+        btnRemover.addEventListener("click", () => removerItem(index));
+        tdAcoes.appendChild(btnRemover);
+
+        tr.appendChild(tdNome);
+        tr.appendChild(tdQtd);
+        tr.appendChild(tdPreco);
+        tr.appendChild(tdSubtotal);
+        tr.appendChild(tdAcoes);
+        tbody.appendChild(tr);
     });
 
     const displayTotal = document.getElementById("displayTotal");

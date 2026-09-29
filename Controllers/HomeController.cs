@@ -54,6 +54,28 @@ namespace ControleEstoqueLoja.Controllers
             });
         }
 
+        /// <summary>
+        /// BUG-23 (XSS armazenado): neutraliza marcacao HTML em textos gravados
+        /// pelo operador. Nao e um sanitizador completo de HTML (o app nao aceita
+        /// HTML do usuario); apenas remove os caracteres que abrem/fecham tag,
+        /// preservando o textoutil. Complementa - e nao substitui - a correcao
+        /// no JavaScript (textContent em vez de innerHTML).
+        /// </summary>
+        private static string? SanitizeTexto(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return texto;
+
+            // Remove tags inteiras <...> e depois escapa o que sobrar de perigoso.
+            var semTags = System.Text.RegularExpressions.Regex.Replace(texto, "<[^>]*>", string.Empty);
+
+            return semTags
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&#39;");
+        }
+
         // Detalhes do Produto
         public IActionResult Produto(int id)
         {
@@ -153,9 +175,16 @@ namespace ControleEstoqueLoja.Controllers
                 return RedirectToAction("Index");
             }
 
+            // BUG-23 (XSS armazenado): o nome era gravado cru. A view Razor escapa
+            // (@Model.Nome), mas o admin-caixa.js montava o nome via innerHTML, entao
+            // um produto chamado "<img src=x onerror=alert(1)>" executava script no
+            // navegador do operador. defense-in-depth: o cadastro agora neutraliza as
+            // tags, E o JS passou a usar textContent (commit do item 1).
+            var nomeLimpo = SanitizeTexto(nome);
+
             var p = new Produto
             {
-                Nome = nome?.ToUpper(),
+                Nome = nomeLimpo?.ToUpper(),
                 Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
@@ -196,7 +225,8 @@ namespace ControleEstoqueLoja.Controllers
                 return RedirectToAction("Index");
             }
 
-            produto.Nome = nome;
+            // BUG-23 (XSS armazenado): mesmo saneamento do cadastro (item 1).
+            produto.Nome = SanitizeTexto(nome) ?? produto.Nome;
             produto.Preco = precoFinal;
             produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : produto.Tipo;
             // BUG-07: Views/Home/Editar.cshtml NÃO tem o campo "quantidade". A action
