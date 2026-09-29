@@ -2,10 +2,18 @@
 // Os <form> normais ja enviam o token em um input hidden gerado pelo Razor, mas
 // os POSTs feitos por fetch() precisam mandar o token no header X-CSRF-TOKEN
 // (configurado em Program.cs). O token vem do <meta name="csrf-token"> do _Layout.
+// BUG-13 (autorizacao): as chamadas do painel se identificam como AJAX.
+// Quando falta permissao (ex.: Operador tentando sangria), o servidor responde
+// 403 direto em vez de redirecionar para a pagina HTML de acesso negado -
+// sem isso o fetch seguia o 302, recebia 200 com HTML e o resp.json() quebrava,
+// escondendo o motivo real do bloqueio do operador.
 function csrfHeaders(extra) {
     const meta = document.querySelector('meta[name="csrf-token"]');
     const token = meta ? meta.getAttribute('content') : null;
-    return Object.assign({}, extra || {}, { 'X-CSRF-TOKEN': token || '' });
+    return Object.assign({}, extra || {}, {
+        'X-CSRF-TOKEN': token || '',
+        'X-Requested-With': 'XMLHttpRequest'
+    });
 }
 
 // 1. MOTOR DO ATALHO
@@ -61,11 +69,24 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         }
 
         const data = new URLSearchParams();
-        data.append('tipo', tipo);
         data.append('valor', valorNumerico.toFixed(2)); // Always sends format 100.00
         data.append('obs', obs);
 
-        const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data, headers: csrfHeaders() });
+        // BUG-13: a rota depende do TIPO, e o tipo agora mora na rota.
+        // RegistrarSangria e exclusiva do Dono: um Operador que tentar leva 403
+        // (o menu esconde o botao, mas a API tambem barra - defesa em camadas).
+        const rota = (tipo === 'Sangria')
+            ? '/Caixa/RegistrarSangria'
+            : '/Caixa/RegistrarSuprimento';
+
+        const resp = await fetch(rota, { method: 'POST', body: data, headers: csrfHeaders() });
+
+        // 403 = autenticado mas sem permissao (falta o papel de Dono).
+        if (resp.status === 403) {
+            Swal.fire('Acesso negado', 'Apenas o Dono pode registrar sangria.', 'error');
+            return;
+        }
+
         const res = await resp.json();
 
         if (res.success) {

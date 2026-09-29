@@ -1,4 +1,6 @@
 using ControleEstoqueLoja.Data;
+using Microsoft.AspNetCore.Authorization;
+using ControleEstoqueLoja;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -7,6 +9,7 @@ using System.Linq;
 
 namespace ControleEstoqueLoja.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         // Inje��o do Banco de Dados
@@ -18,6 +21,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         // Listagem Principal (Estoque)
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public IActionResult Index(string busca)
         {
             // BUG-08: produtos desativados (soft delete) somem do estoque.
@@ -32,6 +36,7 @@ namespace ControleEstoqueLoja.Controllers
             return View(lista);
         }
 
+        [AllowAnonymous]
         public IActionResult Privacy()
         {
             return View();
@@ -46,6 +51,7 @@ namespace ControleEstoqueLoja.Controllers
         /// identificador da requisição, que permite correlacionar com o log do servidor.
         /// </summary>
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        [AllowAnonymous]
         public IActionResult Error()
         {
             return View(new ErrorViewModel
@@ -77,6 +83,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         // Detalhes do Produto
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public IActionResult Produto(int id)
         {
             // BUG-08: produto desativado (soft delete) nao e acessivel pela tela.
@@ -98,6 +105,7 @@ namespace ControleEstoqueLoja.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Excluir(int id)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -113,6 +121,7 @@ namespace ControleEstoqueLoja.Controllers
         // Movimenta��o de Estoque (Entrada/Sa�da)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Movimentar(int id, string valor, string tipo)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -134,6 +143,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Novo()
         {
             return View();
@@ -141,6 +151,7 @@ namespace ControleEstoqueLoja.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string codigoBarras)
         {
             // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
@@ -199,6 +210,7 @@ namespace ControleEstoqueLoja.Controllers
             return RedirectToAction("Index");
         }
         [HttpGet]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Editar(int id)
         {
             // Procura o produto pelo ID
@@ -212,6 +224,7 @@ namespace ControleEstoqueLoja.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -258,6 +271,7 @@ namespace ControleEstoqueLoja.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public async Task<IActionResult> AjustarEstoque(int id, decimal quantidadeAjuste, string operacao)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);

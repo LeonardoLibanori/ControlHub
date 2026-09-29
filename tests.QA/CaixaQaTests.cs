@@ -111,7 +111,7 @@ public class CaixaQaTests
         qa.SeedVenda(20m, metodoPagamento: "Dinheiro");
 
         var controller = new CaixaController(qa.Context);
-        var result = controller.RegistrarMovimentacao("Sangria", "500", "tentativa indevida");
+        var result = controller.RegistrarSangria("500", "tentativa indevida");
 
         Assert.False(result.IsSuccess());
         Assert.Empty(qa.Context.CaixaMovimentacoes.AsNoTracking().ToList());
@@ -130,7 +130,7 @@ public class CaixaQaTests
         using var qa = new QaContext();
         var controller = new CaixaController(qa.Context);
 
-        var result = controller.RegistrarMovimentacao("Suprimento", valor, "valor invalido");
+        var result = controller.RegistrarSuprimento(valor, "valor invalido");
 
         Assert.False(result.IsSuccess());
         Assert.Empty(qa.Context.CaixaMovimentacoes.AsNoTracking().ToList());
@@ -143,7 +143,7 @@ public class CaixaQaTests
         using var qa = new QaContext();
         var controller = new CaixaController(qa.Context);
 
-        var result = controller.RegistrarMovimentacao("Suprimento", "100", "abertura de caixa");
+        var result = controller.RegistrarSuprimento("100", "abertura de caixa");
 
         Assert.True(result.IsSuccess());
         var mov = qa.Context.CaixaMovimentacoes.AsNoTracking().Single();
@@ -159,7 +159,7 @@ public class CaixaQaTests
         qa.SeedVenda(1000m, metodoPagamento: "Dinheiro");
 
         var controller = new CaixaController(qa.Context);
-        var result = controller.RegistrarMovimentacao("Sangria", "50", "sangria valida");
+        var result = controller.RegistrarSangria("50", "sangria valida");
 
         Assert.True(result.IsSuccess());
         var mov = qa.Context.CaixaMovimentacoes.AsNoTracking().Single();

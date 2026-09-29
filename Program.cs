@@ -1,9 +1,12 @@
 using System.IO;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ControleEstoqueLoja;
 using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
+using ControleEstoqueLoja.Security;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +60,83 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+// ------------------------------------------------------------------
+// COOKIE DE AUTENTICACAO
+//
+// 12 horas com SlidingExpiration: o token RENOVA a cada requisicao, entao
+// quem fica logged o turno inteiro no balcao nunca cai. Quem fecha o
+// navegador perde depois de 12h. Cobre o dia de loja com folga.
+//
+// AcoesEventos: a cada ~30 min de atividade reemitem-se o token antiforgery
+// junto com o cookie. Sem isso, a tela do PDV aberta o dia todo terminaria
+// com POSTReturning400 porque o token antiforgery (cookie) do dia anterior
+// ja nao valeria - exatamente o problema relatado no relatorio de QA.
+// ------------------------------------------------------------------
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AcessoNegado";
+    options.ExpireTimeSpan = TimeSpan.FromHours(12);
+    options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+    var reemitir = TimeSpan.FromMinutes(30);
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        // A cada 30 min, renova o token antiforgery do MESMO cookie de sessao.
+        if (DateTimeOffset.UtcNow - context.Properties.IssuedUtc < reemitir)
+            return;
+
+        var antiforgery = context.HttpContext.RequestServices
+            .GetRequiredService<IAntiforgery>();
+        var tokens = antiforgery.GetAndStoreTokens(context.HttpContext);
+        context.Properties.UpdateTokenValue(tokens.FormFieldName, tokens.RequestToken);
+    };
+
+    // ------------------------------------------------------------------
+    // ACESSO NEGADO: DUAS RESPOSTAS PARA DOIS CLIENTES DIFERENTES.
+    //
+    // AccessDeniedPath resolve o operador que CLICA em algo que nao pode ver:
+    // ele vai para a tela /Account/AcessoNegado, que explica o motivo.
+    //
+    // Mas o AccessDeniedPath vale para QUALQUER requisicao - inclusive as
+    // feitas por fetch() no admin-caixa.js. Nesse caso o fetch seguia o 302,
+    // recebia a pagina HTML de acesso negado com status 200 e o
+    //   if (resp.status === 403) { 'Apenas o Dono pode registrar sangria' }
+    // nunca acontecia: o operador via "erro inesperado" em vez do motivo real,
+    // e um 200 no final dava a impressao de que a operacao tinha passado.
+    //
+    // Por isso quem NAO e navegacao de navegador (fetch do painel, curl,
+    // qualquer cliente de dados) recebe 403 direto, com corpo vazio; quem
+    // clicou num link continua indo para a pagina amigavel.
+    // O criterio e duplo de proposito: a navegacao pede HTML (Accept:
+    // text/html) e NAO manda X-Requested-With. Assim, uma chamada de dados
+    // que esqueca o header ainda cai no 403 (seguro por padrao), e nao no
+    // comportamento antigo de devolver 200 com a pagina de acesso negado.
+    // O redirect de LOGIN nao foi mexido: anonimo segue levando 302 para
+    // /Account/Login, que e o comportamento esperado.
+    // ------------------------------------------------------------------
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        var pedeHtml = context.Request.Headers.Accept
+            .ToString()
+            .Contains("text/html", StringComparison.OrdinalIgnoreCase);
+        var ehAjax = context.Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+        if (ehAjax || !pedeHtml)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+});
 
 // ------------------------------------------------------------------
 // POLITICAS NOMEADAS (fonte unica de verdade: Security/Policies.cs).
@@ -125,6 +205,10 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Erro ao iniciar o banco: " + ex.Message);
     }
 }
+
+// Cria os PAPEIS (Dono/Operador) se ainda nao existirem. Sem usuario e sem
+// senha aqui: o primeiro Dono nasce na tela /Account/Setup.
+SeedPapel.GarantirAsync(app.Services).GetAwaiter().GetResult();
 
 app.MapControllerRoute(
     name: "default",

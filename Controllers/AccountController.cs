@@ -1,0 +1,217 @@
+using System.ComponentModel.DataAnnotations;
+using ControleEstoqueLoja.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ControleEstoqueLoja.Controllers;
+
+/// <summary>
+/// Login, logout e a criacao do PRIMEIRO dono.
+///
+/// BUG-13: o controller tem [Authorize] no nivel de classe (padrao do projeto:
+/// nenhuma rota fica anonima por esquecimento) e cada action deste controller
+/// marca [AllowAnonymous] de proposito - e o que permite ACESSAR o login.
+/// Sem esse AllowAnonymous, quem nao estivesse autenticado levaria 403 na
+/// tela de login e nao conseguiria nem entrar.
+///
+/// Nenhuma action daqui exige policy: o login precisa funcionar ANTES de
+/// existir autorizacao de dominio. O acesso real as telas continua
+/// governado pelos [Authorize] das actions de negocio.
+/// </summary>
+[Authorize]
+public class AccountController : Controller
+{
+    private readonly UserManager<Usuario> _userManager;
+    private readonly SignInManager<Usuario> _signInManager;
+    private readonly ILogger<AccountController> _log;
+
+    public AccountController(
+        UserManager<Usuario> userManager,
+        SignInManager<Usuario> signInManager,
+        ILogger<AccountController> log)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _log = log;
+    }
+
+    // =================================================================
+    // LOGIN
+    // =================================================================
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Login(string? returnUrl = null)
+    {
+        // Nao faz sentido mostrar o login se o cadastro ainda nao existe:
+        // o primeiro acesso precisa criar o Dono.
+        if (!ExisteAlgumUsuario())
+            return RedirectToAction(nameof(Setup));
+
+        ViewData["ReturnUrl"] = returnUrl;
+        return View(new LoginViewModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+    {
+        // Contra CSRF o login reusa o mesmo token das demais POSTs.
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var resultado = await _signInManager.PasswordSignInAsync(
+            model.Email, model.Senha, isPersistent: true, lockoutOnFailure: true);
+
+        if (resultado.Succeeded)
+        {
+            _log.LogInformation("Login efetuado: {Email}", model.Email);
+            // So aceita returnUrl local: sem isso um link externo poderia
+            // transformar o login em redirecionamento para phishing.
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+            return RedirectToAction("Index", "Caixa");
+        }
+
+        // MENSAGEM GENERICA DE PROPAGITO: "senha invalida" confirmaria que o
+        // e-mail EXISTE (enumeracao de usuarios). "Bloqueado" e unico caso em
+        // que revelamos algo, porque o operador precisa saber que a conta
+        // esta travada e ha quanto tempo libera.
+        if (resultado.IsLockedOut)
+        {
+            ModelState.AddModelError(string.Empty,
+                "Conta bloqueada temporariamente por tentativas inválidas. Tente novamente em alguns minutos.");
+        }
+        else
+        {
+            ModelState.AddModelError(string.Empty, "E-mail ou senha inválidos.");
+        }
+
+        ViewData["ReturnUrl"] = returnUrl;
+        return View(model);
+    }
+
+    // =================================================================
+    // LOGOUT
+    // =================================================================
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout()
+    {
+        await _signInManager.SignOutAsync();
+        _log.LogInformation("Logout efetuado");
+        return RedirectToAction(nameof(Login));
+    }
+
+    // =================================================================
+    // SETUP DO PRIMEIRO DONO
+    // =================================================================
+
+    /// <summary>
+    /// Tela de criacao do PRIMEIRO usuario, disponivel SOMENTE enquanto o
+    /// banco nao tem nenhum usuario. Depois dela, este acesso e 403.
+    ///
+    /// A senha NAO fica no codigo nem no git: e a pessoa quem a digita.
+    /// (O alerta QA_S05 ja apontou segredos versionados antes; nao repetimos.)
+    /// </summary>
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> Setup()
+    {
+        if (ExisteAlgumUsuario())
+            return RedirectToAction(nameof(Login));
+
+        return View(new SetupViewModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AllowAnonymous]
+    public async Task<IActionResult> Setup(SetupViewModel model)
+    {
+        if (ExisteAlgumUsuario())
+            return RedirectToAction(nameof(Login));
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var dono = new Usuario
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            NomeExibicao = model.NomeExibicao,
+            EmailConfirmed = true
+        };
+
+        var criado = await _userManager.CreateAsync(dono, model.Senha);
+        if (!criado.Succeeded)
+        {
+            foreach (var erro in criado.Errors)
+                ModelState.AddModelError(string.Empty, erro.Description);
+            return View(model);
+        }
+
+        await _userManager.AddToRoleAsync(dono, Roles.Dono);
+        _log.LogInformation("Dono inicial criado: {Email}", model.Email);
+
+        // Ja deixa autenticado: o operador nao precisa digitar tudo de novo.
+        await _signInManager.SignInAsync(dono, isPersistent: true);
+        return RedirectToAction("Index", "Caixa");
+    }
+
+    // =================================================================
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult AcessoNegado()
+    {
+        // 403: o usuario ESTA autenticado mas nao tem a policy necessaria.
+        ViewData["PapelAtual"] = User.Identity?.Name ?? "desconhecido";
+        return View();
+    }
+
+    private bool ExisteAlgumUsuario() => _userManager.Users.Any();
+}
+
+/// <summary>Dados do formulario de login.</summary>
+public class LoginViewModel
+{
+    [Required(ErrorMessage = "Informe o e-mail.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+    [Display(Name = "E-mail")]
+    public string Email { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Informe a senha.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Senha")]
+    public string Senha { get; set; } = string.Empty;
+}
+
+/// <summary>Dados do formulario de criacao do primeiro dono.</summary>
+public class SetupViewModel
+{
+    [Required(ErrorMessage = "Informe o nome exibido.")]
+    [StringLength(80, ErrorMessage = "O nome deve ter no máximo 80 caracteres.")]
+    [Display(Name = "Nome exibido")]
+    public string NomeExibicao { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Informe o e-mail.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+    [Display(Name = "E-mail (login)")]
+    public string Email { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Informe a senha.")]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter no mínimo 6 caracteres.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Senha")]
+    public string Senha { get; set; } = string.Empty;
+
+    [DataType(DataType.Password)]
+    [Display(Name = "Confirmar senha")]
+    [Compare(nameof(Senha), ErrorMessage = "As senhas não conferem.")]
+    public string ConfirmarSenha { get; set; } = string.Empty;
+}

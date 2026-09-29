@@ -158,7 +158,7 @@ public class SegurancaQaTests
         var controller = new CaixaController(qa.Context);
 
         // "abc" nao e decimal -> FormatException capturada e devolvida ao cliente.
-        var result = controller.RegistrarMovimentacao("Suprimento", "abc", "teste");
+        var result = controller.RegistrarSuprimento("abc", "teste");
 
         var json = result.RawJson();
         Assert.DoesNotContain("FormatException", json, StringComparison.OrdinalIgnoreCase);

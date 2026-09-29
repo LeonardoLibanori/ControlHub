@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using ControleEstoqueLoja;
 using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +9,7 @@ using System.Text.Json;
 
 namespace ControleEstoqueLoja.Controllers
 {
+    [Authorize]
     public class CaixaController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -16,6 +19,7 @@ namespace ControleEstoqueLoja.Controllers
             _context = context;
         }
 
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> Index()
         {
             // 1. Busca os produtos ATIVOS no banco de dados
@@ -36,6 +40,7 @@ namespace ControleEstoqueLoja.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
         {
             // BUG-18: valida e finaliza a venda com o MESMO critério de comparação
@@ -170,10 +175,37 @@ namespace ControleEstoqueLoja.Controllers
 
         // --- MÉTODOS DO MENU ADMINISTRATIVO ---
 
+        /// <summary>
+        /// SUPRIMENTO: dinheiro que ENTRA na gaveta (abertura de turno, troco).
+        /// Liberado para Operador e Dono - e operacao de balcao, nao
+        /// movimenta dinheiro para fora da loja.
+        /// </summary>
         [HttpPost]
-
         [ValidateAntiForgeryToken]
-        public IActionResult RegistrarMovimentacao(string tipo, string valor, string obs)
+        [Authorize(Policy = Policies.PodeRegistrarSuprimento)]
+        public IActionResult RegistrarSuprimento(string valor, string obs)
+            => RegistrarMovimentacaoInterno("Suprimento", valor, obs, validarSaldo: false);
+
+        /// <summary>
+        /// SANGRIA: dinheiro que SAI da gaveta. Somente Dono - e a operacao que
+        /// permite retirada de dinheiro da loja, entao exige perfil gerencial.
+        ///
+        /// A action antiga "RegistrarMovimentacao" (unica, com o tipo no corpo)
+        /// foi dividida em duas: assim a permissao fica na declaracao da rota
+        /// (policy) e nao escondida em um if(User.IsInRole(...)) dentro do
+        /// metodo. Um Operador consegue chamar /RegistrarSangria e leva 403.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeRegistrarSangria)]
+        public IActionResult RegistrarSangria(string valor, string obs)
+            => RegistrarMovimentacaoInterno("Sangria", valor, obs, validarSaldo: true);
+
+        /// <summary>
+        /// Logica compartilhada por suprimento e sangria. O tipo vem da ACTION
+        /// (nao do POST): assim nao existe rota que aceite os dois tipos.
+        /// </summary>
+        private IActionResult RegistrarMovimentacaoInterno(string tipo, string valor, string obs, bool validarSaldo)
         {
             try
             {
@@ -187,12 +219,12 @@ namespace ControleEstoqueLoja.Controllers
                     return Json(new { success = false, message = "O valor deve ser maior que zero." });
                 }
 
-                bool ehSangria = tipo.Contains("Sangria", StringComparison.OrdinalIgnoreCase);
+                bool ehSangria = tipo == "Sangria";
 
                 // BUG-05: sem esta validacao a gaveta pode ficar negativa: o caixa
                 // retirava mais dinheiro do que havia. Valida contra o saldo real,
                 // considerando SO vendas em Dinheiro (fonte unica CalcularSaldoEmGaveta).
-                if (ehSangria)
+                if (validarSaldo && ehSangria)
                 {
                     DateTime hoje = DateTime.Today;
 
@@ -242,12 +274,13 @@ namespace ControleEstoqueLoja.Controllers
                 // BUG-12 (vazamento de ex.Message): a mensagem interna (SqliteException,
                 // nome de tabela/coluna, caminho de arquivo) ia para o cliente. O
                 // operador nao precisa dela e ela vaza informacao de infraestrutura.
-                LogarExcecao(nameof(RegistrarMovimentacao), ex);
+                LogarExcecao(nameof(RegistrarMovimentacaoInterno), ex);
                 return Json(new { success = false, message = MensagemErroGenerica });
             }
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeFecharCaixa)]
         public async Task<IActionResult> ObterStatusAtual()
         {
             var hoje = DateTime.Today;
@@ -280,6 +313,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<string> ObterUltimaVendaId()
         {
             var ultimaVenda = await _context.Vendas.OrderByDescending(v => v.Id).FirstOrDefaultAsync();
@@ -378,6 +412,7 @@ namespace ControleEstoqueLoja.Controllers
         // Métodos de Histórico e Cupom (Mantidos conforme seu original)
         // Local: CaixaController.cs
 
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> Historico(DateTime? data)
         {
             // O Include(v => v.Itens) é essencial para o modal de detalhes funcionar!
@@ -408,6 +443,7 @@ namespace ControleEstoqueLoja.Controllers
         // Local: CaixaController.cs
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> RelatorioDados()
         {
             // Usamos um intervalo de tempo em vez de apenas .Date para evitar erros de fuso horário
@@ -454,6 +490,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> ObterResumo()
         {
             var hoje = DateTime.Today;
@@ -488,6 +525,7 @@ namespace ControleEstoqueLoja.Controllers
         }
         // Rota que o JavaScript chama: /Caixa/GerarCupom?id=XX
         [HttpGet]
+        [Authorize(Policy = Policies.PodeReimprimirCupom)]
         public IActionResult GerarCupom(int id)
         {
             var venda = _context.Vendas
@@ -500,6 +538,7 @@ namespace ControleEstoqueLoja.Controllers
             return View(venda);
         }
 
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public IActionResult ImprimirRelatorioHoje()
         {
             // Pega o início e o fim do dia de hoje
@@ -516,6 +555,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public JsonResult ObterRelatorioResumido()
         {
             try
@@ -556,6 +596,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public JsonResult ObterDadosFechamento()
         {
             try
@@ -625,6 +666,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> ObterDetalhesVenda(int id)
         {
             var venda = await _context.Vendas
@@ -652,6 +694,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
 
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeFecharCaixa)]
         public IActionResult ZerarCaixaParaProximoDia()
         {
             try
@@ -683,6 +726,7 @@ namespace ControleEstoqueLoja.Controllers
         // 1.1 Cadastro de Vendedor
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarVendedores)]
         public async Task<IActionResult> CadastrarVendedor(string nome, string codigo)
         {
             // BUG-18: grava sempre o cupom NORMALIZADO e compara duplicado pelo mesmo
@@ -707,6 +751,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         // 1.2 Ver Vendas por Vendedor (Para a tela "Ver Cupom")
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> VerVendasVendedor(string codigo)
         {
             var vendas = await _context.Vendas
@@ -719,6 +764,7 @@ namespace ControleEstoqueLoja.Controllers
         
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> ValidarCupom(string codigo)
         {
             if (string.IsNullOrEmpty(codigo))
@@ -733,6 +779,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> ListarVendedores()
         {
             try
@@ -756,6 +803,7 @@ namespace ControleEstoqueLoja.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarVendedores)]
         public async Task<IActionResult> ExcluirVendedor(string codigo)
         {
             var cupom = NormalizarCupom(codigo);
@@ -769,6 +817,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> BuscarPorId(int id)
         {
             // O AsNoTracking() obriga o Entity Framework a ler o arquivo .db agora, 
@@ -791,6 +840,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> BuscarPorCodigo(string codigo)
         {
             var p = await _context.Produtos
