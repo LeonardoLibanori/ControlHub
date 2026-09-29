@@ -10,12 +10,12 @@ BUG-08,Produtos,Critica,"ON DELETE CASCADE em VendaItens.ProdutoId apaga o histo
 BUG-09,Produtos,Alta,"Cadastro aceita codigo de barras duplicado (ao contrario de CadastrarVendedor, que valida)",ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado,corrigido,
 BUG-10,Produtos,Alta,"Cadastro aceita preco negativo",ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo,corrigido,
 BUG-11,Produtos,Alta,"Cadastro aceita estoque negativo",ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo,corrigido,
-BUG-12,Seguranca,Critica,"XSS armazenado: nome de produto com <script> nao e sanitizado e admin-caixa.js interpola direto no innerHTML",SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML,pendente,
-BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,pendente,
-BUG-14,Seguranca,Alta,"POSTs sem [ValidateAntiForgeryToken] (CSRF)",SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery,pendente,
-BUG-15,Seguranca,Media,"ListarVendedores vaza ex.Message ao cliente",SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao,pendente,
-BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao,pendente,
-BUG-17,Seguranca,Media,"RegistrarMovimentacao vaza mensagem de FormatException ao cliente",SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao,pendente,
+BUG-12,Seguranca,Critica,"XSS armazenado: nome de produto com <script> nao e sanitizado e admin-caixa.js interpola direto no innerHTML",SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML,corrigido,4b06257
+BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos (feature maior adiada para a proxima etapa)",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,pendente,
+BUG-14,Seguranca,Alta,"POSTs sem [ValidateAntiForgeryToken] (CSRF)",SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery,corrigido,c4fc2f6
+BUG-15,Seguranca,Media,"ListarVendedores vaza ex.Message ao cliente",SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
+BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
+BUG-17,Seguranca,Media,"RegistrarMovimentacao vaza mensagem de FormatException ao cliente",SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
 BUG-18,Vendedores,Alta,"Case-sensitivity entre ValidarCupom (ToUpper) e FinalizarVenda (=): cupom validado e rejeitado na venda",VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas,corrigido,
 BUG-19,Dados,Alta,"Program.cs usa EnsureCreated() em vez de Migrate(): migrations novas nunca sao aplicadas",DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated,corrigido,037f8ad;b00a67e
 BUG-20,Dados,Alta,"decimal persistido como TEXT no SQLite: ordenacao lexicografica e aritmetica fragil em relatorios",DadosQaTests.Decimal_NaoDeveSerPersistidoComoText,pendente,

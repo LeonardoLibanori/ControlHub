@@ -1,6 +1,6 @@
 ﻿# Relatório de QA — Sistema de Controle de Estoque
 
-**Branch:** `fix/fase1-dinheiro` · **HEAD:** `1016148` · **Data da recriação:** 28/09/2026
+**Branch:** `fix/fase1-dinheiro` · **HEAD:** `c4fc2f6` · **Última atualização:** 29/09/2026
 
 > Esta suíte foi **recriada do zero** após a troca de máquina. As pastas `tests.QA/` e
 > `qa/` existiam apenas no PC antigo e nunca foram versionadas. A partir de agora
@@ -20,14 +20,20 @@ ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 
 | Métrica | Valor |
 |---|---|
-| Total de testes | **55** |
-| ✅ Aprovados (comportamento correto) | **49** |
-| ❌ Falhando (bug presente) | **6** |
+| Total de testes | **57** |
+| ✅ Aprovados (comportamento correto) | **55** |
+| ❌ Falhando (bug presente) | **2** |
 
-Última atualização: **28/09/2026** — terceira etapa da Fase 2 (CASCADE + Migrate),
-a primeira que envolve **migration**. Juntando as três etapas são **15 bugs
-corrigidos** (Caixa, Produtos/Vendedores/Lacunas, e agora BUG-08 e BUG-19).
-Ficou vermelho: 1 Dados (decimal como TEXT) + 5 Segurança = **6 casos**.
+Última atualização: **29/09/2026** — três correções de segurança **sem**
+autenticação: XSS armazenado (BUG-12), vazamento de `ex.Message` (BUG-15/16/17)
+e token anti-forgery em todos os POSTs (BUG-14).
+Ficou vermelho: `Decimal_NaoDeveSerPersistidoComoText` (BUG-20) +
+`Controllers_NaoDevemExporEndpointsSemAutorizacao` (BUG-13) = **2 casos**.
+
+Os 2 testes de concorrência foram recuperados do notebook antigo em 29/09/2026
+(commit `11b88f0`): ambos passam, porque a branch atual já rejeita a venda
+concorrente excedente (a Fase 1 adicionou a rechecagem de estoque). Eles
+documentam o BUG-05 (falta de transação/lock) para a Fase 2.
 
 Os testes são de **caracterização**: falham enquanto o bug existir e passam quando for
 corrigido. Nenhum código de produção foi alterado para fazê-los passar.
@@ -154,17 +160,8 @@ permaneceu com o hash `D38374DA...1609`.
 
 ## Severidade Crítica (pendentes)
 
-### BUG-12 — XSS armazenado no PDV
-`HomeController.Novo` + `wwwroot/js/admin-caixa.js` (linha 438)
-
-O nome do produto é gravado sem sanitizar e interpolado direto no `innerHTML`:
-
-```javascript
-btn.innerHTML = `<strong>${nomeOriginal}</strong> <small ...>R$ ${div.dataset.preco}</small>`;
-```
-
-Um produto chamado `<img src=x onerror=alert(1)>` executa JavaScript no navegador de quem
-busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
+_Nenhum. Os dois críticos de segurança foram corrigidos em 29/09/2026
+(BUG-12 XSS e BUG-14 CSRF — ver "Corrigido em 29/09/2026" abaixo)._
 
 ---
 
@@ -172,26 +169,79 @@ busca no PDV. A view Razor escapa (`@Model.Nome`); o JavaScript não.
 
 | ID | Descrição | Teste |
 |---|---|---|
-| BUG-09 | Cadastro aceita código de barras duplicado | `ProdutosQaTests.Novo_DeveRejeitarCodigoDeBarrasDuplicado` |
-| BUG-10 | Cadastro aceita preço negativo | `ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo` |
-| BUG-11 | Cadastro aceita estoque negativo | `ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo` |
-| BUG-14 | POSTs sem `[ValidateAntiForgeryToken]` (CSRF) | `SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery` |
+| BUG-13 | Nenhum endpoint tem `[Authorize]` — **feature maior, adiada** | `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao` |
 | BUG-20 | `decimal` mapeado como `TEXT` no SQLite — `ORDER BY` fica lexicográfico (`"10,00" < "9,00"`), quebrando relatórios | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
 
 ---
 
 ## Severidade Média
 
-| ID | Descrição | Teste |
-|---|---|---|
-| BUG-15 | `ListarVendedores` vaza `ex.Message` ao cliente | `SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao` |
-| BUG-16 | `ObterDadosFechamento` vaza `ex.Message` ao cliente | `SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao` |
-| BUG-17 | `RegistrarMovimentacao` vaza `FormatException` ao cliente | `SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao` |
+_Nenhum pendente. BUG-15/16/17 (vazamento de `ex.Message`) foram corrigidos em
+29/09/2026._
 
 > **Filtro de data do Histórico:** `CaixaController.Historico` **aplica corretamente** o
 > filtro no controller, então `LacunasQaTests.Historico_DeveRespeitarOFiltroDeData` **passa**.
 > O sintoma percebido na tela está na camada de rota/view e não é coberto por teste
 > unitário — ver `qa/http-parte1.ps1`.
+
+---
+
+## ✅ Corrigido em 29/09/2026 — Segurança sem autenticação
+
+Três correções que **não exigem sistema de login**. A autenticação (`[Authorize]`)
+ficou de fora de propósito: é uma feature maior, a desenhar com calma.
+
+| ID | O que foi corrigido | Commit | Teste |
+|---|---|---|---|
+| BUG-12 | XSS armazenado no nome do produto | `4b06257` | `SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML` |
+| BUG-15/16/17 | Vazamento de `ex.Message` ao cliente | `f11a4b1` | `ListarVendedores_...` · `ObterDadosFechamento_...` · `RegistrarMovimentacao_...` |
+| BUG-14 | POSTs sem token anti-forgery (CSRF) | `c4fc2f6` | `SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery` |
+
+### BUG-12 — XSS armazenado (dupla camada)
+
+1. **JavaScript** (`wwwroot/js/admin-caixa.js`) — as linhas que interpolavam
+   `${nome}` em `innerHTML`/`insertAdjacentHTML` passaram a montar os nós com
+   `createElement` + `textContent` (sugestões de busca e linhas do carrinho).
+   O texto sempre aparece; a tag nunca vira elemento.
+2. **Servidor** (`HomeController`) — helper `SanitizeTexto` remove tags
+   `<...>` e escapa `& < > " '` no nome gravado, aplicado em `Novo` e `Editar`
+   (defense-in-depth: o teste exige que o payload não chegue intacto ao banco).
+
+**Verificado manualmente** (app real, banco isolado): cadastrar
+`<script>alert(1)</script>` e `<img src=x onerror=alert(1)>` → o nome volta
+como `ALERT(1)` (sem tag) e o HTML do PDV não contém o payload cru.
+
+### BUG-15/16/17 — Vazamento de mensagem de exceção
+
+Criados `LogarExcecao(origem, ex)` (escreve a exceção completa em
+`Console.Error`, ou seja, no log do servidor — ainda não há `ILogger`
+configurado) e a constante `MensagemErroGenerica`. Aplicados em
+`RegistrarMovimentacao`, `ObterRelatorioResumido`, `ObterDadosFechamento`,
+`ZerarCaixaParaProximoDia` e `ListarVendedores`. O cliente deixa de receber
+`SqliteException`, `no such table: Vendas` e `FormatException`.
+
+### BUG-14 — Token anti-forgery (CSRF)
+
+1. `[ValidateAntiForgeryToken]` nos **5 POSTs** do `CaixaController` e nos
+   **5 POSTs** do `HomeController`.
+2. `@Html.AntiForgeryToken()` nos formulários de `Home/{Novo,Editar,Index,Produto}`.
+3. `Program.cs`: `AddAntiforgery(o => o.HeaderName = "X-CSRF-TOKEN")` para os
+   POSTs que não passam por `<form>`.
+4. `_Layout.cshtml`: `<meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />`.
+5. `admin-caixa.js`: helper `csrfHeaders()` aplicado em `FinalizarVenda`,
+   `RegistrarMovimentacao` e `ZerarCaixaParaProximoDia`.
+
+**Verificado manualmente** (app real, banco isolado): POST direto **sem
+token** em `/Caixa/RegistrarMovimentacao` e `/Home/Novo` → **HTTP 400** e
+**nada é gravado** (o suprimento de 999 do cenário sem token não aparece no
+caixa); POST **com** token → **HTTP 200** e gravado. Ou seja, a tela continua
+funcionando e o ataque CSRF é barrado.
+
+> **Nota de operação:** o token anti-forgery é emitido por cookie. Se o
+> navegador ficar muito tempo sem recarregar a página, o cookie expira e o
+> próximo POST volta 400 — recarregar a tela resolve. Ainda não há
+> autenticação, então o token só protege contra CSRF, **não** contra acesso
+> direto por quem alcança a URL na rede (isso é o BUG-13, pendente).
 
 ---
 
