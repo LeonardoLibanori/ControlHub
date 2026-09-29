@@ -236,9 +236,11 @@ namespace ControleEstoqueLoja.Controllers
             }
             catch (Exception ex)
             {
-                // Pega a mensagem real do erro (InnerException)
-                var msg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                return Json(new { success = false, message = "Erro ao salvar: " + msg });
+                // BUG-12 (vazamento de ex.Message): a mensagem interna (SqliteException,
+                // nome de tabela/coluna, caminho de arquivo) ia para o cliente. O
+                // operador nao precisa dela e ela vaza informacao de infraestrutura.
+                LogarExcecao(nameof(RegistrarMovimentacao), ex);
+                return Json(new { success = false, message = MensagemErroGenerica });
             }
         }
 
@@ -313,6 +315,35 @@ namespace ControleEstoqueLoja.Controllers
         /// nao compoem o saldo da gaveta.
         /// </summary>
         public const string MetodoPagamentoDinheiro = "Dinheiro";
+
+        // ------------------------------------------------------------------
+        // BUG-12: tratamento de erro sem vazamento de informacao.
+        //
+        // Antes, cada catch devolvia ex.Message (ou InnerException.Message)
+        // direto no JSON. Isso expunha ao cliente nomes de tabelas/colunas,
+        // caminhos de arquivo e tipos de excecao (SqliteException,
+        // FormatException) - informacao de infraestrutura nao pertencente a
+        // quem opera o caixa.
+        //
+        // A excecao real vai para o log do servidor (Console.Error, ja que
+        // ainda nao ha ILogger configurado - ver item futuro) e o cliente
+        // recebe uma mensagem generica, sem detalhe tecnico.
+        // ------------------------------------------------------------------
+
+        /// <summary>Mensagem devolvida ao cliente quando o erro nao e previsto.</summary>
+        public const string MensagemErroGenerica = "Erro ao processar a solicitação.";
+
+        /// <summary>
+        /// Registra a excecao REAL no log do servidor. Nao usar ILogger ainda:
+        /// o projeto nao configura logging; o Console.Error aparece no log da
+        /// aplicacao (dotnet run / IISExpress / servico), que e quem pode
+        /// diagnosticar. O operador ve apenas MensagemErroGenerica.
+        /// </summary>
+        private static void LogarExcecao(string origem, Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[ERRO] {origem}: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex}");
+        }
 
         /// <summary>
         /// Normaliza o CUPOM (código do vendedor) em UM ÚNICO formato.
@@ -515,7 +546,9 @@ namespace ControleEstoqueLoja.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { erro = ex.Message });
+                // BUG-12 (vazamento de ex.Message): log no servidor, resposta generica.
+                LogarExcecao(nameof(ObterRelatorioResumido), ex);
+                return Json(new { success = false, erro = MensagemErroGenerica });
             }
         }
 
@@ -582,7 +615,9 @@ namespace ControleEstoqueLoja.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { erro = ex.Message });
+                // BUG-12 (vazamento de ex.Message): log no servidor, resposta generica.
+                LogarExcecao(nameof(ObterDadosFechamento), ex);
+                return Json(new { success = false, erro = MensagemErroGenerica });
             }
         }
 
@@ -634,7 +669,9 @@ namespace ControleEstoqueLoja.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                // BUG-12 (vazamento de ex.Message): log no servidor, resposta generica.
+                LogarExcecao(nameof(ZerarCaixaParaProximoDia), ex);
+                return Json(new { success = false, message = MensagemErroGenerica });
             }
         }
 
@@ -704,7 +741,10 @@ namespace ControleEstoqueLoja.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = "Erro ao buscar vendedores: " + ex.Message });
+                // BUG-12 (vazamento de ex.Message): a mensagem do SqliteException
+                // ("no such table: Vendedores") revelava o schema do banco.
+                LogarExcecao(nameof(ListarVendedores), ex);
+                return BadRequest(new { success = false, message = MensagemErroGenerica });
             }
         }
 
