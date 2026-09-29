@@ -1,9 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ControleEstoqueLoja.Models;
 
 namespace ControleEstoqueLoja.Data
 {
-    public class ApplicationDbContext : DbContext
+    /// <summary>
+    /// Contexto unico da aplicacao: dominio (produtos/vendas/caixa) + Identity
+    /// (login). Herdar de IdentityDbContext<Usuario> traz as 7 tabelas do ASP.NET
+    /// Core Identity (AspNetUsers, AspNetRoles, AspNetUserRoles, etc.) e o
+    /// UserManager/RoleManager, sem colidir com nenhuma tabela de negocio.
+    /// </summary>
+    public class ApplicationDbContext : IdentityDbContext<Usuario>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
