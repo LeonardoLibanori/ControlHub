@@ -16,6 +16,16 @@ Console.WriteLine($"O BANCO ATIVO �: {connectionString}");
 // ----------------------------------------------
 
 // Adicione isso ANTES do builder.Build()
+// ------------------------------------------------------------------
+// BUG-05 (seguranca): os POSTs de CaixaController/HomeController exigem
+// token anti-forgery ([ValidateAntiForgeryToken]). As views ja emitem
+// @Html.AntiForgeryToken() no <form>, mas os POSTs feitos por fetch() no
+// admin-caixa.js (FinalizarVenda, RegistrarMovimentacao, zerar dia,
+// cadastrar/excluir vendedor) nao passam por formulario: o token precisa
+// vir no header X-CSRF-TOKEN, lido de um <meta> renderizado no layout.
+// ------------------------------------------------------------------
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
 

@@ -8,6 +8,7 @@
         <h2 class="text-center mb-4">📦 Novo Produto</h2>
 
         <form method="post" action="/Home/Novo">
+            @Html.AntiForgeryToken()
             <div class="mb-3">
                 <label class="fw-bold">Nome do produto:</label>
                 <input type="text" name="nome" class="form-control" required />

@@ -36,6 +36,7 @@
                 <hr />
 
                 <form asp-action="AjustarEstoque" method="post" class="p-3">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
 
                     <div class="mb-4">

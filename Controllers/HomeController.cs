@@ -1,4 +1,4 @@
-﻿using ControleEstoqueLoja.Data;
+using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -97,6 +97,7 @@ namespace ControleEstoqueLoja.Controllers
         /// banco com todo o historico de vendas preservado.
         /// </summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Excluir(int id)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -111,6 +112,7 @@ namespace ControleEstoqueLoja.Controllers
 
         // Movimenta��o de Estoque (Entrada/Sa�da)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Movimentar(int id, string valor, string tipo)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -138,6 +140,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string codigoBarras)
         {
             // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
@@ -208,6 +211,7 @@ namespace ControleEstoqueLoja.Controllers
             return View(produto);
         }
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
@@ -253,6 +257,7 @@ namespace ControleEstoqueLoja.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AjustarEstoque(int id, decimal quantidadeAjuste, string operacao)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);

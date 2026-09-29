@@ -1,4 +1,4 @@
-﻿using ControleEstoqueLoja.Data;
+using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +35,7 @@ namespace ControleEstoqueLoja.Controllers
         // --- MÉTODOS DE FINALIZAÇÃO E ESTOQUE ---
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
         {
             // BUG-18: valida e finaliza a venda com o MESMO critério de comparação
@@ -170,6 +171,8 @@ namespace ControleEstoqueLoja.Controllers
         // --- MÉTODOS DO MENU ADMINISTRATIVO ---
 
         [HttpPost]
+
+        [ValidateAntiForgeryToken]
         public IActionResult RegistrarMovimentacao(string tipo, string valor, string obs)
         {
             try
@@ -647,6 +650,8 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpPost]
+
+        [ValidateAntiForgeryToken]
         public IActionResult ZerarCaixaParaProximoDia()
         {
             try
@@ -677,6 +682,7 @@ namespace ControleEstoqueLoja.Controllers
 
         // 1.1 Cadastro de Vendedor
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CadastrarVendedor(string nome, string codigo)
         {
             // BUG-18: grava sempre o cupom NORMALIZADO e compara duplicado pelo mesmo
@@ -749,6 +755,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ExcluirVendedor(string codigo)
         {
             var cupom = NormalizarCupom(codigo);

@@ -1,4 +1,14 @@
-﻿// 1. MOTOR DO ATALHO
+﻿// BUG-05 (seguranca): os POSTs exigem token anti-forgery ([ValidateAntiForgeryToken]).
+// Os <form> normais ja enviam o token em um input hidden gerado pelo Razor, mas
+// os POSTs feitos por fetch() precisam mandar o token no header X-CSRF-TOKEN
+// (configurado em Program.cs). O token vem do <meta name="csrf-token"> do _Layout.
+function csrfHeaders(extra) {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta ? meta.getAttribute('content') : null;
+    return Object.assign({}, extra || {}, { 'X-CSRF-TOKEN': token || '' });
+}
+
+// 1. MOTOR DO ATALHO
 let modalAtalhosInstance = null;
 document.addEventListener('keydown', function(e) {
     if (e.altKey && (e.key === 'm' || e.key === 'M')) {
@@ -55,7 +65,7 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         data.append('valor', valorNumerico.toFixed(2)); // Always sends format 100.00
         data.append('obs', obs);
 
-        const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data });
+        const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data, headers: csrfHeaders() });
         const res = await resp.json();
 
         if (res.success) {
@@ -290,7 +300,7 @@ async function realizarFechamento() {
 }
 
 async function confirmarZeramentoFinal() {
-    const res = await fetch('/Caixa/ZerarCaixaParaProximoDia', { method: 'POST' });
+    const res = await fetch('/Caixa/ZerarCaixaParaProximoDia', { method: 'POST', headers: csrfHeaders() });
     const data = await res.json();
 
     if (data.success) {
@@ -758,9 +768,9 @@ async function enviarVendaDeVez() {
         const response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            })
         });
 
         const res = await response.json();

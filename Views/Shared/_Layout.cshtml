@@ -3,6 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @* BUG-05: token anti-forgery para os POSTs feitos por fetch() no admin-caixa.js.
+       Os <form> normais ja emitem @Html.AntiForgeryToken(); este <meta> atende o JS,
+       que envia o token no header X-CSRF-TOKEN (configurado em Program.cs).
+       GetAndStoreTokens devolve o token em texto puro (o cookie continua sendo
+       emitido, entao a validacao do [ValidateAntiForgeryToken] funciona). *@
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
     <title>@ViewData["Title"] - Cereal Brasil</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />

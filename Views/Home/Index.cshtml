@@ -65,6 +65,7 @@
                             <div class="acoes">
                                 <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
                                 <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
+                                    @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@item.Id" />
                                     <button type="submit" class="btn-excluir">Excluir</button>
                                 </form>
