@@ -1,4 +1,6 @@
-﻿namespace ControleEstoqueLoja.Models
+﻿using System.Collections.Generic;
+
+namespace ControleEstoqueLoja.Models
 {
     public enum TipoProduto
     {
@@ -15,5 +17,16 @@
         public decimal Quantidade { get; set; }
         public TipoProduto Tipo { get; set; }
         public string? CodigoBarras { get; set; }
+
+        /// <summary>
+        /// Exclusão lógica (soft delete). Um produto com histórico de vendas NÃO pode ser
+        /// apagado fisicamente: a FK VendaItens.ProdutoId tem ON DELETE RESTRICT e o
+        /// banco recusaria a exclusão. Desativar o produto o esconde do operação
+        /// (as listagens filtram por Ativo) mas preserva todo o histórico financeiro.
+        /// </summary>
+        public bool Ativo { get; set; } = true;
+
+        /// <summary>Itens de venda que referenciam este produto (histórico financeiro).</summary>
+        public List<VendaItem> VendaItems { get; set; } = new List<VendaItem>();
     }
 }

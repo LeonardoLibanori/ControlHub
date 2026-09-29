@@ -51,6 +51,9 @@ namespace ControleEstoqueLoja.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("CodigoBarras")
                         .HasColumnType("TEXT");
 
@@ -184,9 +187,9 @@ namespace ControleEstoqueLoja.Migrations
             modelBuilder.Entity("ControleEstoqueLoja.Models.VendaItem", b =>
                 {
                     b.HasOne("ControleEstoqueLoja.Models.Produto", "Produto")
-                        .WithMany()
+                        .WithMany("VendaItems")
                         .HasForeignKey("ProdutoId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ControleEstoqueLoja.Models.Venda", "Venda")
@@ -198,6 +201,11 @@ namespace ControleEstoqueLoja.Migrations
                     b.Navigation("Produto");
 
                     b.Navigation("Venda");
+                });
+
+            modelBuilder.Entity("ControleEstoqueLoja.Models.Produto", b =>
+                {
+                    b.Navigation("VendaItems");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Venda", b =>
