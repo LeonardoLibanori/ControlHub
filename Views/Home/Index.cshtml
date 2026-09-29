@@ -5,8 +5,15 @@
     (preço negativo, estoque negativo, código de barras duplicado).
     Mesmo partial _Aviso usado em Produto.cshtml — sem duplicar HTML.
 *@
+@inject IAuthorizationService Autorizacao
 @{
     var mensagemErro = TempData["Erro"] as string;
+
+    // BUG-13 (commit 4): esta tela e do Operador (PodeOperarPDV), mas cada botao
+    // dela chama uma action PodeGerenciarEstoque (so o Dono). A pergunta vai a
+    // mesma IAuthorizationService das rotas: a view nao conhece nenhuma role,
+    // entao ela nunca mostra um botao que so poderia terminar em 403.
+    var podeGerenciarEstoque = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarEstoque)).Succeeded;
 }
 
 @if (!string.IsNullOrWhiteSpace(mensagemErro))
@@ -26,9 +33,12 @@
         </form>
     </div>
 
-    <div class="mb-4 text-start">
-        <a asp-controller="Home" asp-action="Novo" class="btn-novo">+ Novo Produto</a>
-    </div>
+    @if (podeGerenciarEstoque)
+    {
+        <div class="mb-4 text-start">
+            <a asp-controller="Home" asp-action="Novo" class="btn-novo">+ Novo Produto</a>
+        </div>
+    }
 
     @* QUADRADO DA TABELA (ESTE FICA DENTRO DO MAIN-CONTAINER) *@
     <div class="tabela-card">
@@ -38,7 +48,10 @@
                     <th>Produto</th>
                     <th>Tipo</th>
                     <th>Estoque</th>
-                    <th class="text-center">Ações</th>
+                    @if (podeGerenciarEstoque)
+                    {
+                        <th class="text-center">Ações</th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -61,16 +74,19 @@
                                             @item.Quantidade.ToString("N1") <span>kg</span>
                                         }
                         </td>
-                        <td>
-                            <div class="acoes">
-                                <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
-                                <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Id" />
-                                    <button type="submit" class="btn-excluir">Excluir</button>
-                                </form>
-                            </div>
-                        </td>
+                        @if (podeGerenciarEstoque)
+                        {
+                            <td>
+                                <div class="acoes">
+                                    <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
+                                    <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn-excluir">Excluir</button>
+                                    </form>
+                                </div>
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>

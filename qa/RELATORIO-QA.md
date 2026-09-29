@@ -28,7 +28,7 @@ o banco versionado mudar.
 
 | Script | Escopo | Estado |
 |---|---|---|
-| `qa/http-authz.ps1` | Autorização dos 3 perfis (anônimo / Operador / Dono) — **BUG-13** | ✅ **66/66** checagens, 0 falhas |
+| `qa/http-authz.ps1` | Autorização dos 3 perfis (anônimo / Operador / Dono) + **o que cada um vê na tela** — **BUG-13** | ✅ **115/115** checagens, 0 falhas |
 | `qa/http-parte1.ps1` | Vendas e caixa da Fase 1 (BUG-01/02/05/06) | ⚠️ **histórico/superado**: foi escrito **antes** do BUG-14 (não envia token anti-forgery), do BUG-13 (não faz login) e da divisão de `RegistrarMovimentacao` (a rota antiga hoje responde 405). Acumula **14 falhas de preparação que não são bugs atuais**; para voltar a valer precisa do mesmo preâmbulo de Setup/login e das rotas novas de sangria/suprimento. |
 
 ## Estado atual
@@ -40,14 +40,16 @@ o banco versionado mudar.
 | ❌ Falhando (bug presente) | **1** |
 
 Última atualização: **29/09/2026** — **autenticação e autorização (BUG-13)**:
-`[Authorize]` + policies nomeadas em todas as rotas (`85d6797`) e a tela de
-gestão de usuários só-Dono (`702ae85`). Antes destas duas, três correções de
+`[Authorize]` + policies nomeadas em todas as rotas (`85d6797`), a tela de
+gestão de usuários só-Dono (`702ae85`) e o **menu por papel** nas views: o que a
+pessoa não tem permissão de fazer não aparece na navegação, nem no Alt+M, nem
+como botão na tela. Antes dessas três, três correções de
 segurança **sem** autenticação: XSS armazenado (BUG-12), vazamento de
 `ex.Message` (BUG-15/16/17) e token anti-forgery em todos os POSTs (BUG-14).
 Ficou vermelho apenas `Decimal_NaoDeveSerPersistidoComoText` (**BUG-20**).
 O teste HTTP dos 3 perfis, que até então era um script descartável em `%TEMP%`,
-passou a ser **versionado** em `qa/http-authz.ps1` (66/66 checagens) — ver
-*Como executar*.
+passou a ser **versionado** em `qa/http-authz.ps1` (115/115 checagens, 49 delas
+sobre o HTML que cada perfil recebe) — ver *Como executar*.
 
 Os 2 testes de concorrência foram recuperados do notebook antigo em 29/09/2026
 (commit `11b88f0`): ambos passam, porque a branch atual já rejeita a venda
@@ -284,13 +286,14 @@ funcionando e o ataque CSRF é barrado.
 ## ✅ Corrigido em 29/09/2026 — Autenticação e autorização (BUG-13)
 
 O sistema deixou de ser aberto na rede: **toda rota de domínio exige login e
-policy**. Três entregas, nesta ordem:
+policy**. Quatro entregas, nesta ordem:
 
 | ID | O que foi feito | Commit | Teste |
 |---|---|---|---|
 | — | Identity, migration, cookie de 12 h e papéis Dono/Operador | `ae12be8` | — |
 | **BUG-13** | `[Authorize]` + policy por rota; sangria separada do suprimento | `85d6797` | `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao` |
 | — | Tela de gestão de usuários (só Dono) — sem ela não havia como criar Operador | `702ae85` | HTTP manual (abaixo) |
+| **BUG-13** | Menu, atalhos e botões por papel nas views (o que não pode, não aparece) | *(este commit)* | `qa/http-authz.ps1`, seção 6 — 49 checagens no HTML |
 
 ### Como ficou
 
@@ -323,8 +326,22 @@ policy**. Três entregas, nesta ordem:
    e-mail, papel de cada conta e situação; cria conta com nome, e-mail, senha e
    papel (Operador por padrão). O papel vindo do POST é validado contra a lista
    conhecida **antes** de tocar no Identity.
+8. **O que cada papel VÊ** (`Views/Shared/_Layout.cshtml`, `Views/Home/Index.cshtml`
+   e `Views/Home/Produto.cshtml`): as views perguntam à **mesma**
+   `IAuthorizationService` das rotas — não existe um `if (role == "Operador")` em
+   nenhuma view. Na prática: a barra superior mostra nome e papel e esconde
+   `Histórico` (`PodeVerFinanceiro`) e `Usuários` (`PodeGerenciarUsuarios`) de quem
+   não pode; o **Alt+M** lista só os itens utilizáveis (o Operador vê suprimento,
+   reimprimir e vendedores — não vê sangria, caixa, fechamento nem relatório);
+   `Sair` só aparece logado; e a tela de estoque, que o Operador abre como
+   consulta, esconde `+ Novo Produto`, `Editar`/`Excluir` e o formulário de ajuste
+   (mostra no lugar o aviso "ajuste de estoque é função do dono"). O
+   `admin-caixa.js` recebe `window.LOJA_ACESSO` com as mesmas flags para esconder
+   o que ele desenha em runtime (botão de novo vendedor). **Nada disso é
+   segurança**: quem digitar `/Usuarios` na barra de endereços continua levando
+   **403** — a view apenas deixa de oferecer um botão que só terminaria em 403.
 
-### Evidência HTTP — 3 perfis (66/66 checagens)
+### Evidência HTTP — 3 perfis (115/115 checagens)
 
 Script **versionado** em `qa/http-authz.ps1` (mesmo padrão do `qa/http-parte1.ps1`:
 `-Porta`, `-ManterApp`, banco isolado em `%TEMP%` e conferência do hash do banco
@@ -332,7 +349,7 @@ versionado no início e no fim), banco **isolado** em `%TEMP%\qa-authz-<guid>.db
 o `controleestoque.db` versionado **não é aberto** em nenhum momento — o script falha
 se o hash mudar. Três sessões de cookie independentes, aplicação real na porta 5400
 (o Dono nasce em `/Account/Setup`, o Operador é criado pela tela `/Usuarios`); a
-execução versionada terminou com **66/66 checagens e 0 falhas** e o hash
+execução versionada terminou com **115/115 checagens e 0 falhas** e o hash
 `80D3F707…A8B8A` idêntico antes e depois:
 
 | Perfil | Resultado |

@@ -1,9 +1,15 @@
 ﻿@model ControleEstoqueLoja.Models.Produto
+@inject IAuthorizationService Autorizacao
 @{
     // BUG-21: AjustarEstoque define TempData["Erro"] (ex.: "Estoque insuficiente!") ao
     // barrar a remoção, mas nenhuma view o exibia — o operador achava que o botão não
     // funcionava. O partial _Aviso transforma o TempData em um alerta SweetAlert2.
     var mensagemErro = TempData["Erro"] as string;
+
+    // BUG-13 (commit 4): o Operador chega aqui pela consulta (PodeOperarPDV), mas o
+    // formulario abaixo chama AjustarEstoque, que e PodeGerenciarEstoque (so o Dono).
+    // Decide-se pela mesma policy da rota, nao pela role.
+    var podeGerenciarEstoque = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarEstoque)).Succeeded;
 }
 
 @if (!string.IsNullOrWhiteSpace(mensagemErro))
@@ -35,30 +41,43 @@
 
                 <hr />
 
-                <form asp-action="AjustarEstoque" method="post" class="p-3">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" value="@Model.Id" />
+                @if (podeGerenciarEstoque)
+                {
+                    <form asp-action="AjustarEstoque" method="post" class="p-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
 
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">QUANTIDADE PARA AJUSTE</label>
-                        <input type="number" name="quantidadeAjuste" class="form-control form-control-lg text-center" placeholder="0" min="1" step="any" required />
-                    </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">QUANTIDADE PARA AJUSTE</label>
+                            <input type="number" name="quantidadeAjuste" class="form-control form-control-lg text-center" placeholder="0" min="1" step="any" required />
+                        </div>
 
-                    <div class="d-flex gap-3 justify-content-center">
-                        <button type="submit" name="operacao" value="adicionar" class="btn-ajuste btn-add">
-                            + ADICIONAR
-                        </button>
-                        <button type="submit" name="operacao" value="remover" class="btn-ajuste btn-rem">
-                            - REMOVER
-                        </button>
-                    </div>
+                        <div class="d-flex gap-3 justify-content-center">
+                            <button type="submit" name="operacao" value="adicionar" class="btn-ajuste btn-add">
+                                + ADICIONAR
+                            </button>
+                            <button type="submit" name="operacao" value="remover" class="btn-ajuste btn-rem">
+                                - REMOVER
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    @* Operador: mostra o estoque (que ele consulta) e diz por que
+                       nao ha botao aqui - esconder sem explicar parecia tela quebrada. *@
+                    <p class="text-muted p-3 mb-0">
+                        Ajuste de estoque é função do dono. Esta tela está em modo consulta.
+                    </p>
+                }
 
-                    <div class="text-center mt-5">
-                        <a asp-action="Index" class="btn-voltar-borda">
-                            Voltar ao Estoque
-                        </a>
-                    </div>
-                </form>
+                @* O "Voltar" estava dentro do form: saiu de la para continuar
+                   visivel tambem no modo consulta do Operador. *@
+                <div class="text-center mt-5">
+                    <a asp-action="Index" class="btn-voltar-borda">
+                        Voltar ao Estoque
+                    </a>
+                </div>
             </div>
         </div>
     </div>

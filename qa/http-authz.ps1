@@ -123,6 +123,35 @@ function SemTexto($desc, $corpo, $agulha) {
     if ($corpo -like "*$agulha*") { $global:f++; Write-Falha ('{0} contem "{1}" (nao deveria)' -f $desc, $agulha); return }
     $global:p++; Write-Ok ('{0} nao contem "{1}"' -f $desc, $agulha)
 }
+# Mostra, em texto, o que o navegador desenha: e a versao "visual" dos testes
+# acima, para quem esta revisando ver a diferenca entre os papeis sem abrir o
+# navegador. Nao conta checagem: so imprime o que foi encontrado no HTML.
+function Mostrar-Menu($titulo, $html) {
+    Say ''
+    Say ('  -- ' + $titulo + ' --')
+
+    $links = [regex]::Matches($html, '<a class="nav-link text-dark"[^>]*>([^<]+)</a>')
+    if ($links.Count -gt 0) {
+        Say ('    navbar .......: ' + (($links | ForEach-Object { $_.Groups[1].Value }) -join ' | '))
+    } else {
+        Say '    navbar .......: (nenhum link)'
+    }
+
+    $itens = [regex]::Matches($html, 'data-key="(\d)"[^>]*>(.*?)</button>', 'Singleline')
+    if ($itens.Count -gt 0) {
+        foreach ($m in $itens) {
+            $rotulo = ([regex]::Matches($m.Groups[2].Value, '<span[^>]*>([^<]*)</span>') | ForEach-Object { $_.Groups[1].Value }) -join ' '
+            $rotulo = ($rotulo -replace '[\uD800-\uDFFF\uFE0F]', '') -replace '\s+', ' '
+            Say ('    Alt+M ' + $m.Groups[1].Value + ' .......: ' + $rotulo.Trim())
+        }
+    } else {
+        Say '    Alt+M ........: (nenhum item)'
+    }
+
+    if ($html -match '>Sair</button>') { Say '    botao Sair ...: sim' } else { Say '    botao Sair ...: nao' }
+    if ($html -match 'href="/Usuarios"') { Say '    link /Usuarios: sim' } else { Say '    link /Usuarios: nao' }
+}
+
 Write-Titulo 'Pre-requisitos e banco isolado'
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
@@ -297,6 +326,90 @@ Ok 'GET /Usuarios' 403 (Chama $jar 'GET' '/Usuarios' $null $null $true)
 Ok 'GET /Usuarios/Criar' 403 (Chama $jar 'GET' '/Usuarios/Criar' $null $null $true)
 Ok 'POST /Usuarios/Criar' 403 (Chama $jar 'POST' '/Usuarios/Criar' 'Nome=HACK&Email=hack%40teste.com&Senha=Hack%40123&ConfirmarSenha=Hack%40123&Papel=Dono' (Token $pg.Body) $true)
 Ok302Negado 'GET /Usuarios (navegacao do Operador)' (Chama $jar 'GET' '/Usuarios' $null $null $false)
+
+# =============================================================================
+# 6) MENU POR PAPEL (commit 4) - o que SAI no HTML de cada perfil.
+#    O menu nao e a seguranca (quem barra e o [Authorize] da action, ja testado
+#    nos blocos 2 a 5): aqui se confere o que a pessoa VE - que e o que evita
+#    oferecer ao operador um botao que so pode terminar em 403.
+#    Estes testes leem o MESMO HTML que o navegador recebe (inclusive a navbar
+#    e o modal Alt+M), entao valem como verificacao visual automatizada.
+# =============================================================================
+Write-Titulo '6) MENU POR PAPEL (commit 4) - HTML renderizado'
+
+$hDono = (Chama $dono 'GET' '/Caixa/Index' $null $null $false).Body
+Write-Host '  -- Dono: menu completo --'
+TemTexto 'Dono: navbar mostra o nome' $hDono '>Dono Teste</b>'
+TemTexto 'Dono: navbar mostra o papel' $hDono '>Dono</span>'
+TemTexto 'Dono: link /Usuarios na navbar' $hDono 'href="/Usuarios"'
+TemTexto 'Dono: link do Historico na navbar' $hDono 'href="/Caixa/Historico"'
+TemTexto 'Dono: item 1 (SANGRIA) no menu Alt+M' $hDono 'data-key="1"'
+TemTexto 'Dono: item 2 (SUPRIMENTO) no menu Alt+M' $hDono 'data-key="2"'
+TemTexto 'Dono: item 3 (CAIXA) no menu Alt+M' $hDono 'data-key="3"'
+TemTexto 'Dono: item 4 (FECHAMENTO) no menu Alt+M' $hDono 'data-key="4"'
+TemTexto 'Dono: item 5 (RELATORIO) no menu Alt+M' $hDono 'data-key="5"'
+TemTexto 'Dono: item 6 (REIMPRIMIR) no menu Alt+M' $hDono 'data-key="6"'
+TemTexto 'Dono: item 7 (VENDEDORES) no menu Alt+M' $hDono 'data-key="7"'
+TemTexto 'Dono: rotulo MENU ADMINISTRATIVO' $hDono 'MENU ADMINISTRATIVO'
+TemTexto 'Dono: botao Sair na navbar' $hDono '>Sair</button>'
+TemTexto 'Dono: JS libera a gestao de vendedores' $hDono 'vendedores: true'
+
+$hOp = (Chama $jar 'GET' '/Caixa/Index' $null $null $false).Body
+Write-Host '  -- Operador: so o que ele pode usar --'
+TemTexto 'Operador: navbar mostra o nome' $hOp '>Operador Teste</b>'
+TemTexto 'Operador: navbar mostra o papel' $hOp '>Operador</span>'
+TemTexto 'Operador: botao Sair na navbar' $hOp '>Sair</button>'
+TemTexto 'Operador: item 2 (SUPRIMENTO) no menu Alt+M' $hOp 'data-key="2"'
+TemTexto 'Operador: item 6 (REIMPRIMIR) no menu Alt+M' $hOp 'data-key="6"'
+TemTexto 'Operador: item 7 (VENDEDORES - consulta) no menu Alt+M' $hOp 'data-key="7"'
+SemTexto 'Operador: NAO tem item 1 (SANGRIA)' $hOp 'data-key="1"'
+SemTexto 'Operador: NAO tem item 3 (CAIXA)' $hOp 'data-key="3"'
+SemTexto 'Operador: NAO tem item 4 (FECHAMENTO)' $hOp 'data-key="4"'
+SemTexto 'Operador: NAO tem item 5 (RELATORIO)' $hOp 'data-key="5"'
+SemTexto 'Operador: NAO tem link /Usuarios' $hOp 'href="/Usuarios"'
+SemTexto 'Operador: NAO tem link do Historico' $hOp 'href="/Caixa/Historico"'
+SemTexto 'Operador: NAO ve o rotulo MENU ADMINISTRATIVO' $hOp 'MENU ADMINISTRATIVO'
+TemTexto 'Operador: ve MENU DO CAIXA' $hOp 'MENU DO CAIXA'
+TemTexto 'Operador: JS diz que opera o PDV' $hOp 'pdv: true'
+TemTexto 'Operador: JS diz que NAO ve o financeiro' $hOp 'financeiro: false'
+TemTexto 'Operador: JS diz que NAO gerencia vendedores' $hOp 'vendedores: false'
+
+$hAnon = (Chama $anon 'GET' '/Account/Login' $null $null $false).Body
+Write-Host '  -- Anonimo: nenhum menu --'
+SemTexto 'Anonimo: sem menu Alt+M' $hAnon 'id="modalAtalhos"'
+SemTexto 'Anonimo: sem link /Usuarios' $hAnon 'href="/Usuarios"'
+SemTexto 'Anonimo: sem o rotulo MENU ADMINISTRATIVO' $hAnon 'MENU ADMINISTRATIVO'
+SemTexto 'Anonimo: sem botao Sair' $hAnon '>Sair</button>'
+SemTexto 'Anonimo: sem nome/papel na navbar' $hAnon 'class="badge bg-secondary"'
+SemTexto 'Anonimo: sem link de navegacao para o Caixa' $hAnon 'href="/Caixa"'
+
+# Mesma regra do menu vale para os botoes dentro das telas: a tela de Estoque e
+# de consulta (PodeOperarPDV), mas Novo/Editar/Excluir/AjustarEstoque pedem
+# PodeGerenciarEstoque. Se o Operador ve o botao, o maximo que ele consegue e um
+# 403 - entao o botao nao vai nem para o HTML dele.
+Write-Host '  -- Tela de Estoque: botoes de Dono apenas para o Dono --'
+$eDono = (Chama $dono 'GET' '/Home/Index' $null $null $false).Body
+TemTexto 'Dono: botao de novo produto' $eDono 'btn-novo'
+TemTexto 'Dono: botao editar na tabela' $eDono 'btn-editar'
+TemTexto 'Dono: botao excluir na tabela' $eDono 'btn-excluir'
+$pDono = (Chama $dono 'GET' '/Home/Produto/1' $null $null $false).Body
+TemTexto 'Dono: formulario de ajuste de estoque' $pDono 'QUANTIDADE PARA AJUSTE'
+
+$eOp = (Chama $jar 'GET' '/Home/Index' $null $null $false).Body
+SemTexto 'Operador: sem botao de novo produto' $eOp 'btn-novo'
+SemTexto 'Operador: sem botao editar' $eOp 'btn-editar'
+SemTexto 'Operador: sem botao excluir' $eOp 'btn-excluir'
+SemTexto 'Operador: sem coluna de acoes na tabela' $eOp 'class="acoes"'
+$pOp = (Chama $jar 'GET' '/Home/Produto/1' $null $null $false).Body
+SemTexto 'Operador: sem formulario de ajuste' $pOp 'QUANTIDADE PARA AJUSTE'
+SemTexto 'Operador: sem botao adicionar/remover' $pOp 'btn-ajuste'
+TemTexto 'Operador: continua podendo voltar para o estoque' $pOp 'btn-voltar-borda'
+TemTexto 'Operador: ve o aviso de modo consulta' $pOp 'modo consulta'
+
+# Versao "visual" (texto) do que cada perfil recebe - so para revisao humana.
+Mostrar-Menu 'DONO: o que o navegador mostra' $hDono
+Mostrar-Menu 'OPERADOR: o que o navegador mostra' $hOp
+Mostrar-Menu 'ANONIMO: o que o navegador mostra' $hAnon
 Say ''
 Write-Titulo 'RESULTADO FINAL'
 Write-Host "  checagens aprovadas: $global:p" -ForegroundColor Green
