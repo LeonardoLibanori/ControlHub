@@ -33,11 +33,11 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 // --- GARANTE QUE O BANCO E AS TABELAS EXISTAM ---
-// BUG-19: EnsureCreated() criava o schema a partir do MODELO ATUAL e ignorava
-// as migrations. Numa base já existente, EnsureCreated() não altera nada: as
-// colunas/índices/FKs criados por migrations posteriores nunca eram aplicados e a
-// aplicação quebrava em runtime. Migrate() aplica as migrations pendentes e cria
-// a base do zero apenas quando ela ainda não existe.
+// BUG-19: a criação direta do schema a partir do MODELO ATUAL ignorava as
+// migrations. Numa base já existente ela não altera nada: colunas, índices e FKs
+// criados por migrations posteriores nunca eram aplicados e a aplicação quebrava
+// em runtime. Migrate() aplica as migrations pendentes e cria a base do zero
+// apenas quando ela ainda não existe.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
