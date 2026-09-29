@@ -1,6 +1,6 @@
 ﻿# Relatório de QA — Sistema de Controle de Estoque
 
-**Branch:** `fix/fase1-dinheiro` · **HEAD:** `c4fc2f6` · **Última atualização:** 29/09/2026
+**Branch:** `fix/fase1-dinheiro` · **HEAD (código medido):** `702ae85` · **Última atualização:** 29/09/2026
 
 > Esta suíte foi **recriada do zero** após a troca de máquina. As pastas `tests.QA/` e
 > `qa/` existiam apenas no PC antigo e nunca foram versionadas. A partir de agora
@@ -21,14 +21,15 @@ ao final. **O `controleestoque.db` versionado nunca é aberto pela suíte.**
 | Métrica | Valor |
 |---|---|
 | Total de testes | **57** |
-| ✅ Aprovados (comportamento correto) | **55** |
-| ❌ Falhando (bug presente) | **2** |
+| ✅ Aprovados (comportamento correto) | **56** |
+| ❌ Falhando (bug presente) | **1** |
 
-Última atualização: **29/09/2026** — três correções de segurança **sem**
-autenticação: XSS armazenado (BUG-12), vazamento de `ex.Message` (BUG-15/16/17)
-e token anti-forgery em todos os POSTs (BUG-14).
-Ficou vermelho: `Decimal_NaoDeveSerPersistidoComoText` (BUG-20) +
-`Controllers_NaoDevemExporEndpointsSemAutorizacao` (BUG-13) = **2 casos**.
+Última atualização: **29/09/2026** — **autenticação e autorização (BUG-13)**:
+`[Authorize]` + policies nomeadas em todas as rotas (`85d6797`) e a tela de
+gestão de usuários só-Dono (`702ae85`). Antes destas duas, três correções de
+segurança **sem** autenticação: XSS armazenado (BUG-12), vazamento de
+`ex.Message` (BUG-15/16/17) e token anti-forgery em todos os POSTs (BUG-14).
+Ficou vermelho apenas `Decimal_NaoDeveSerPersistidoComoText` (**BUG-20**).
 
 Os 2 testes de concorrência foram recuperados do notebook antigo em 29/09/2026
 (commit `11b88f0`): ambos passam, porque a branch atual já rejeita a venda
@@ -169,7 +170,6 @@ _Nenhum. Os dois críticos de segurança foram corrigidos em 29/09/2026
 
 | ID | Descrição | Teste |
 |---|---|---|
-| BUG-13 | Nenhum endpoint tem `[Authorize]` — **feature maior, adiada** | `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao` |
 | BUG-20 | `decimal` mapeado como `TEXT` no SQLite — `ORDER BY` fica lexicográfico (`"10,00" < "9,00"`), quebrando relatórios | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
 
 ---
@@ -241,7 +241,74 @@ funcionando e o ataque CSRF é barrado.
 > navegador ficar muito tempo sem recarregar a página, o cookie expira e o
 > próximo POST volta 400 — recarregar a tela resolve. Ainda não há
 > autenticação, então o token só protege contra CSRF, **não** contra acesso
-> direto por quem alcança a URL na rede (isso é o BUG-13, pendente).
+> direto por quem alcança a URL na rede (era o BUG-13, corrigido em `85d6797`).
+
+---
+
+## ✅ Corrigido em 29/09/2026 — Autenticação e autorização (BUG-13)
+
+O sistema deixou de ser aberto na rede: **toda rota de domínio exige login e
+policy**. Três entregas, nesta ordem:
+
+| ID | O que foi feito | Commit | Teste |
+|---|---|---|---|
+| — | Identity, migration, cookie de 12 h e papéis Dono/Operador | `ae12be8` | — |
+| **BUG-13** | `[Authorize]` + policy por rota; sangria separada do suprimento | `85d6797` | `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao` |
+| — | Tela de gestão de usuários (só Dono) — sem ela não havia como criar Operador | `702ae85` | HTTP manual (abaixo) |
+
+### Como ficou
+
+1. **`[Authorize]` no nível de CLASSE** em `CaixaController`, `HomeController` e
+   `AccountController` (padrão do projeto): nenhuma rota fica anônima por
+   esquecimento. Uma action nova já nasce protegida.
+2. **Cada action declara a policy que exige** (20 no caixa, 9 na home). A regra
+   mora em `Security/Policies.cs` (fonte única, registrada em `Program.cs`);
+   **não existe `if (User.IsInRole(...))` espalhado no código**.
+3. **`AccountController`**: cada action leva `[AllowAnonymous]` **de propósito**
+   (Login, Logout, Setup, AcessoNegado) — se o login exigisse autenticação,
+   ninguém conseguiria entrar. `Privacy` e `Error` também são anônimas.
+4. **`RegistrarMovimentacao` foi dividida** em `RegistrarSuprimento`
+   (`PodeRegistrarSuprimento`: Operador + Dono) e `RegistrarSangria`
+   (`PodeRegistrarSangria`: só Dono). A permissão passou a morar na **rota**: um
+   Operador que chame `/Caixa/RegistrarSangria` leva **403**. A rota única antiga
+   (tipo no corpo do POST) era exatamente a brecha — aceitava sangria de qualquer
+   um. Sangria continua validando o saldo da gaveta; suprimento não.
+5. **Acesso negado com duas respostas** (só o `AccessDeniedPath` quebrava o
+   painel): navegação vai para `/Account/AcessoNegado`; chamada **de dados**
+   (`fetch` do painel, `curl`) recebe **403** direto. Antes o `fetch` seguia o
+   302, recebia a página HTML de acesso negado com status **200** e o tratamento
+   de 403 do `admin-caixa.js` nunca rodava: o operador via "erro inesperado" em
+   vez de "apenas o Dono pode registrar sangria", e o 200 dava a impressão de que
+   a sangria tinha passado.
+6. **`admin-caixa.js`** chama as rotas novas (sangria/suprimento conforme o tipo)
+   e se identifica como AJAX (`X-Requested-With`), junto do `X-CSRF-TOKEN` que
+   já enviava.
+7. **Tela `/Usuarios`** (policy `PodeGerenciarUsuarios`, Dono apenas): lista nome,
+   e-mail, papel de cada conta e situação; cria conta com nome, e-mail, senha e
+   papel (Operador por padrão). O papel vindo do POST é validado contra a lista
+   conhecida **antes** de tocar no Identity.
+
+### Evidência HTTP — 3 perfis (66/66 checagens)
+
+Script manual em `%TEMP%\manual-authz.ps1` (não versionado, por higiene — ver
+`qa/http-parte1.ps1`), banco **isolado** em `%TEMP%\qa-estoque\manual-authz\`:
+o `controleestoque.db` versionado **não foi aberto** em nenhum momento. Três
+sessões de cookie independentes, aplicação real na porta 5400:
+
+| Perfil | Resultado |
+|---|---|
+| **Anônimo** | 10 rotas de domínio → **302** para `/Account/Login?ReturnUrl=…`; **nenhuma** respondeu 200. POST de sangria e de criação de usuário → **401** |
+| **Dono** | `/Usuarios` e `/Usuarios/Criar` → 200; criou o Operador → 302; e-mail repetido → 200 com aviso em português (nada duplicado); `Papel=SuperAdmin` → 200 com aviso e **nada gravado**; suprimento, sangria, produto, vendedor e relatórios → 200 |
+| **Operador** (criado pela tela nova) | PDV → 200; bipou o produto → 200; **fechou uma venda completa** → `{"success":true}`; suprimento → 200; **sangria → 403**; relatórios (5 rotas), fechamento (2), estoque (5), vendedores (2) e usuários (3) → **403**; `/Usuarios` por navegação → 302 para `/Account/AcessoNegado` |
+
+Dois detalhes que **só** o teste manual pegou:
+
+- Mensagens do Identity em inglês (`The Papel field is required.`) trocadas por
+  texto em português; os acentos saem HTML-codificados pelo Razor
+  (`J&#xE1; existe uma conta com este e-mail.`), o que está **correto** — o
+  navegador renderiza "Já".
+- Um Operador levava **302 → 200** (página de acesso negado) no lugar do 403 em
+  toda chamada `fetch`: corrigido no item 5 acima.
 
 ---
 
@@ -255,8 +322,10 @@ São os 32 testes verdes — ver `qa/falhas.csv` (`Status = corrigido`).
 
 → `SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML`
 
-### BUG-13 — Nenhum endpoint tem autenticação
-Nenhum controller possui `[Authorize]`. Qualquer pessoa na mesma rede acessa
-`/Caixa/Index`, `/Home/Excluir`, `/Caixa/RegistrarMovimentacao`, `/Caixa/ExcluirVendedor`.
+### BUG-13 — Nenhum endpoint tem autenticação ✅ **corrigido** (`85d6797`)
+Nenhum controller possuía `[Authorize]`: qualquer pessoa na mesma rede acessava
+`/Caixa/Index`, `/Home/Excluir`, `/Caixa/RegistrarSangria` e
+`/Caixa/ExcluirVendedor`. Hoje toda rota de domínio exige policy — ver
+"Corrigido em 29/09/2026 — Autenticação e autorização (BUG-13)".
 
 → `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao`

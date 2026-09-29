@@ -11,7 +11,7 @@ BUG-09,Produtos,Alta,"Cadastro aceita codigo de barras duplicado (ao contrario d
 BUG-10,Produtos,Alta,"Cadastro aceita preco negativo",ProdutosQaTests.Novo_DeveRejeitarPrecoNegativo,corrigido,
 BUG-11,Produtos,Alta,"Cadastro aceita estoque negativo",ProdutosQaTests.Novo_DeveRejeitarEstoqueNegativo,corrigido,
 BUG-12,Seguranca,Critica,"XSS armazenado: nome de produto com <script> nao e sanitizado e admin-caixa.js interpola direto no innerHTML",SegurancaQaTests.NomeDeProduto_ComScript_DeveSerSanitizadoParaOInnerHTML,corrigido,4b06257
-BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos (feature maior adiada para a proxima etapa)",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,pendente,
+BUG-13,Seguranca,Critica,"Nenhum controller possui [Authorize]: endpoints administrativos publicos (qualquer um na rede registrava sangria e excluia produto)",SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao,corrigido,85d6797;702ae85
 BUG-14,Seguranca,Alta,"POSTs sem [ValidateAntiForgeryToken] (CSRF)",SegurancaQaTests.PostActions_NaoDevemFaltarAntiForgery,corrigido,c4fc2f6
 BUG-15,Seguranca,Media,"ListarVendedores vaza ex.Message ao cliente",SegurancaQaTests.ListarVendedores_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
 BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",SegurancaQaTests.ObterDadosFechamento_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
