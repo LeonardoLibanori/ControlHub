@@ -202,8 +202,10 @@ public class DadosQaTests
 
         try
         {
-            // 2a. base LEGADA: para uma migration antes da conversao - o ponto
-            //     exato em que o banco da loja esta hoje.
+            // 2a. base LEGADA: para uma migration antes da conversao -- exatamente
+            //     a migration em que o controleestoque.exemplo.db versionado esta
+            //     parado (lido na __EFMigrationsHistory dele: Inicial_Nova,
+            //     AddValorRecebidoValorTroco e ProdutoAtivo_ExclusaoLogica).
             using (var ctx = new ApplicationDbContext(options))
                 ctx.Database.Migrate("20260928234611_ProdutoAtivo_ExclusaoLogica_VendaItemRestrict");
 
