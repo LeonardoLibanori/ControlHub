@@ -1,0 +1,35 @@
+@model ControleEstoqueLoja.Controllers.LoginViewModel
+@{
+    ViewData["Title"] = "Entrar";
+    Layout = "_Layout";
+}
+
+<div class="container" style="max-width: 420px; margin-top: 60px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h2 class="text-center mb-1">🔐 ENTRAR</h2>
+            <p class="text-center text-muted mb-4">Controle de Estoque</p>
+
+            <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+            <form method="post" asp-controller="Account" asp-action="Login">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-bold"></label>
+                    <input asp-for="Email" class="form-control" autofocus autocomplete="username" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Senha" class="form-label fw-bold"></label>
+                    <input asp-for="Senha" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Senha" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100 py-2 fw-bold">ENTRAR</button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -6,6 +6,7 @@
     <h2 style="text-align: center; margin-bottom: 25px;">Editar Produto</h2>
 
     <form method="post" action="/Home/Editar">
+        @Html.AntiForgeryToken()
         <input type="hidden" name="id" value="@Model.Id" />
 
         <label style="font-weight: bold;">Nome do produto:</label><br />

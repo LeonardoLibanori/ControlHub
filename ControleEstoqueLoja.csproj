@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,6 +19,15 @@
     <Compile Remove="Models\Class.cs" />
   </ItemGroup>
 
+  <!-- A suite de QA fica dentro do repo, mas NAO faz parte do app:
+       sem estas exclusoes o Web SDK compila os .cs de tests.QA no projeto web. -->
+  <ItemGroup>
+    <Compile Remove="tests.QA\**" />
+    <Content Remove="tests.QA\**" />
+    <EmbeddedResource Remove="tests.QA\**" />
+    <None Remove="tests.QA\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Remove="Views\Caixa\Index1.cshtml" />
     <Content Remove="Views\Caixa\Index2.cshtml" />
@@ -31,6 +40,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.3">
       <PrivateAssets>all</PrivateAssets>

@@ -1,4 +1,22 @@
-﻿// 1. MOTOR DO ATALHO
+﻿// BUG-05 (seguranca): os POSTs exigem token anti-forgery ([ValidateAntiForgeryToken]).
+// Os <form> normais ja enviam o token em um input hidden gerado pelo Razor, mas
+// os POSTs feitos por fetch() precisam mandar o token no header X-CSRF-TOKEN
+// (configurado em Program.cs). O token vem do <meta name="csrf-token"> do _Layout.
+// BUG-13 (autorizacao): as chamadas do painel se identificam como AJAX.
+// Quando falta permissao (ex.: Operador tentando sangria), o servidor responde
+// 403 direto em vez de redirecionar para a pagina HTML de acesso negado -
+// sem isso o fetch seguia o 302, recebia 200 com HTML e o resp.json() quebrava,
+// escondendo o motivo real do bloqueio do operador.
+function csrfHeaders(extra) {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta ? meta.getAttribute('content') : null;
+    return Object.assign({}, extra || {}, {
+        'X-CSRF-TOKEN': token || '',
+        'X-Requested-With': 'XMLHttpRequest'
+    });
+}
+
+// 1. MOTOR DO ATALHO
 let modalAtalhosInstance = null;
 document.addEventListener('keydown', function(e) {
     if (e.altKey && (e.key === 'm' || e.key === 'M')) {
@@ -51,11 +69,24 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         }
 
         const data = new URLSearchParams();
-        data.append('tipo', tipo);
         data.append('valor', valorNumerico.toFixed(2)); // Always sends format 100.00
         data.append('obs', obs);
 
-        const resp = await fetch('/Caixa/RegistrarMovimentacao', { method: 'POST', body: data });
+        // BUG-13: a rota depende do TIPO, e o tipo agora mora na rota.
+        // RegistrarSangria e exclusiva do Dono: um Operador que tentar leva 403
+        // (o menu esconde o botao, mas a API tambem barra - defesa em camadas).
+        const rota = (tipo === 'Sangria')
+            ? '/Caixa/RegistrarSangria'
+            : '/Caixa/RegistrarSuprimento';
+
+        const resp = await fetch(rota, { method: 'POST', body: data, headers: csrfHeaders() });
+
+        // 403 = autenticado mas sem permissao (falta o papel de Dono).
+        if (resp.status === 403) {
+            Swal.fire('Acesso negado', 'Apenas o Dono pode registrar sangria.', 'error');
+            return;
+        }
+
         const res = await resp.json();
 
         if (res.success) {
@@ -290,7 +321,7 @@ async function realizarFechamento() {
 }
 
 async function confirmarZeramentoFinal() {
-    const res = await fetch('/Caixa/ZerarCaixaParaProximoDia', { method: 'POST' });
+    const res = await fetch('/Caixa/ZerarCaixaParaProximoDia', { method: 'POST', headers: csrfHeaders() });
     const data = await res.json();
 
     if (data.success) {
@@ -435,7 +466,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 const btn = document.createElement("button");
                 btn.type = "button";
                 btn.className = "list-group-item list-group-item-action py-2";
-                btn.innerHTML = `<strong>${nomeOriginal}</strong> <small class="text-muted float-end">R$ ${div.dataset.preco}</small>`;
+                // BUG-23 (XSS armazenado): o nome vinha cru por innerHTML e um
+                // produto chamado "<img src=x onerror=alert(1)>" executava script
+                // no PDV. Montamos os nos via DOM (textContent escapa o texto).
+                const nomeEl = document.createElement("strong");
+                nomeEl.textContent = nomeOriginal;
+                const precoEl = document.createElement("small");
+                precoEl.className = "text-muted float-end";
+                precoEl.textContent = `R$ ${div.dataset.preco}`;
+                btn.appendChild(nomeEl);
+                btn.appendChild(document.createTextNode(" "));
+                btn.appendChild(precoEl);
 
                 btn.onclick = () => {
                     // Busca dados reais (inclui estoque) e preenche o campo quantidade
@@ -472,17 +513,38 @@ function renderCarrinho() {
         const precoDisplay = preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const subtotalDisplay = subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        tbody.insertAdjacentHTML('beforeend', `
-            <tr>
-                <td>${item.nome || 'Sem nome'}</td>
-                <td>${labelQtd}</td>
-                <td>R$ ${precoDisplay}</td>
-                <td class="fw-bold">R$ ${subtotalDisplay}</td>
-                <td>
-                    <button onclick="removerItem(${index})" class="btn btn-sm btn-danger">x</button>
-                </td>
-            </tr>
-        `);
+        // BUG-23 (XSS armazenado): o nome do produto era interpolado em
+        // insertAdjacentHTML, executando qualquer tag HTML salva no cadastro.
+        // A linha e montada com createElement/textContent (texto sempre escapado).
+        const tr = document.createElement("tr");
+
+        const tdNome = document.createElement("td");
+        tdNome.textContent = item.nome || 'Sem nome';
+
+        const tdQtd = document.createElement("td");
+        tdQtd.textContent = String(labelQtd);
+
+        const tdPreco = document.createElement("td");
+        tdPreco.textContent = `R$ ${precoDisplay}`;
+
+        const tdSubtotal = document.createElement("td");
+        tdSubtotal.className = "fw-bold";
+        tdSubtotal.textContent = `R$ ${subtotalDisplay}`;
+
+        const tdAcoes = document.createElement("td");
+        const btnRemover = document.createElement("button");
+        btnRemover.type = "button";
+        btnRemover.className = "btn btn-sm btn-danger";
+        btnRemover.textContent = "x";
+        btnRemover.addEventListener("click", () => removerItem(index));
+        tdAcoes.appendChild(btnRemover);
+
+        tr.appendChild(tdNome);
+        tr.appendChild(tdQtd);
+        tr.appendChild(tdPreco);
+        tr.appendChild(tdSubtotal);
+        tr.appendChild(tdAcoes);
+        tbody.appendChild(tr);
     });
 
     const displayTotal = document.getElementById("displayTotal");
@@ -727,9 +789,9 @@ async function enviarVendaDeVez() {
         const response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            })
         });
 
         const res = await response.json();

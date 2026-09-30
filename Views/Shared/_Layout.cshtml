@@ -1,9 +1,102 @@
-﻿<!DOCTYPE html>
+﻿@*
+    ==========================================================================
+    BUG-13 (commit 4): MENU POR PAPEL.
+    ==========================================================================
+    O menu NAO decide permissao: ele apenas PERGUNTA, para as MESMAS policies
+    que cada rota ja exige (Security/Policies.cs). E o mesmo
+    IAuthorizationService do [Authorize(Policy = ...)] das actions, entao nao
+    existe uma segunda regra escrita a mao que possa divergir da primeira.
+
+    IMPORTANTE: esconder o botao e cortesia com o usuario, NAO seguranca. Quem
+    barra de verdade continua sendo o [Authorize] da action - um Operador que
+    digite /Usuarios na barra de enderecos recebe 403 do mesmo jeito.
+    ==========================================================================
+*@
+@inject IAuthorizationService Autorizacao
+@inject UserManager<Usuario> GerenciadorDeUsuarios
+@{
+    var autenticado = User.Identity?.IsAuthenticated == true;
+
+    var podeOperarPdv = false;
+    var podeReimprimirCupom = false;
+    var podeRegistrarSuprimento = false;
+    var podeRegistrarSangria = false;
+    var podeVerFinanceiro = false;
+    var podeFecharCaixa = false;
+    var podeGerenciarVendedores = false;
+    var podeGerenciarUsuarios = false;
+    var podeAcessarAdmin = false;
+
+    if (autenticado)
+    {
+        podeOperarPdv = (await Autorizacao.AuthorizeAsync(User, Policies.PodeOperarPDV)).Succeeded;
+        podeReimprimirCupom = (await Autorizacao.AuthorizeAsync(User, Policies.PodeReimprimirCupom)).Succeeded;
+        podeRegistrarSuprimento = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSuprimento)).Succeeded;
+        podeRegistrarSangria = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSangria)).Succeeded;
+        podeVerFinanceiro = (await Autorizacao.AuthorizeAsync(User, Policies.PodeVerFinanceiro)).Succeeded;
+        podeFecharCaixa = (await Autorizacao.AuthorizeAsync(User, Policies.PodeFecharCaixa)).Succeeded;
+        podeGerenciarVendedores = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarVendedores)).Succeeded;
+        podeGerenciarUsuarios = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarUsuarios)).Succeeded;
+        podeAcessarAdmin = (await Autorizacao.AuthorizeAsync(User, Policies.PodeAcessarAdmin)).Succeeded;
+    }
+
+    // O modal Alt+M so existe se sobrar pelo menos um item para esta pessoa.
+    var temMenuAtalhos = podeOperarPdv || podeRegistrarSuprimento || podeRegistrarSangria
+                         || podeFecharCaixa || podeVerFinanceiro || podeReimprimirCupom
+                         || podeGerenciarVendedores;
+
+    // ---------------------------------------------------------------- "quem esta logado" ---
+    // Nome: o login e por e-mail (Usuario.UserName == Email) e o nome bonito mora
+    // em Usuario.NomeExibicao, que NAO esta no cookie. Uma consulta por pagina
+    // (indice de UserName) em um SQLite local e irrelevante; se algum dia virar
+    // caminho quente, o certo e gravar o NomeExibicao como claim no login.
+    var nomeExibido = User.Identity?.Name;
+    var papelExibido = "sem papel";
+
+    if (autenticado)
+    {
+        var conta = await GerenciadorDeUsuarios.FindByNameAsync(User.Identity!.Name!);
+        if (!string.IsNullOrWhiteSpace(conta?.NomeExibicao))
+        {
+            nomeExibido = conta!.NomeExibicao;
+        }
+
+        // Dono primeiro quando houver mais de um papel: e ele que explica tudo
+        // o que a pessoa ve na tela.
+        var papeis = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        papelExibido = papeis.Contains(Roles.Dono) ? Roles.Dono
+                     : papeis.Count > 0 ? string.Join(" + ", papeis)
+                     : "sem papel";
+    }
+}
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Cereal Brasil</title>
+    @* BUG-05: token anti-forgery para os POSTs feitos por fetch() no admin-caixa.js.
+       Os <form> normais ja emitem @Html.AntiForgeryToken(); este <meta> atende o JS,
+       que envia o token no header X-CSRF-TOKEN (configurado em Program.cs).
+       GetAndStoreTokens devolve o token em texto puro (o cookie continua sendo
+       emitido, entao a validacao do [ValidateAntiForgeryToken] funciona). *@
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+
+    @* BUG-13 (commit 4): o JS do painel (atalhos Alt+X e a gestao de vendedores)
+       le daqui o que ESTE usuario pode fazer. Sai do mesmo IAuthorizationService
+       das policies - nao e uma segunda regra escrita a mao no JavaScript. *@
+    <script>
+        window.LOJA_ACESSO = {
+            pdv: @(podeOperarPdv ? "true" : "false"),
+            financeiro: @(podeVerFinanceiro ? "true" : "false"),
+            vendedores: @(podeGerenciarVendedores ? "true" : "false"),
+            usuarios: @(podeGerenciarUsuarios ? "true" : "false"),
+            admin: @(podeAcessarAdmin ? "true" : "false")
+        };
+    </script>
+    @* Nome do produto: generico de proposito. A identidade visual da loja
+       (CNPJ, endereco, telefone) ainda nao esta parametrizada - ver
+       Views/Caixa/GerarCupom.cshtml e a secao "Dados da empresa" do README. *@
+    <title>@ViewData["Title"] - Controle de Estoque e Caixa</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
@@ -20,19 +113,56 @@
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            @* asp-controller="Home" mantido *@
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Estoque</a>
-                        </li>
-                        <li class="nav-item">
-                            @* asp-controller="Caixa" mantido *@
-                            <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Index">Caixa</a>
-                        </li>
-                        <li class="nav-item">
-                            @* Link para o histórico sem o emoji *@
-                            <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Historico">Histórico</a>
-                        </li>
+                        @* Estoque e Caixa: PodeOperarPDV (Dono e Operador). *@
+                        @if (podeOperarPdv)
+                        {
+                            <li class="nav-item">
+                                @* asp-controller="Home" mantido *@
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Estoque</a>
+                            </li>
+                            <li class="nav-item">
+                                @* asp-controller="Caixa" mantido *@
+                                <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Index">Caixa</a>
+                            </li>
+                        }
+
+                        @* Histórico: PodeVerFinanceiro (só Dono) - some para o Operador. *@
+                        @if (podeVerFinanceiro)
+                        {
+                            <li class="nav-item">
+                                @* Link para o histórico sem o emoji *@
+                                <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Historico">Histórico</a>
+                            </li>
+                        }
+
+                        @* Usuários: PodeGerenciarUsuarios (só Dono). Este é o ÚNICO link
+                           para /Usuarios na interface - o Operador não o vê em lugar
+                           nenhum (e se digitar a URL recebe 403 da própria rota). *@
+                        @if (podeGerenciarUsuarios)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Usuarios" asp-action="Index">Usuários</a>
+                            </li>
+                        }
                     </ul>
+
+                    @if (autenticado)
+                    {
+                        @* Quem está logado e com qual papel: no balcão o PC é
+                           compartilhado e saber quem entrou evita vender no cupom
+                           errado. O "Sair" é POST com token anti-forgery (o logout
+                           não pode ser um GET que qualquer página dispararia). *@
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small text-muted">
+                                Olá, <b class="text-dark">@nomeExibido</b> —
+                                <span class="badge bg-secondary">@papelExibido</span>
+                            </span>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-secondary fw-bold">Sair</button>
+                            </form>
+                        </div>
+                    }
                 </div>
             </div>
         </nav>
@@ -43,15 +173,19 @@
 
 
         @* Modal Atalhos (Mantido) *@
+        @if (temMenuAtalhos)
+        {
         <div class="modal fade" id="modalAtalhos" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title">⚙️ MENU ADMINISTRATIVO (ALT + M)</h5>
+                        <h5 class="modal-title">⚙️ @(podeAcessarAdmin ? "MENU ADMINISTRATIVO" : "MENU DO CAIXA") (ALT + M)</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
                         <div class="row g-3">
+                            @if (podeRegistrarSangria)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-danger w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
                                     <span style="width: 30px; text-align: left;">1 -</span>
@@ -59,6 +193,9 @@
                                     <span>SANGRIA</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeRegistrarSuprimento)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
                                     <span style="width: 30px; text-align: left;">2 -</span>
@@ -66,6 +203,9 @@
                                     <span>SUPRIMENTO</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeFecharCaixa)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-secondary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
                                     <span style="width: 30px; text-align: left;">3 -</span>
@@ -73,6 +213,9 @@
                                     <span>CAIXA</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeFecharCaixa)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
                                     <span style="width: 30px; text-align: left;">4 -</span>
@@ -80,6 +223,9 @@
                                     <span>FECHAMENTO</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeVerFinanceiro)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-info w-100 py-3 fw-bold shadow-sm d-flex align-items-center text-white" data-key="5" onclick="verRelatorioCaixa()">
                                     <span style="width: 30px; text-align: left;">5 -</span>
@@ -87,6 +233,9 @@
                                     <span>RELATÓRIO</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeReimprimirCupom)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-warning w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
                                     <span style="width: 30px; text-align: left;">6 -</span>
@@ -94,6 +243,9 @@
                                     <span>REIMPRIMIR</span>
                                 </button>
                             </div>
+                            }
+                            @if (podeOperarPdv || podeGerenciarVendedores)
+                            {
                             <div class="col-6">
                                 <button class="btn btn-outline-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
                                     <span style="width: 30px; text-align: left;">7 -</span>
@@ -101,11 +253,13 @@
                                     <span>VENDEDORES</span>
                                 </button>
                             </div>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        }
 
         @* Modal Admin (Mantido) *@
         <div class="modal fade" id="modalOperacao" tabindex="-1" aria-hidden="true">
@@ -142,7 +296,7 @@
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Menu Administrativo</span>
+                        <span class="fw-bold">@(podeAcessarAdmin ? "Menu Administrativo" : "Menu do Caixa")</span>
                         <kbd style="background: #6c757d; color: white; padding: 2px 6px; border-radius: 4px;">Alt + M</kbd>
                     </div>
 
@@ -151,10 +305,13 @@
                         <kbd style="background: #007bff; color: white; padding: 2px 6px; border-radius: 4px;">Alt + C</kbd>
                     </div>
 
+                    @if (podeVerFinanceiro)
+                    {
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span class="fw-bold">Histórico de Vendas</span>
                         <kbd style="background: #17a2b8; color: white; padding: 2px 6px; border-radius: 4px;">Alt + H</kbd>
                     </div>
+                    }
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span class="fw-bold">Controle de Estoque</span>
@@ -171,7 +328,7 @@
 
     <footer class="footer text-muted text-center py-3">
         <div class="container" style="color: white;">
-            &copy; 2026 - Controle de Estoque Cereal Brasil
+            &copy; 2026 - Controle de Estoque e Caixa
         </div>
     </footer>
 
@@ -216,21 +373,25 @@
             const isVisible = modalElement && modalElement.classList.contains('show');
 
 
-            // Atalho ALT + C (Caixa) - Sempre funciona
-            if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+            // BUG-13 (commit 4): os atalhos de NAVEGACAO obedecem as MESMAS policies
+            // do menu - window.LOJA_ACESSO e gerado pelo Razor com o resultado de
+            // IAuthorizationService. Atalho escondido e atalho que nao existe:
+            // quem nao pode ver /Caixa/Historico tambem nao chega nele por teclado.
+            // Atalho ALT + C (Caixa) - PodeOperarPDV (Dono e Operador)
+            if (window.LOJA_ACESSO.pdv && e.altKey && (e.key === 'c' || e.key === 'C')) {
                 window.location.href = '/Caixa';
                 return;
             }
 
-                    // Atalho ALT + H (Histórico)
-        if (e.altKey && (e.key.toLowerCase() === 'h')) {
-            window.location.href = '/Caixa/Historico';
-        }
+            // Atalho ALT + H (Histórico) - PodeVerFinanceiro (só Dono)
+            if (window.LOJA_ACESSO.financeiro && e.altKey && (e.key.toLowerCase() === 'h')) {
+                window.location.href = '/Caixa/Historico';
+            }
 
-        // Atalho ALT + E (Estoque / Home)
-        if (e.altKey && (e.key.toLowerCase() === 'e')) {
-            window.location.href = '/Home/Index'; // Ajuste se a rota do seu estoque for diferente
-        }
+            // Atalho ALT + E (Estoque / Home) - PodeOperarPDV
+            if (window.LOJA_ACESSO.pdv && e.altKey && (e.key.toLowerCase() === 'e')) {
+                window.location.href = '/Home/Index';
+            }
 
             // LÓGICA QUANDO O MODAL ESTÁ ABERTO (NÚMEROS 1-6)
             if (isVisible) {
@@ -294,6 +455,15 @@
                 console.log("Modal não estava aberto");
             }
 
+            // BUG-13 (commit 4): quem NAO gerencia vendedores (Operador) vai direto
+            // para a CONSULTA. O menu de dois passos ("Cadastrar Novo" / "Listar
+            // Todos") ofereceria um cadastro que a rota recusa com 403 - nao se
+            // oferece botao que nao funciona.
+            if (!window.LOJA_ACESSO || !window.LOJA_ACESSO.vendedores) {
+                abrirListagemVendedores();
+                return;
+            }
+
             Swal.fire({
                 title: 'Gestão de Vendedores',
                 icon: 'info',
@@ -322,6 +492,10 @@
             // Abre um carregando para você saber que a função disparou
             Swal.showLoading();
 
+            // BUG-13 (commit 4): o Operador consulta cupons, mas nao cadastra nem
+            // exclui vendedor (PodeGerenciarVendedores e so do Dono).
+            const podeMexer = !!(window.LOJA_ACESSO && window.LOJA_ACESSO.vendedores);
+
             try {
                 const resp = await fetch('/Caixa/ListarVendedores');
                 const vendedores = await resp.json();
@@ -332,7 +506,7 @@
                 <tr>
                     <th>Nome</th>
                     <th>Cupom</th>
-                    <th class="text-end">Ações</th>
+                    ${podeMexer ? '<th class="text-end">Ações</th>' : ''}
                 </tr>
             </thead>
             <tbody>
@@ -340,11 +514,11 @@
                     <tr>
                         <td>${v.nome}</td>
                         <td><b>${v.codigo}</b></td>
-                        <td class="text-end">
+                        ${podeMexer ? `<td class="text-end">
                             <button class="btn btn-sm btn-danger" onclick="confirmarExclusaoVendedor('${v.codigo}')">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        </td>
+                        </td>` : ''}
                     </tr>
                 `).join('')}
             </tbody>
@@ -352,26 +526,35 @@
 
                 if(vendedores.length === 0) html = "Nenhum vendedor cadastrado.";
 
-                        Swal.fire({
-            title: '🤝 GESTÃO DE VENDEDORES',
-            html: html, // Sua tabela com o botão de excluir
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-plus"></i> NOVO VENDEDOR',
-            cancelButtonText: 'FECHAR',
-            confirmButtonColor: '#198754', // Verde Bootstrap (Success)
-            cancelButtonColor: '#6c757d',  // Cinza Bootstrap (Secondary)
-            reverseButtons: true,          // Coloca o cancelar na esquerda e o confirmar na direita
-            width: '600px'
-        });
+                // BUG-13 (commit 4): o objeto e o MESMO para os dois papeis. O que
+                // muda e o botao de confirmar (cadastrar): so o Dono tem
+                // PodeGerenciarVendedores, entao para o Operador a lista e consulta pura.
+                const opcoes = {
+                    title: '🤝 GESTÃO DE VENDEDORES',
+                    html: html, // Sua tabela com o botão de excluir
+                    showCancelButton: true,
+                    showConfirmButton: podeMexer,
+                    confirmButtonText: '<i class="fas fa-plus"></i> NOVO VENDEDOR',
+                    cancelButtonText: 'FECHAR',
+                    confirmButtonColor: '#198754', // Verde Bootstrap (Success)
+                    cancelButtonColor: '#6c757d',  // Cinza Bootstrap (Secondary)
+                    reverseButtons: true,          // Coloca o cancelar na esquerda e o confirmar na direita
+                    width: '600px'
+                };
+
+                // O ".then" tem de estar NA MESMA expressao do Swal.fire: aqui ele
+                // estava solto depois do try/catch, o navegador acusava
+                // "then is not defined" e o botao "NOVO VENDEDOR" nunca abria o
+                // formulario. Corrigido de passagem por estar no mesmo trecho.
+                Swal.fire(opcoes).then((result) => {
+                    if (result.isConfirmed) {
+                        abrirFormularioCadastro(); // Faz o botão "Novo Vendedor" da lista funcionar
+                    }
+                });
 
             } catch (e) {
                 Swal.fire('Erro', 'Não foi possível buscar os dados.', 'error');
             }
-                    then((result) => {
-            if (result.isConfirmed) {
-                abrirFormularioCadastro(); // Faz o botão "Novo Vendedor" da lista funcionar
-            }
-        });
         }
 
                 function confirmarExclusaoVendedor(codigo) {

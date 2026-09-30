@@ -1,0 +1,39 @@
+@model ControleEstoqueLoja.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Erro";
+}
+
+<div class="main-container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 text-center">
+
+            <h1 class="fw-bold" style="color:#b30000;">⚠️ ERRO INESPERADO</h1>
+
+            <p class="fs-5 text-muted mt-3">
+                Ocorreu um problema ao processar sua solicita&ccedil;&atilde;o.
+                A opera&ccedil;&atilde;o n&atilde;o foi conclu&iacute;da.
+            </p>
+
+            @*
+                Não exibe stack trace nem mensagem de exceção: apenas o
+                identificador da requisição, que permite ao suporte localizar
+                o erro no log do servidor. (BUG-22)
+            *@
+            @if (Model != null && Model.ShowRequestId)
+            {
+                <p class="mt-4">
+                    <strong>C&oacute;digo da requisi&ccedil;&atilde;o:</strong>
+                    <code class="user-select-all">@Model.RequestId</code>
+                </p>
+                <p class="small text-muted">
+                    Guarde este c&oacute;digo e informe ao suporte.
+                </p>
+            }
+
+            <a asp-controller="Home" asp-action="Index" class="btn btn-success btn-lg mt-3">
+                VOLTAR AO ESTOQUE
+            </a>
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,50 @@
+@model ControleEstoqueLoja.Controllers.SetupViewModel
+@{
+    ViewData["Title"] = "Configuração inicial";
+    Layout = "_Layout";
+}
+
+<div class="container" style="max-width: 480px; margin-top: 40px;">
+    <div class="card shadow-sm border-warning">
+        <div class="card-body p-4">
+            <h2 class="text-center mb-1">⚙️ CONFIGURAÇÃO INICIAL</h2>
+            <p class="text-center text-muted mb-4">
+                Primeira execução: crie a conta de <strong>Dono</strong> (acesso total).
+                Esta tela só aparece uma vez.
+            </p>
+
+            <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+            <form method="post" asp-controller="Account" asp-action="Setup">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="NomeExibicao" class="form-label fw-bold"></label>
+                    <input asp-for="NomeExibicao" class="form-control" autofocus autocomplete="name" />
+                    <span asp-validation-for="NomeExibicao" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-bold"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="username" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Senha" class="form-label fw-bold"></label>
+                    <input asp-for="Senha" class="form-control" autocomplete="new-password" />
+                    <div class="form-text">Mínimo 6 caracteres, com 1 maiúscula, 1 minúscula e 1 número.</div>
+                    <span asp-validation-for="Senha" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="ConfirmarSenha" class="form-label fw-bold"></label>
+                    <input asp-for="ConfirmarSenha" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmarSenha" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-warning w-100 py-2 fw-bold">CRIAR DONO E ENTRAR</button>
+            </form>
+        </div>
+    </div>
+</div>
