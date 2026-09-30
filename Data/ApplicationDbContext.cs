@@ -43,6 +43,34 @@ namespace ControleEstoqueLoja.Data
                 .WithMany(p => p.VendaItems)
                 .HasForeignKey(vi => vi.ProdutoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ------------------------------------------------------------------
+            // BUG-20: dinheiro vira INTEGER de centavos no banco.
+            //
+            // As 7 colunas abaixo sao a superficie monetaria do sistema. Quantidade
+            // (Produto e VendaItem) fica de FORA de proposito: quantidade de granel
+            // tem 3+ casas (1,235 kg) e nao e dinheiro; converter centavo nao vale
+            // para quilo, e a correcao nao pode quebrar pesagem. Ela permanece TEXT
+            // e segue como divida separada no relatorio de QA.
+            //
+            // O padrao de registro e HasConversion em vez de atributo na classe para
+            // deixar explicito no unico lugar que descreve o banco quais campos sao
+            // monetarios - a nova regra de arquitetura da suite de QA audita exatamente
+            // esta lista.
+            // ------------------------------------------------------------------
+            var centavos = ConversorCentavos.ParaBanco;
+
+            modelBuilder.Entity<Produto>().Property(p => p.Preco).HasConversion(centavos);
+
+            modelBuilder.Entity<Venda>().Property(v => v.TotalVenda).HasConversion(centavos);
+            modelBuilder.Entity<Venda>().Property(v => v.ValorRecebido).HasConversion(centavos).HasDefaultValue(0m);
+            modelBuilder.Entity<Venda>().Property(v => v.ValorTroco).HasConversion(centavos).HasDefaultValue(0m);
+
+            modelBuilder.Entity<VendaItem>().Property(i => i.PrecoUnitario).HasConversion(centavos);
+
+            modelBuilder.Entity<CaixaMovimentacao>().Property(m => m.Valor).HasConversion(centavos);
+
+            modelBuilder.Entity<FluxoCaixa>().Property(f => f.Valor).HasConversion(centavos);
         }
     }
 }

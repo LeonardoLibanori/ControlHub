@@ -401,5 +401,9 @@ FodyWeavers.xsd
 # casa com o caminho e a que vale.
 # ---------------------------------------------------------------------------
 !controleestoque.exemplo.db
-!controleestoque.exemplo.db-shm
-!controleestoque.exemplo.db-wal
+# Os sidecars de WAL (-shm / -wal) do template NAO sao versionados de
+# proposito: sao artefato de runtime de quem abriu o arquivo e perdem o
+# sentido longe do .db que os gerou. Como o template e copiado para
+# `copy controleestoque.exemplo.db controleestoque.db`, um -wal desacompanhado
+# ao lado de um .db copiado e vetor de corrupcao. Ficam entao cobertos pelas
+# regras *.db-shm / *.db-wal do template do Visual Studio acima.

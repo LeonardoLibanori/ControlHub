@@ -37,8 +37,8 @@ namespace ControleEstoqueLoja.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("Valor")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -61,8 +61,8 @@ namespace ControleEstoqueLoja.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("Preco")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("Preco")
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Quantidade")
                         .HasColumnType("TEXT");
@@ -164,14 +164,18 @@ namespace ControleEstoqueLoja.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("TotalVenda")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("TotalVenda")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("ValorRecebido")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("ValorRecebido")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
-                    b.Property<decimal>("ValorTroco")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("ValorTroco")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.HasKey("Id");
 
@@ -184,8 +188,8 @@ namespace ControleEstoqueLoja.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("PrecoUnitario")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("PrecoUnitario")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("ProdutoId")
                         .HasColumnType("INTEGER");
@@ -243,8 +247,8 @@ namespace ControleEstoqueLoja.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("Valor")
-                        .HasColumnType("TEXT");
+                    b.Property<long>("Valor")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
