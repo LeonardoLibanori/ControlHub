@@ -6,6 +6,18 @@
 > `qa/` existiam apenas no PC antigo e nunca foram versionadas. A partir de agora
 > ambas estão no Git (ver `git log`).
 
+> **Nomenclatura:** a marca exibida na tela (`<title>` e rodapé) é o nome **genérico** do
+> produto, *Controle de Estoque e Caixa*. O nicho ainda não foi decidido, então nenhum nome
+> de loja aparece no código. Os **dados fiscais do cupom são fictícios e ainda estão
+> hard-coded** em `Views/Caixa/GerarCupom.cshtml` — ver *Dados da empresa* no `README.md`.
+>
+> **Contas de teste do banco real:** o `controleestoque.db` da loja tem **uma conta de Dono
+> com e-mail provisório** (nome de nicho antigo). **Não existe tela de edição de usuário**
+> (o controller só tem `Index` e `Criar`) e o `/Account/Setup` já está fechado — a troca fica
+> para quando o sistema for usado de verdade. Detalhes e caminho futuro no `README.md`.
+> Os e-mails dos testes (`dono@teste.com`, `operador@teste.com`) são de banco descartável em
+> `%TEMP%` e **nunca tocam o banco real**.
+
 ## Como executar
 
 ```powershell

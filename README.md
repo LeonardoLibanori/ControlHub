@@ -42,6 +42,29 @@ dotnet run
 
 Abra <http://localhost:5236> (Caixa) ou `/Home/Index` (Estoque).
 
+Na primeira execução o sistema redireciona para `/Account/Setup`, onde você cria a conta de
+**Dono** (nome, e-mail e senha). Essa tela só funciona enquanto o banco não tiver nenhum
+usuário — depois ela redireciona para o login.
+
+### Dados da empresa (pendente de parametrizar)
+
+O nome do produto exibido no `<title>` e no rodapé é genérico de propósito
+(**Controle de Estoque e Caixa**): o nicho ainda não foi decidido.
+
+Já os **dados fiscais impressos no cupom ainda são fictícios e fixos no HTML** de
+`Views/Caixa/GerarCupom.cshtml`:
+
+| Dado | Valor atual (fictício) |
+|---|---|
+| CNPJ | `00.000.000/0001-00` |
+| Endereço | `Rua Exemplo, 123 - Centro` |
+| Telefone | `(11) 99999-9999` |
+
+> ⚠️ **Estes valores precisam ser parametrizados antes de qualquer uso comercial.**
+> Não versionar um CNPJ real aqui: ele ficaria visível no histórico do Git.
+> O caminho é um registro de empresa no banco + uma tela de configuração, não um
+> hard-coded no `.cshtml`.
+
 > Se preferir começar do zero, basta **apagar** `controleestoque.db`: na próxima execução o
 > `Program.cs` roda `Database.Migrate()` e recria todas as tabelas automaticamente.
 
@@ -89,6 +112,53 @@ alguns **dados fictícios**, para navegar pela aplicação sem precisar cadastra
 3. Clique em **Cadastrar Novo**
 4. Preencha o nome e o c├│digo (cupom) do vendedor
 5. Clique em **Salvar Registro**
+
+---
+
+## 🔐 Contas de acesso (Usuários)
+
+Quem entra no sistema é um **`Usuario`** (ASP.NET Core Identity), com **dois papéis**:
+
+| Papel | O que pode fazer |
+|---|---|
+| **Dono** | Tudo, inclusive financeiro, vendedores e a gestão de contas (`/Usuarios`) |
+| **Operador** | PDV, suprimentos, reimpressão e consulta de vendedores — **sem** financeiro e **sem** criar/editar/excluir produtos |
+
+- A tela `/Usuarios` é exclusiva do **Dono**. Um Operador que digitar a URL na mão recebe **403** —
+  as permissões são aplicadas no servidor (`[Authorize(Policy = ...)]`), não só escondendo botões.
+- Contas são criadas em `/Usuarios` → **+ NOVA CONTA**. O papel é escolhido no formulário e
+  validado contra a lista conhecida antes de chegar ao Identity.
+- O login é por **e-mail** (`UserName = Email`).
+
+### ⚠️ Nomes de e-mail provisórios
+
+O `controleestoque.db` **real** (ignorado pelo Git) tem hoje **uma única conta**, de teste, cujo
+e-mail ainda carrega um **nome de nicho antigo** que não é mais o projeto. O endereço em si
+**não é registrado aqui de propósito**, justamente para não voltar a vazar esse nome pelo
+repositório.
+
+| Conta | Papel | E-mail | Situação |
+|---|---|---|---|
+| `Leonardo (Dono)` | **Dono** | nome de nicho antigo (ver banco local) | **provisório** |
+
+**Isso não é um bug e não afeta o funcionamento** — o e-mail é apenas o login. Ele só precisa
+ser trocado quando o sistema for usado de verdade.
+
+Motivos para ainda não ter sido trocado:
+
+1. **Não existe tela de edição de usuário.** O `UsuariosController` só tem `Index` e `Criar` —
+   não há `Editar`, nem reset de senha, nem desativar conta.
+2. **`/Account/Setup` não serve de saída.** Ela só abre enquanto o banco não tiver nenhum
+   usuário; com o Dono criado, redireciona para o login.
+3. **A senha não é conhecida.** Ela só existe como hash no banco — quem define uma nova
+   senha é a pessoa, não o código.
+
+Quando for trocado, o caminho é criar a tela `/Usuarios/Editar` (nome + e-mail + nova senha),
+alterando `UserName` e `Email` juntos via `UserManager` — o Identity exige os dois em sincronia.
+
+> Nomes de e-mail **nunca** devem ser versionados: eles vivem só no banco local. Os e-mails
+> usados pelos testes de QA (`dono@teste.com`, `operador@teste.com`) são criados em bancos
+> descartáveis em `%TEMP%` e não tocam o banco real.
 
 ---
 

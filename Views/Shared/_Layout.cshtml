@@ -93,7 +93,10 @@
             admin: @(podeAcessarAdmin ? "true" : "false")
         };
     </script>
-    <title>@ViewData["Title"] - Cereal Brasil</title>
+    @* Nome do produto: generico de proposito. A identidade visual da loja
+       (CNPJ, endereco, telefone) ainda nao esta parametrizada - ver
+       Views/Caixa/GerarCupom.cshtml e a secao "Dados da empresa" do README. *@
+    <title>@ViewData["Title"] - Controle de Estoque e Caixa</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
@@ -325,7 +328,7 @@
 
     <footer class="footer text-muted text-center py-3">
         <div class="container" style="color: white;">
-            &copy; 2026 - Controle de Estoque Cereal Brasil
+            &copy; 2026 - Controle de Estoque e Caixa
         </div>
     </footer>
 
