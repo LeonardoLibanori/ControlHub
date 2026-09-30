@@ -305,7 +305,7 @@ policy**. Quatro entregas, nesta ordem:
 | — | Identity, migration, cookie de 12 h e papéis Dono/Operador | `ae12be8` | — |
 | **BUG-13** | `[Authorize]` + policy por rota; sangria separada do suprimento | `85d6797` | `SegurancaQaTests.Controllers_NaoDevemExporEndpointsSemAutorizacao` |
 | — | Tela de gestão de usuários (só Dono) — sem ela não havia como criar Operador | `702ae85` | HTTP manual (abaixo) |
-| **BUG-13** | Menu, atalhos e botões por papel nas views (o que não pode, não aparece) | *(este commit)* | `qa/http-authz.ps1`, seção 6 — 49 checagens no HTML |
+| **BUG-13** | Menu, atalhos e botões por papel nas views (o que não pode, não aparece) | `d71c2b2` | `qa/http-authz.ps1`, seção 6 — 49 checagens no HTML |
 
 ### Como ficou
 
