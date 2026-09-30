@@ -48,17 +48,27 @@ o banco versionado mudar.
 | Métrica | Valor |
 |---|---|
 | Total de testes | **57** |
-| ✅ Aprovados (comportamento correto) | **56** |
-| ❌ Falhando (bug presente) | **1** |
+| ✅ Aprovados (comportamento correto) | **57** |
+| ❌ Falhando (bug presente) | **0** |
 
-Última atualização: **29/09/2026** — **autenticação e autorização (BUG-13)**:
+Última atualização: **30/09/2026** — **dinheiro em `INTEGER` de centavos (BUG-20)**:
+as 7 colunas monetárias saíram de `TEXT` para `INTEGER` de centavos
+(`Data/ConversorCentavos.cs` + a migration `DecimalParaCentavos`, que **converte o
+dado já gravado** e recria os índices das tabelas reconstruídas). A suíte voltou a
+ficar **100% verde (57/57)**, e o teste do BUG-20 foi **reescrito para medir o
+esquema efetivo** — snapshot do modelo, arquivo SQLite criado pelo
+`Database.Migrate()` e o número cru — em vez de procurar texto no arquivo de uma
+migration histórica. Ver *Corrigido em 30/09/2026* abaixo (`fd30124`).
+
+Antes disso, **29/09/2026** — **autenticação e autorização (BUG-13)**:
 `[Authorize]` + policies nomeadas em todas as rotas (`85d6797`), a tela de
 gestão de usuários só-Dono (`702ae85`) e o **menu por papel** nas views: o que a
 pessoa não tem permissão de fazer não aparece na navegação, nem no Alt+M, nem
 como botão na tela. Antes dessas três, três correções de
 segurança **sem** autenticação: XSS armazenado (BUG-12), vazamento de
 `ex.Message` (BUG-15/16/17) e token anti-forgery em todos os POSTs (BUG-14).
-Ficou vermelho apenas `Decimal_NaoDeveSerPersistidoComoText` (**BUG-20**).
+Ficou vermelho naquela data apenas `Decimal_NaoDeveSerPersistidoComoText`
+(**BUG-20**), corrigido em 30/09/2026.
 O teste HTTP dos 3 perfis, que até então era um script descartável em `%TEMP%`,
 passou a ser **versionado** em `qa/http-authz.ps1` (115/115 checagens, 49 delas
 sobre o HTML que cada perfil recebe) — ver *Como executar*.
@@ -89,6 +99,17 @@ serem confundidos com falhas nem redescobertos como "novidade" em uma próxima f
   alteração direta no banco. A tela `/Usuarios` mostra a situação de cada conta
   (Ativo/Bloqueado por tentativas erradas), mas não tem ação de editar, trocar
   senha ou inativar.
+
+- **`Quantidade` continua `TEXT` no SQLite** — a conversão de centavos (BUG-20)
+  cobre **dinheiro**, e quantidade não é dinheiro: produto a granel tem 3+ casas
+  decimais (`1,235 kg`) e quilo não tem centavo. Aplicar o conversor a ela seria
+  errado por princípio: o `ConversorCentavos` **recusa** a 3ª casa decimal (por
+  design — ele não arredonda dinheiro), então a pesagem passaria a lançar exceção
+  na primeira venda de granel. Consequência aceita: `ORDER BY`/`SUM` por
+  **quantidade** segue lexicográfico no banco, e o valor não é monetário — não
+  entra em troco, sangria nem total. O teste do BUG-20 **audita a lista**: se
+  nascer coluna nova de dinheiro como `decimal`/`TEXT`, a suíte quebra — a dívida
+  não cresce sozinha.
 
 ---
 
@@ -216,9 +237,12 @@ _Nenhum. Os dois críticos de segurança foram corrigidos em 29/09/2026
 
 ## Severidade Alta (pendentes)
 
-| ID | Descrição | Teste |
-|---|---|---|
-| BUG-20 | `decimal` mapeado como `TEXT` no SQLite — `ORDER BY` fica lexicográfico (`"10,00" < "9,00"`), quebrando relatórios | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
+_Nenhum pendente. `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` (**BUG-20**),
+único vermelho desde 28/09/2026, foi corrigido em 30/09/2026 — ver
+*Corrigido em 30/09/2026 — Dinheiro em `INTEGER` de centavos`._
+
+> **Fica `TEXT`, e é decisão consciente:** `Quantidade` (`Produtos` e `VendaItens`)
+> não entrou na conversão — ver *Lacunas conhecidas*.
 
 ---
 
@@ -378,6 +402,93 @@ Dois detalhes que **só** o teste manual pegou:
   navegador renderiza "Já".
 - Um Operador levava **302 → 200** (página de acesso negado) no lugar do 403 em
   toda chamada `fetch`: corrigido no item 5 acima.
+
+---
+
+## ✅ Corrigido em 30/09/2026 — Dinheiro em `INTEGER` de centavos (BUG-20)
+
+| ID | O que foi corrigido | Commit | Teste |
+|---|---|---|---|
+| BUG-20 | As 7 colunas monetárias deixaram de ser `TEXT` e passaram a `INTEGER` de centavos, **com o dado já gravado convertido** pela migration | `fd30124` | `DadosQaTests.Decimal_NaoDeveSerPersistidoComoText` |
+
+**As colunas:** `Produtos.Preco`, `Vendas.TotalVenda`, `Vendas.ValorRecebido`,
+`Vendas.ValorTroco`, `VendaItens.PrecoUnitario`, `CaixaMovimentacoes.Valor`,
+`FluxoCaixa.Valor`. O C# continua vendo `decimal` — o conversor mora só no modelo.
+
+### Por que centavos, e não "mudar o tipo da coluna"
+
+O SQLite não tem tipo rígido: uma coluna declarada `INTEGER` continua aceitando
+qualquer coisa lá dentro, e `ALTER TABLE ... ALTER COLUMN` simplesmente não existe.
+Quem decide a ordenação e a soma é o **valor armazenado**, e `INTEGER` é a única
+afinidade numericamente exata do SQLite. O modelo passa a gravar **centavos**
+(`9.99` → `999`) por um único `ValueConverter<decimal,long>`
+(`Data/ConversorCentavos.cs`), registrado nas 7 propriedades em
+`ApplicationDbContext`. Nada na cadeia passa por `float`/`double`: `* 100m` e
+`/ 100m` são exatos. O conversor **recusa, sem arredondar**, valor com mais de 2
+casas e valor acima de R$ 922 trilhões — arredondar em silêncio mudaria um preço
+que o operador digitou.
+
+### O SQL que o EF gera sozinho estava errado (medição, não suposição)
+
+O `AlterColumn` do provider SQLite faz `CREATE TABLE` nova + `INSERT ... SELECT`
+**cru**. Copiar o texto `'9.99'` para uma coluna `INTEGER` não multiplica nada por
+100: o SQLite só aplica a afinidade numérica e grava `REAL 9.99` (`typeof='real'`).
+Como a leitura divide por 100, o preço de R$ 9,99 passaria a aparecer como
+**R$ 0,0999**. A migration `DecimalParaCentavos` traz o rebuild escrito à mão:
+estrutura **idêntica** à do script do EF (mesmas tabelas `ef_temp_`, mesmas
+colunas na mesma ordem, mesmas PK/FK, mesmos índices, mesma ordem de
+`DROP`/`RENAME`) — muda apenas a lista de colunas do `INSERT`, que converte.
+
+| Armadilha | Como foi medida | O que a migration faz |
+|---|---|---|
+| `DROP TABLE "Vendas"` dispara `ON DELETE CASCADE` e **apaga o histórico de vendas** (na matriz de teste, 3 itens viraram 0 — e o `foreign_key_check` dizia "ok" porque as linhas já não existiam) | replay do SQL com `PRAGMA foreign_keys` ligado | `PRAGMA foreign_keys = 0` executado **fora** da transação (`suppressTransaction: true`); dentro dela o pragma é ignorado (medido: continuava `1`). É a mesma família do BUG-08 |
+| O `REAL` intermediário deixa resto binário: `'8.345' * 100 = 834.5000000000001`, que truncaria em `834` | `SELECT` direto no arquivo | `CAST(ROUND(CAST(... AS REAL) * 100) AS INTEGER)` |
+| Texto vazio (`''`) ou com vírgula (`'9,99'`) digitado direto no banco | `INSERT` manual | `TRIM`/`REPLACE` tratam a vírgula; `NULLIF('')` + `NOT NULL` fazem o valor inválido **derrubar a migration** em vez de virar `R$ 0,00` |
+| Rebuild do SQLite **não preserva os índices** de `VendaItens` | `sqlite_master` antes/depois | `IX_VendaItens_ProdutoId` e `IX_VendaItens_VendaId` recriados no fim do `Up` |
+
+No fim do `Up`, um `pragma_foreign_key_check` embutido numa tabela com
+`CHECK (violacoes = 0)` trava a aplicação se qualquer FK ficar violada.
+
+### O teste foi reescrito — e por quê
+
+A versão anterior abria o arquivo `20260220171624_Inicial_Nova.cs` e procurava
+`table.Column<decimal>(type: "TEXT")` nele. Para ela passar, a única saída seria
+**editar a migration inicial**, o que não é permitido: migration aplicada é o
+registro histórico do que rodou no banco da loja, e editar o arquivo não muda
+esquema nenhum — só faria o `Inicial_Nova` declarar `INTEGER` enquanto a conversão
+continua multiplicando por 100 (o `999` de uma base nova viraria `99900`). Era um
+teste que media o **texto de um registro histórico** em vez do comportamento.
+
+O teste agora mede o **esquema efetivo**, em três níveis independentes:
+
+1. **snapshot do modelo** — as 7 colunas são `Property<long>` e nenhuma delas é
+   `Property<decimal>`; e o que sobrou como `decimal` é exatamente `Quantidade`
+   (2 ocorrências). Isso também vale como trava de arquitetura: se nascer coluna
+   nova de dinheiro como `decimal`/`TEXT`, a suíte quebra;
+2. **arquivo SQLite real pelo caminho de produção** — sobe uma base **só com
+   `Database.Migrate()`** (o mesmo método do `Program.cs`) até
+   `20260928234611_ProdutoAtivo_ExclusaoLogica_VendaItemRestrict`, que é exatamente
+   a migration em que o `controleestoque.exemplo.db` versionado está parado hoje;
+   grava dinheiro como `TEXT` no formato legado, roda o `Migrate()` completo
+   (Identity + `DecimalParaCentavos`) e cobra `integer=999`;
+3. **o número cru dos dois lados do sintoma** — a mesma `ORDER BY` que na base
+   legada devolve `"10.00,9.99"` (ordem lexicográfica: o relatório de preços
+   invertido) passa a devolver `"999,1000,123456"`; e `1234.56m` gravado pelo EF
+   sai `integer=123456` do arquivo.
+
+O banco do teste é sempre um arquivo novo em `%TEMP%` (`Pooling=False`, apagado no
+`finally`); o `controleestoque.db` da loja continua intocado, como atesta
+`Suite_NaoDeveAbrirOBancoVersionado`.
+
+### Impacto no banco versionado
+
+`controleestoque.exemplo.db` **não mudou**: continua na migration 3 e passa pela
+conversão no primeiro `Database.Migrate()` da instalação — exatamente o caminho que
+o teste agora exercita. O `controleestoque.db` da loja recebe a migration na
+primeira execução depois do update. Junto com a correção, o `.gitignore` deixou de
+excepcionar os sidecars `-shm`/`-wal` do template: são artefato de runtime de quem
+abre o arquivo e, como o template vai para `controleestoque.db` por `copy`, um
+`-wal` desacompanhado ao lado de um `.db` copiado é vetor de corrupção.
 
 ---
 

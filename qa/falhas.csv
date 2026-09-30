@@ -18,7 +18,7 @@ BUG-16,Seguranca,Media,"ObterDadosFechamento vaza ex.Message ao cliente",Seguran
 BUG-17,Seguranca,Media,"RegistrarMovimentacao vaza mensagem de FormatException ao cliente",SegurancaQaTests.RegistrarMovimentacao_NaoDeveVazarMensagemDeExcecao,corrigido,f11a4b1
 BUG-18,Vendedores,Alta,"Case-sensitivity entre ValidarCupom (ToUpper) e FinalizarVenda (=): cupom validado e rejeitado na venda",VendedoresQaTests.Cupom_DeveAceitarMesmoCodigoEmCaixaDiferente_NasDuasEtapas,corrigido,
 BUG-19,Dados,Alta,"Program.cs usa EnsureCreated() em vez de Migrate(): migrations novas nunca sao aplicadas",DadosQaTests.Program_DeveUsarMigrate_EmVezDeEnsureCreated,corrigido,037f8ad;b00a67e
-BUG-20,Dados,Alta,"decimal persistido como TEXT no SQLite: ordenacao lexicografica e aritmetica fragil em relatorios",DadosQaTests.Decimal_NaoDeveSerPersistidoComoText,pendente,
+BUG-20,Dados,Alta,"decimal persistido como TEXT no SQLite: ordenacao lexicografica e aritmetica fragil em relatorios",DadosQaTests.Decimal_NaoDeveSerPersistidoComoText,corrigido,fd30124
 BUG-21,Lacunas,Media,"TempData[\"Erro\"] definido em AjustarEstoque nunca e exibido em nenhuma view",LacunasQaTests.TempDataErro_DeveSerExibidoNaView,corrigido,
 BUG-22,Lacunas,Media,"HomeController nao possui a action Error, mas Program.cs aponta UseExceptionHandler(\"/Home/Error\") -> 404",LacunasQaTests.HomeController_DevePossuirActionError,corrigido,
 FIX-01,Vendas,Ok,"Preco de venda vem sempre da tabela (POST adulterado e ignorado) - Fase 1 ja corrigida",VendasQaTests.FinalizarVenda_DeveIgnorarPrecoAdulteradoNoPost,corrigido,
