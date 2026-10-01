@@ -61,6 +61,9 @@ namespace ControleEstoqueLoja.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PermiteFracionado")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long>("Preco")
                         .HasColumnType("INTEGER");
 
@@ -69,6 +72,11 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.Property<int>("Tipo")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

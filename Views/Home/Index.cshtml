@@ -46,7 +46,7 @@
             <thead>
                 <tr>
                     <th>Produto</th>
-                    <th>Tipo</th>
+                    <th>Local</th>
                     <th>Estoque</th>
                     @if (podeGerenciarEstoque)
                     {
@@ -63,16 +63,17 @@
                         </td>
                         <td>@item.Tipo</td>
                         <td>
-                                     @if (item.Tipo.ToString() == "Unidade" || item.Tipo.ToString() == "Prateleira")
-                                        {
-                                            @* Exibe como número inteiro *@ 
-                                            @item.Quantidade.ToString("0") <span>un</span>
-                                        }
-                                     else
-                                        {
-                                            @* Mantém uma casa decimal para produtos a Granel *@
-                                            @item.Quantidade.ToString("N1") <span>kg</span>
-                                        }
+                            @* A unidade vem do cadastro. É ela (e não o local de
+                               guarda) que diz se o saldo faz sentido ter casa decimal.
+                               O "Unidade" comparado aqui nem existia no enum. *@
+                            @if (item.PermiteFracionado)
+                            {
+                                @item.Quantidade.ToString("0.###") <span>@item.Unidade</span>
+                            }
+                            else
+                            {
+                                @item.Quantidade.ToString("0") <span>@item.Unidade</span>
+                            }
                         </td>
                         @if (podeGerenciarEstoque)
                         {

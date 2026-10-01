@@ -186,6 +186,92 @@ public class DadosQaTests
         Assert.DoesNotContain("controleestoque.db", caminho, StringComparison.OrdinalIgnoreCase);
     }
 
+    // ---------------------------------------------------------------------
+    // UNIDADES GENERALIZADAS - a migration UnidadeMedidaProduto nao pode apenas
+    // criar as duas colunas: ela tem de converter o que ja esta no banco da loja.
+    // Antes, "Granel" (Tipo = 0 no enum antigo) queria dizer "o Preco da tabela vale
+    // por 100 g e a Quantidade esta em kg", e o CaixaController refazia a conta em
+    // x10. Como Preco passou a ser o preco de UMA unidade, a linha antiga precisa
+    // nascer com Preco x10; se nao nascer, o cliente passa a pagar 1/10 do preco e o
+    // prejuizo so aparece no fechamento do caixa.
+    // Medido no ARQUIVO, subindo a cadeia pelo mesmo Database.Migrate() do Program.cs
+    // (mesmo criterio da assessao do BUG-20 acima: migration aplicada nao se mede
+    // olhando o .cs, mede-se o que ela fez no banco).
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void UnidadeMedidaProduto_DeveConverterProdutosQueEramGranel()
+    {
+        var db = Path.Combine(Path.GetTempPath(), $"qa-unidade-{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={db};Pooling=False")
+            .Options;
+
+        try
+        {
+            // Base parada exatamente uma migration antes da conversao de unidades.
+            using (var ctx = new ApplicationDbContext(options))
+                ctx.Database.Migrate("20260930134556_DecimalParaCentavos");
+
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                // SALAME: linha de balanca do jeito antigo - Preco ja em centavos
+                // (R$ 4,90 por 100 g = 490), estoque em kg, Tipo = 0 (Granel).
+                Executar(ctx, @"INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                                VALUES (1, 1, NULL, 'SALAME', 490, '12.5', 0);");
+                // REFRIGERANTE: de prateleira (Tipo = 1), nao pode ser encostado.
+                Executar(ctx, @"INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                                VALUES (2, 1, NULL, 'REFRIGERANTE', 700, '24', 1);");
+            }
+
+            using (var ctx = new ApplicationDbContext(options))
+                ctx.Database.Migrate();
+
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                // R$ 4,90/100 g virou R$ 49,00/kg - mesma soma cobrada do cliente.
+                Assert.Equal("integer=4900", Bruto(ctx,
+                    "SELECT typeof(Preco) || '=' || Preco FROM Produtos WHERE Id = 1"));
+
+                // Prateleira (1) + unidade 'kg' + fracionavel, tudo declarado na linha.
+                Assert.Equal("1|kg|1", Bruto(ctx,
+                    "SELECT Tipo || '|' || Unidade || '|' || PermiteFracionado FROM Produtos WHERE Id = 1"));
+
+                var salame = ctx.Produtos.AsNoTracking().Single(p => p.Id == 1);
+                Assert.Equal(49m, salame.Preco);
+                // O estoque NAO acompanhou o preco: ele ja estava em kg, que e agora a
+                // unidade declarada. Multiplicar os dois inventaria 125 kg de salame.
+                Assert.Equal(12.5m, salame.Quantidade);
+
+                // Nenhum registro pode sobreviver com o codigo 0: o enum novo nao tem
+                // mais esse valor e uma leitura ali devolveria um enum inexistente.
+                Assert.Equal("0", Bruto(ctx, "SELECT COUNT(*) FROM Produtos WHERE Tipo = 0"));
+
+                // O produto de prateleira ficou exatamente como estava, com a unidade
+                // inteira padrao que a loja sempre quis dizer quando nao informava nada.
+                var refrigerante = ctx.Produtos.AsNoTracking().Single(p => p.Id == 2);
+                Assert.Equal(7m, refrigerante.Preco);
+                Assert.Equal(24m, refrigerante.Quantidade);
+                Assert.Equal("un", refrigerante.Unidade);
+                Assert.False(refrigerante.PermiteFracionado);
+            }
+        }
+        finally
+        {
+            foreach (var sufixo in new[] { "", "-shm", "-wal" })
+            {
+                var arquivo = db + sufixo;
+                try
+                {
+                    if (File.Exists(arquivo)) File.Delete(arquivo);
+                }
+                catch (IOException)
+                {
+                    // Arquivo temporario pode estar bloqueado pelo SQLite; irrelevante.
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Sobe uma base LEGADA (parada na migration anterior a conversao), escreve
     /// dinheiro como TEXT do jeito do Inicial_Nova, roda o Database.Migrate() do

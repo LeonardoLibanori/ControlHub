@@ -357,7 +357,11 @@ async function buscarProdutoPorCodigo(codigo) {
                 id: data.id,
                 nome: data.nome,
                 preco: parseFloat(data.preco),
-                regra: data.regra,
+                // Unidade e "pode fracionar" vem do cadastro. Antes vinha "regra"
+                // (o tipo de local de guarda em maiusculo) e o front decidia sozinho
+                // o que significava.
+                unidade: data.unidade || "un",
+                fracionado: data.fracionado === true,
                 estoque: data.estoque ?? 0
             };
 
@@ -369,11 +373,17 @@ async function buscarProdutoPorCodigo(codigo) {
             if (displayNome) displayNome.innerText = itemAtual.nome;
             if (exibirPreco) exibirPreco.innerText = "R$ " + (itemAtual.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             if (campoQtd) {
-                // Se for UNIDADE, já coloca 1; se for GRANEL, limpa para o operador informar
-                campoQtd.value = (String(itemAtual.regra || "").toUpperCase() === "UNIDADE") ? "1" : "";
+                // Produto de unidade inteira ja entra com 1; produto fracionavel fica
+                // em branco para o operador informar o peso/volume. A decisao vem do
+                // cadastro (fracionado), nao mais de um texto chumbado aqui.
+                campoQtd.value = itemAtual.fracionado ? "" : "1";
+                campoQtd.step = itemAtual.fracionado ? "any" : "1";
                 campoQtd.focus();
                 campoQtd.select();
             }
+
+            const rotuloQtd = document.getElementById("rotuloUnidadeQtd");
+            if (rotuloQtd) rotuloQtd.textContent = itemAtual.unidade;
 
             // Guarda o estoque visível (opcional)
             const modalEstoque = document.getElementById("modalEstoqueDisponivel");
@@ -522,7 +532,9 @@ function renderCarrinho() {
         tdNome.textContent = item.nome || 'Sem nome';
 
         const tdQtd = document.createElement("td");
-        tdQtd.textContent = String(labelQtd);
+        // Mostra a unidade do produto junto da quantidade: "2 un" e "0,350 kg" deixam
+        // de ser visualmente iguais no carrinho.
+        tdQtd.textContent = String(labelQtd) + (item.unidade ? " " + item.unidade : "");
 
         const tdPreco = document.createElement("td");
         tdPreco.textContent = `R$ ${precoDisplay}`;
@@ -574,7 +586,10 @@ function abrirModalPagamento() {
         const qtdPedida = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
         const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
         if (qtdPedida > estoqueReal) {
-            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            // A unidade agora e a do cadastro. O codigo antigo deduzia de item.tipo,
+            // campo que nenhum dos tres construtores de item de carrinho preenchia:
+            // todo produto aparecia como "un" na mensagem, inclusive os de kg.
+            let unidade = item.unidade || "un";
             errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
         }
     });

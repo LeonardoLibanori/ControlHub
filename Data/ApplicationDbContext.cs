@@ -48,10 +48,11 @@ namespace ControleEstoqueLoja.Data
             // BUG-20: dinheiro vira INTEGER de centavos no banco.
             //
             // As 7 colunas abaixo sao a superficie monetaria do sistema. Quantidade
-            // (Produto e VendaItem) fica de FORA de proposito: quantidade de granel
-            // tem 3+ casas (1,235 kg) e nao e dinheiro; converter centavo nao vale
-            // para quilo, e a correcao nao pode quebrar pesagem. Ela permanece TEXT
-            // e segue como divida separada no relatorio de QA.
+            // (Produto e VendaItem) fica de FORA de proposito: quantidade em unidade
+            // fracionavel tem 3+ casas (0,335 kg, 1,25 l) e nao e dinheiro; conversao
+            // de centavo nao vale para unidade de medida e nao pode quebrar pesagem.
+            // Ela permanece TEXT e segue como divida separada no
+            // relatorio de QA.
             //
             // O padrao de registro e HasConversion em vez de atributo na classe para
             // deixar explicito no unico lugar que descreve o banco quais campos sao
@@ -71,6 +72,22 @@ namespace ControleEstoqueLoja.Data
             modelBuilder.Entity<CaixaMovimentacao>().Property(m => m.Valor).HasConversion(centavos);
 
             modelBuilder.Entity<FluxoCaixa>().Property(f => f.Valor).HasConversion(centavos);
+
+            // ------------------------------------------------------------------
+            // Unidade de medida do produto. Substitui o multiplicador x10 que estava
+            // preso ao valor "Granel" do enum TipoProduto: agora Preco e sempre o
+            // preco de UMA Unidade, e PermiteFracionado diz se o caixa pode aceitar
+            // 0,335 ou se so aceita inteiro.
+            //
+            // Texto livre de caso curto de proposito - "un", "kg", "l", "cx", "pct",
+            // "m", "dz"... uma enum recriaria justamente a rigidez que esta mudanca
+            // tira do sistema (o comercio muda, o codigo nao deveria mudar junto).
+            // MaxLength e cinto de seguranca contra payload grande no cadastro, nao
+            // uma lista fechada de valores.
+            // ------------------------------------------------------------------
+            modelBuilder.Entity<Produto>().Property(p => p.Unidade)
+                .HasMaxLength(12)
+                .IsRequired();
         }
     }
 }

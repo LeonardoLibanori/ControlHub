@@ -56,21 +56,54 @@ public class VendasQaTests
         Assert.Empty(qa.Context.Vendas.AsNoTracking().ToList());
     }
 
-    // JA CORRIGIDO: granel usa multiplicador x10 (preco da tabela e por 100 g, quantidade em kg).
+    // UNIDADES GENERALIZADAS (substitui o antigo "multiplicador x10 em Granel").
+    // O teste anterior media uma regra presa ao valor "Granel" de um enum de LOCAL DE
+    // GUARDA: o cadastro guardava o preco por 100 g, a quantidade entrava em kg e o
+    // caixa refazia a conta x10. A conta batia para um unico case e mentia para
+    // qualquer outra medida (litro, caixa, pacote). A regra agora e una e o que se
+    // cobra aqui e ela: subtotal = preco de UMA unidade x quantidade.
     [Fact]
-    public async Task FinalizarVenda_DeveAplicarMultiplicadorX10EmGranel()
+    public async Task FinalizarVenda_DeveMultiplicarPrecoDaUnidadePelaQuantidade()
     {
         using var qa = new QaContext();
         qa.SeedVendedor(codigo: "ABC123");
-        // R$ 5,00 por 100 g
-        var granel = qa.SeedProduto(preco: 5m, quantidade: 50m, tipo: TipoProduto.Granel);
+        // R$ 50,00 o quilo - o que antes era gravado como "R$ 5,00 por 100 g" + Granel.
+        var queijo = qa.SeedProduto(nome: "QUEIJO MUSSARELA", preco: 50m, quantidade: 50m,
+                                    unidade: "kg", permiteFracionado: true);
 
         var controller = new CaixaController(qa.Context);
         await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
-            Item(granel.Id.ToString(), "2"));   // 2 kg
+            Item(queijo.Id.ToString(), "2"));   // 2 kg
 
-        var venda = qa.Context.Vendas.AsNoTracking().Single();
-        Assert.Equal(100m, venda.TotalVenda);   // 5,00 x 2 x 10
+        var venda = qa.Context.Vendas.AsNoTracking().Include(v => v.Itens).Single();
+        Assert.Equal(100m, venda.TotalVenda);                 // 50,00 x 2
+        Assert.Equal(50m, venda.Itens.Single().PrecoUnitario); // preco de 1 kg, nao de 100 g
+    }
+
+    // UNIDADES GENERALIZADAS (2): a mesma regra vale para outra medida fracionavel.
+    // Se alguem voltar a amarrar "fracionavel" a "kg"/a um valor de enum, este teste pega.
+    [Fact]
+    public async Task FinalizarVenda_DeveAceitarFracaoEmQualquerUnidadeFracionavel()
+    {
+        using var qa = new QaContext();
+        qa.SeedVendedor(codigo: "ABC123");
+        var refrigerante = qa.SeedProduto(nome: "REFRIGERANTE DE 2 L", preco: 8m, quantidade: 30m,
+                                          tipo: TipoProduto.Geladeira, unidade: "l",
+                                          permiteFracionado: true, codigoBarras: "7891000000002");
+
+        var controller = new CaixaController(qa.Context);
+        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+            Item(refrigerante.Id.ToString(), "1,5"));   // 1,5 l
+
+        // Nao usa result.GetStr("message") aqui: a resposta de sucesso nao tem a
+        // propriedade "message" e o helper arrebentaria antes da afirmacao de verdade.
+        Assert.True(result.IsSuccess());
+        var venda = qa.Context.Vendas.AsNoTracking().Include(v => v.Itens).Single();
+        Assert.Equal(12m, venda.TotalVenda);   // 8,00 x 1,5
+        Assert.Equal(8m, venda.Itens.Single().PrecoUnitario);
+
+        var salvo = qa.Context.Produtos.AsNoTracking().First(p => p.Id == refrigerante.Id);
+        Assert.Equal(28.5m, salvo.Quantidade);
     }
 
     // JA CORRIGIDO: produto inexistente invalida a venda (sem venda vazia).
@@ -135,7 +168,10 @@ public class VendasQaTests
         Assert.False(result.IsSuccess());
     }
 
-    // JA CORRIGIDO: quantidade fracionada em produto NAO-granel (unidades inteiras).
+    // FASE 1 (regra agora no cadastro): quantidade fracionada so e aceita quando o
+    // produto declara PermiteFracionado. O produto deste teste nasceu com a unidade
+    // inteira padrao ("un"), entao 1,5 tem de ser barrado - e nao porque o "tipo" dele
+    // se chama Prateleira, como decidia o codigo antigo.
     [Fact]
     public async Task FinalizarVenda_DeveRejeitarQuantidadeFracionadaEmUnitario()
     {

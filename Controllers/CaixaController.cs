@@ -102,17 +102,23 @@ namespace ControleEstoqueLoja.Controllers
                         return Json(new { success = false, message = $"Quantidade inválida para {produto.Nome}." });
                     }
 
-                    // FASE 1: produto unitário (não granel) só aceita quantidade inteira.
-                    string tipoRegra = produto.Tipo.ToString().ToUpper();
-                    if (tipoRegra != "GRANEL" && tipoRegra != "PESO" && qtdVendida != decimal.Truncate(qtdVendida))
+                    // GENERALIZACAO DE UNIDADES: quem decide se a quantidade pode ser
+                    // fracionada e o proprio produto (PermiteFracionado), nao mais um
+                    // valor do enum de local de guarda. O teste antigo comparava
+                    // tipoRegra != "GRANEL" && != "PESO", e "PESO" jamais existiu no
+                    // enum - ramo morto que fingia cobrir um caso.
+                    if (!produto.PermiteFracionado && qtdVendida != decimal.Truncate(qtdVendida))
                     {
-                        return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome}." });
+                        return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome} (unidade: {produto.Unidade})." });
                     }
 
                     // 2. VALIDAÇÃO DE ESTOQUE COM MENSAGEM DETALHADA
                     if (produto.Quantidade < qtdVendida)
                     {
-                        string unidadeMedida = (tipoRegra == "PESO" || tipoRegra == "GRANEL") ? "kg" : "un";
+                        // A unidade vem do cadastro. Antes era deduzida do tipo
+                        // ("kg" se fosse granel, "un" no resto), o que mentia para
+                        // qualquer produto vendido por litro, caixa, dúzia...
+                        string unidadeMedida = produto.Unidade;
 
                         // Retorna o erro parando o loop e avisando o vendedor exatamente o saldo
                         return Json(new
@@ -126,8 +132,8 @@ namespace ControleEstoqueLoja.Controllers
 
                     // FASE 1: o preço de venda é SEMPRE o preço de tabela (produto.Preco).
                     // O campo item.Preco do POST é ignorado para impedir fraude via POST manual.
-                    // Granel: a tabela guarda o preço por 100 g -> o preço efetivo por kg é preco*10.
-                    // Regra centralizada em CalcularSubtotalItem (única fonte de verdade).
+                    // Preco é o valor de UMA unidade na medida do produto: não existe mais
+                    // fator escondido por tipo. Regra centralizada em CalcularSubtotalItem.
                     decimal precoUnit = CalcularSubtotalItem(produto, 1m);
                     decimal subtotalItem = CalcularSubtotalItem(produto, qtdVendida);
 
@@ -323,20 +329,27 @@ namespace ControleEstoqueLoja.Controllers
         // --- CLASSES AUXILIARES ---
 
         /// <summary>
-        /// REGRA ÚNICA de subtotal de item de venda (fonte de verdade para FinalizarVenda,
-        /// cupom e ObterDetalhesVenda).
-        /// O preço vem SEMPRE da tabela (produto.Preco), nunca do POST.
-        /// Granel: o cadastro (Novo.cshtml) guarda o preço por 100 g e a quantidade em kg,
-        /// então multiplica por 10 (R$ 5,00/100 g = R$ 50,00/kg x qtd em kg).
+        /// REGRA ÚNICA de subtotal de item no ato da venda. O preço vem SEMPRE da
+        /// tabela (produto.Preco), nunca do POST.
+        ///
+        /// GENERALIZAÇÃO DE UNIDADES: subtotal = Preco x Quantidade, e somente isso.
+        /// Preco é o valor de UMA unidade na medida do produto (produto.Unidade: "un",
+        /// "kg", "l", "cx", "pct"...). Antes existia um multiplicador x10 preso ao valor
+        /// "Granel" do enum TipoProduto - que é um enum de LOCAL DE GUARDA - porque o
+        /// cadastro guardava o preço por 100 g enquanto a quantidade entrava em kg.
+        /// O mesmo campo passava a significar duas coisas dependendo de uma categoria
+        /// de prateleira, e nada no nome do campo avisava. A migration
+        /// UnidadeMedidaProduto reagiu os preços existentes (x10) para que o valor
+        /// efetivamente cobrado por quilo continuasse o mesmo.
+        ///
+        /// Cupom e ObterDetalhesVenda NÃO chamam este método de propósito: eles leem
+        /// VendaItem.PrecoUnitario, o snapshot do preço cobrado na hora. Recalcular a
+        /// partir do produto de hoje mostraria no cupom um preço diferente do que o
+        /// cliente pagou assim que o cadastro fosse alterado.
         /// </summary>
         public static decimal CalcularSubtotalItem(Produto produto, decimal quantidade)
         {
-            decimal subtotal = produto.Preco * quantidade;
-
-            if (produto.Tipo == TipoProduto.Granel)
-                subtotal *= 10;
-
-            return Math.Round(subtotal, 2, MidpointRounding.AwayFromZero);
+            return Math.Round(produto.Preco * quantidade, 2, MidpointRounding.AwayFromZero);
         }
 
         // ------------------------------------------------------------------
@@ -834,7 +847,11 @@ namespace ControleEstoqueLoja.Controllers
                 id = p.Id,
                 nome = p.Nome,
                 preco = p.Preco,
-                regra = p.Tipo.ToString().ToUpper(),
+                // A unidade do cadastro manda na exibicao e na regra de quantidade do
+                // caixa. O campo "regra" saiu de cena: ele mandava o front decidir
+                // inteiro/fracado a partir do TIPO DE LOCAL DE GUARDA do produto.
+                unidade = p.Unidade,
+                fracionado = p.PermiteFracionado,
                 estoque = p.Quantidade // Aqui deve retornar 4 se estiver no banco
             });
         }
@@ -855,6 +872,8 @@ namespace ControleEstoqueLoja.Controllers
                 id = p.Id,
                 nome = p.Nome,
                 preco = p.Preco,
+                unidade = p.Unidade,
+                fracionado = p.PermiteFracionado,
                 // Garante que o nome enviado seja 'estoque' para o seu JS não se perder
                 estoque = p.Quantidade
             });
