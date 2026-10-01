@@ -141,33 +141,52 @@
                             </li>
                         }
 
-                        @* Usuários: PodeGerenciarUsuarios (só Dono). Este é o ÚNICO link
-                           para /Usuarios na interface - o Operador não o vê em lugar
-                           nenhum (e se digitar a URL recebe 403 da própria rota). *@
-                        @if (podeGerenciarUsuarios)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Usuarios" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i>Usuários</a>
-                            </li>
-                        }
+                        @* O link /Usuarios saiu da barra: hoje a rota vive dentro do
+                           menu de perfil (dropdown a direita), para a navbar ficar
+                           clean. O Operador nao vê a opcao em lugar nenhum (e se
+                           digitar a URL recebe 403 da propria rota). *@
                     </ul>
 
                     @if (autenticado)
                     {
-                        @* Quem está logado e com qual papel: no balcão o PC é
+                        @* Menu de perfil (clean): na barra fica SO o icone + "Olá, nome";
+                           ao clicar abrem as opcoes - ADMINISTRAR USUARIOS (Dono, a
+                           unica rota /Usuarios da interface) e SAIR (POST com token
+                           anti-forgery: logout nao pode ser GET que qualquer pagina
+                           dispararia). O papel fica DENTRO do menu: no balcao o PC e
                            compartilhado e saber quem entrou evita vender no cupom
-                           errado. O "Sair" é POST com token anti-forgery (o logout
-                           não pode ser um GET que qualquer página dispararia). *@
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="user-session small text-muted">
-                                <i class="bi bi-person-circle" aria-hidden="true"></i>
-                                Olá, <b class="text-dark">@nomeExibido</b> —
-                                <span class="badge bg-secondary">@papelExibido</span>
-                            </span>
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Sair</button>
-                            </form>
+                           errado, sem poluir a barra. *@
+                        <div class="dropdown">
+                            <button class="btn d-flex align-items-center gap-2 px-2 text-dark user-session-trigger"
+                                    type="button" id="btnMenuPerfil" data-bs-toggle="dropdown"
+                                    aria-expanded="false" aria-label="Menu do perfil">
+                                <i class="bi bi-person-circle fs-4" aria-hidden="true"></i>
+                                <span class="small fw-semibold">Olá, <b class="text-dark">@nomeExibido</b></span>
+                                <i class="bi bi-chevron-down small" aria-hidden="true"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="btnMenuPerfil">
+                                <li>
+                                    <span class="dropdown-item-text small text-muted d-flex align-items-center justify-content-between">
+                                        <span>Papel</span>
+                                        <span class="badge bg-secondary">@papelExibido</span>
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @if (podeGerenciarUsuarios)
+                                {
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Usuarios" asp-action="Index">
+                                            <i class="bi bi-people me-2" aria-hidden="true"></i>Administrar usuários
+                                        </a>
+                                    </li>
+                                }
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Sair</button>
+                                    </form>
+                                </li>
+                            </ul>
                         </div>
                     }
                 </div>

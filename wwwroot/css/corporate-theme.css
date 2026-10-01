@@ -923,3 +923,20 @@ footer .container {
     margin: 0 0 1rem;
     text-align: left;
 }
+
+/* Menu de perfil da navbar: gatilho clean (icone + "Ola, nome") que abre as
+   opcoes (administrar usuarios / sair) em um dropdown a direita. */
+.user-session-trigger {
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.user-session-trigger:hover,
+.user-session-trigger:focus-visible {
+    background-color: #f1f3f5;
+    border-color: #dee2e6;
+}
+
+.user-session-trigger:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
