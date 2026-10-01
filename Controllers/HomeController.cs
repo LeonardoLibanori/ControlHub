@@ -142,19 +142,6 @@ namespace ControleEstoqueLoja.Controllers
             return RedirectToAction("Produto", new { id = id });
         }
 
-        /// <summary>
-        /// Unidade de medida vira minúscula, sem espaços e limitada a 12 caracteres
-        /// (o MaxLength configurado no ApplicationDbContext). Vazio ou só espaço
-        /// significa "un": é o que a loja quer dizer quando não informa nada.
-        /// Texto livre de propósito - ver o comentário em ApplicationDbContext.
-        /// </summary>
-        private static string NormalizarUnidade(string? unidade)
-        {
-            var limpa = (unidade ?? string.Empty).Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(limpa)) return "un";
-            return limpa.Length > 12 ? limpa[..12] : limpa;
-        }
-
         [HttpGet]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Novo()
@@ -165,8 +152,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string codigoBarras,
-                                 string? unidade = null, bool permiteFracionado = false)
+        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string codigoBarras)
         {
             // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
             decimal.TryParse(preco, out decimal valorBruto);
@@ -189,18 +175,6 @@ namespace ControleEstoqueLoja.Controllers
             if (qtd < 0m)
             {
                 TempData["Erro"] = "A quantidade não pode ser negativa.";
-                return RedirectToAction("Index");
-            }
-
-            // GENERALIZAÇÃO DE UNIDADES: a unidade é texto livre do cadastro e passa a
-            // ser a única coisa que diz em que se conta o estoque e o preço. Se o
-            // produto não é fracionável, estoque com casa decimal é contradição: é
-            // melhor barrar aqui do que deixar o caixa impossível de reproduzir o saldo.
-            string unidadeNormalizada = NormalizarUnidade(unidade);
-
-            if (!permiteFracionado && qtd != decimal.Truncate(qtd))
-            {
-                TempData["Erro"] = $"{unidadeNormalizada} é unidade inteira: informe a quantidade sem casas decimais ou marque a opção de venda fracionada.";
                 return RedirectToAction("Index");
             }
 
@@ -228,8 +202,6 @@ namespace ControleEstoqueLoja.Controllers
                 Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
-                Unidade = unidadeNormalizada,
-                PermiteFracionado = permiteFracionado,
                 CodigoBarras = codigoBarras
             };
 
@@ -253,8 +225,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco,
-                                    string? unidade = null, bool? permiteFracionado = null)
+        public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
@@ -275,15 +246,6 @@ namespace ControleEstoqueLoja.Controllers
             produto.Nome = SanitizeTexto(nome) ?? produto.Nome;
             produto.Preco = precoFinal;
             produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : produto.Tipo;
-
-            // Unidade/fracionável chegam como null quando a chamada não envia o campo
-            // (formulário antigo, chamada direta de teste): nesse caso não se mexe.
-            // bool? existe justamente para "checkbox desmarcado" (false) não ser
-            // confundido com "checkbox não enviado" (null).
-            if (!string.IsNullOrWhiteSpace(unidade))
-                produto.Unidade = NormalizarUnidade(unidade);
-            if (permiteFracionado.HasValue)
-                produto.PermiteFracionado = permiteFracionado.Value;
             // BUG-07: Views/Home/Editar.cshtml NÃO tem o campo "quantidade". A action
             // fazia TryParse sem checar o retorno, então qtd virava 0 e a linha
             // `produto.Quantidade = qtd` ZERAVA todo o estoque a cada edição.
@@ -302,15 +264,6 @@ namespace ControleEstoqueLoja.Controllers
                 }
 
                 produto.Quantidade = qtd;
-            }
-
-            // Desmarcar "venda fracionada" num produto com saldo quebrado deixaria o
-            // resto impossível de vender (sobrariam 0,5 kg de um produto que o caixa
-            // só conta em inteiro). Barrar aqui é mais barato que explicar depois.
-            if (!produto.PermiteFracionado && produto.Quantidade != decimal.Truncate(produto.Quantidade))
-            {
-                TempData["Erro"] = $"{produto.Nome} tem estoque fracionado ({produto.Quantidade} {produto.Unidade}). Ajuste o estoque para um valor inteiro antes de desmarcar a venda fracionada.";
-                return RedirectToAction("Index");
             }
 
             _context.SaveChanges();

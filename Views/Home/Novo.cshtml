@@ -30,41 +30,17 @@
             </div>
 
             <div class="mb-3">
-                <label class="fw-bold">Local de guarda:</label>
-                <select name="tipo" class="form-select" required>
+                <label class="fw-bold">Tipo do produto:</label>
+                <select name="tipo" id="tipoProduto" class="form-select" required onchange="atualizarQuantidade()">
+                    <option value="Granel">Granel</option>
                     <option value="Prateleira">Prateleira</option>
                     <option value="Geladeira">Geladeira</option>
                     <option value="Freezer">Freezer</option>
                 </select>
-                <small class="text-muted">Só diz onde o produto fica guardado. Não muda preço nem quantidade.</small>
             </div>
 
             <div class="mb-3">
-                <label class="fw-bold">Unidade de medida:</label>
-                <input type="text" name="unidade" id="unidadeProduto" list="listaUnidades" maxlength="12"
-                       class="form-control" value="un" required oninput="atualizarRotulosUnidade()" />
-                <datalist id="listaUnidades">
-                    <option value="un"></option>
-                    <option value="kg"></option>
-                    <option value="l"></option>
-                    <option value="cx"></option>
-                    <option value="pct"></option>
-                    <option value="dz"></option>
-                    <option value="m"></option>
-                </datalist>
-                <small class="text-muted">Em que o estoque é contado e o preço é cobrado. Ex.: un, kg, l, cx, pct, dz, m.</small>
-            </div>
-
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" name="permiteFracionado" value="true"
-                       id="chkFracionado" onchange="atualizarRotulosUnidade()" />
-                <label class="form-check-label" for="chkFracionado">
-                    Permite quantidade fracionada (ex.: 0,335 kg)
-                </label>
-            </div>
-
-            <div class="mb-3">
-                <label class="fw-bold">Preço por <span id="rotuloUnidadePreco">un</span>:</label>
+                <label class="fw-bold">Preço Unitário:</label>
                 <div class="input-group">
                     <span class="input-group-text">R$</span>
                     <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required
@@ -74,10 +50,9 @@
             </div>
 
             <div class="mb-4">
-                <label id="labelQuantidade" class="fw-bold">Quantidade inicial (un):</label>
-                <input type="text" name="quantidade" id="quantidadeVisual" class="form-control"
-                       placeholder="0" required oninput="limparQuantidade(this)" />
-                <small class="text-muted" id="ajudaQuantidade">Unidade inteira: sem casas decimais.</small>
+                <label id="labelQuantidade" class="fw-bold">Quantidade inicial (kg):</label>
+                <input type="text" id="quantidadeVisual" class="form-control" required oninput="atualizarQuantidade()" />
+                <input type="hidden" name="quantidade" id="quantidadeReal" />
             </div>
 
             <button type="submit" class="btn btn-success w-100 btn-lg">SALVAR PRODUTO</button>
@@ -90,34 +65,25 @@
 </div>
 
 <script>
-    // A unidade é um texto livre do cadastro e nenhum valor tem regra especial aqui.
-    // No lugar desta função existia um (parseInt(valor) / 10) disparado quando o tipo
-    // era "Granel": o operador digitava 12 para significar 1,2 kg e o caixa ainda
-    // multiplicava por 10 de novo na hora de cobrar. Dois passos de mágica para o que
-    // é só "1,2 da unidade do produto".
-    function nomeUnidade() {
-        const v = (document.getElementById('unidadeProduto').value || '').trim().toLowerCase();
-        return v === '' ? 'un' : v;
-    }
+    function atualizarQuantidade() {
+        const tipo = document.getElementById('tipoProduto').value;
+        const input = document.getElementById('quantidadeVisual');
+        const hidden = document.getElementById('quantidadeReal');
+        const label = document.getElementById('labelQuantidade');
 
-    function atualizarRotulosUnidade() {
-        const un = nomeUnidade();
-        const fracionado = document.getElementById('chkFracionado').checked;
+        let valor = input.value.replace(/\D/g, '');
 
-        document.getElementById('rotuloUnidadePreco').textContent = un;
-        document.getElementById('labelQuantidade').innerText = 'Quantidade inicial (' + un + '):';
-        document.getElementById('ajudaQuantidade').innerText = fracionado
-            ? 'Aceita fração da unidade: 0,335 e 1,5 são bem-vindos.'
-            : 'Unidade inteira: sem casas decimais.';
-    }
-
-    function limparQuantidade(input) {
-        // Mantém dígitos e um único separador; vírgula vira ponto (o controlador
-        // também aceita vírgula, isto aqui é só para o campo nunca sair sujo).
-        let v = input.value.replace(',', '.').replace(/[^0-9.]/g, '');
-        const partes = v.split('.');
-        if (partes.length > 2) v = partes[0] + '.' + partes.slice(1).join('');
-        input.value = v;
+        if (tipo === 'Granel') {
+            label.innerText = "Quantidade inicial (kg):";
+            if (valor === '') return;
+            let numero = (parseInt(valor) / 10).toFixed(1);
+            input.value = numero.replace('.', ',') + ' kg';
+            hidden.value = numero.replace(',', '.');
+        } else {
+            label.innerText = "Quantidade inicial (un):";
+            input.value = valor;
+            hidden.value = valor;
+        }
     }
 
         function formatarMoeda(input, idOculto) {

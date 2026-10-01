@@ -657,15 +657,21 @@
 
         
 
-        // NAO EXISTE mais processarCodigoBalanca() aqui.
-        // Ela tratava codigo de balanca ("2 00123 00500 1"), mas nunca foi chamada por
-        // ninguem, interpretava os 5 primeiros digitos como Produto.Id (a chave
-        // primaria interna virando PLU de balanca: bastaria um produto novo para o
-        // codigo de uma mercadoria passar a apontar para outra) e chamava uma
-        // adicionarAoCarrinho(id, nome, preco, peso) com assinatura que nao existe no
-        // projeto. Codigo morto que ensinava o proximo a repetir o erro: saiu.
-        // Se um dia a loja usar etiqueta de balanca, o caminho e um campo PLU proprio
-        // no cadastro (decuplado do Id) e um parser escolhido por configuracao.
+                        function processarCodigoBalanca(codigo) {
+            // Exemplo código: 2 00123 00500 1
+            // idProduto = 123 | valorExtraido = 0.500
+            const idProduto = parseInt(codigo.substring(1, 6));
+            const pesoExtraido = parseFloat(codigo.substring(6, 12)) / 1000;
+
+            fetch(`/Caixa/BuscarPorId?id=${idProduto}`).then(async r => {
+                const p = await r.json();
+                if(p.success) {
+                    // Aqui passamos o pesoExtraido como a QUANTIDADE da venda
+                    adicionarAoCarrinho(p.id, p.nome, p.preco, pesoExtraido);
+                }
+            });
+        }
+
 
 
     </script>

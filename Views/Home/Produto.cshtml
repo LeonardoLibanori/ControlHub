@@ -28,20 +28,16 @@
             <div class="tabela-card text-center">
                 <h4 class="mb-3">Estoque Atual</h4>
                 <div class="display-1 fw-bold @(Model.Quantidade <= 5 ? "text-danger" : "text-success")">
-                    @if (Model.PermiteFracionado)
+                    @if (Model.Tipo.ToString() == "Unidade" || Model.Tipo.ToString() == "Prateleira")
                     {
-                        @Model.Quantidade.ToString("0.###")
+                        @Model.Quantidade.ToString("0") @* Tira as casas decimais *@
                     }
                     else
                     {
-                        @Model.Quantidade.ToString("0")
+                        @Model.Quantidade.ToString("N1") @* Mantém uma casa decimal para Granel/Quilos *@
                     }
                 </div>
-                @* A unidade é a do cadastro. Antes a página deduzia "Quilos" ou
-                   "Unidades" a partir do local de guarda, e um produto vendido por
-                   litro ou por caixa era apresentado com o nome errado. *@
-                <p class="fs-5 text-muted">@Model.Unidade</p>
-                <p class="text-muted">Preço por @Model.Unidade: <strong>@Model.Preco.ToString("C2")</strong></p>
+                <p class="fs-5 text-muted">@(Model.Tipo.ToString() == "Granel" ? "Quilos" : "Unidades")</p>
 
                 <hr />
 

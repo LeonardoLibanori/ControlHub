@@ -77,18 +77,13 @@
 
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <label class="fw-bold">QUANTIDADE <span id="rotuloUnidadeQtd" class="fw-normal text-muted">un</span></label>
-                            @* step="any": o produto pode ser contado em inteiro ou em
-                               fracao da unidade dele, e quem barra a fracao indevida e
-                               o servidor (Produto.PermiteFracionado). O step="0.001"
-                               de antes valia para tudo e o min="0.1" nem deixava
-                               registrar 50 g de um produto de kg. *@
+                            <label class="fw-bold">QUANTIDADE</label>
                             <input type="number"
                                    id="campoQtd"
                                    class="form-control form-control-lg"
                                    value="0"
-                                   step="any"
-                                   min="0"
+                                   step="0.001"
+                                   min="0.1"
                                    onfocus="this.select()" />
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
@@ -291,8 +286,6 @@
                 Quantidade: qtdString,
                 Preco: precoString,
                 labelQtd: qtdString,
-                unidade: itemAtual.unidade || 'un',
-                fracionado: itemAtual.fracionado === true,
                 subtotal: (itemAtual.preco || 0) * quantidade,
                 estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
             };
@@ -331,8 +324,6 @@ function adicionarItemAoCarrinho() {
         qtd: quantidade,
         Quantidade: qtdString,
         Preco: precoString,
-        unidade: itemAtual.unidade || 'un',
-        fracionado: itemAtual.fracionado === true,
         subtotal: (itemAtual.preco || 0) * quantidade,
         estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
     };
@@ -375,8 +366,6 @@ function confirmarItem() {
         qtd: qtdNumerica,
         Quantidade: qtdDigitada,
         Preco: precoString,
-        unidade: itemAtual.unidade || 'un',
-        fracionado: itemAtual.fracionado === true,
         subtotal: (itemAtual.preco || 0) * qtdNumerica,
         estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
     };
@@ -405,16 +394,8 @@ function abrirModalPagamento() {
         const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
 
         if (qtdPedida > estoqueReal) {
-            errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${item.unidade || 'un'} | Disponível: ${estoqueReal}${item.unidade || 'un'}`);
-        }
-
-        // Unidade inteira vem do cadastro (Produto.PermiteFracionado), a mesma regra
-        // que o servidor vai cobrar no FinalizarVenda. Avisar aqui devolve a mensagem
-        // na hora, sem o ida e volta, e sem precisar de um tipo de produto especial
-        // para saber se aquilo e contado em inteiro ou no peso.
-        const unidade = item.unidade || 'un';
-        if (item.fracionado === false && qtdPedida !== Math.trunc(qtdPedida)) {
-            errosEstoque.push(`Produto: <b>${item.nome}</b><br>${unidade} e unidade inteira: ${qtdPedida}${unidade} nao e aceito. Ajuste para ${Math.trunc(qtdPedida)}${unidade} ou cadastre o produto como vendavel fracionado.`);
+            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
         }
     });
 

@@ -56,13 +56,9 @@ public sealed class QaContext : IDisposable
 
     // ---------- helpers de seed ----------
 
-    // unidade/permiteFracionado entraram junto com a generalizacao de medidas: antes
-    // o teste so escolhia um local de guarda e o caixa decidia sozinho se aquilo era
-    // fracionavel (era "Granel"). Agora o seed declara a medida, igual ao cadastro.
     public Produto SeedProduto(string nome = "PRODUTO TESTE", decimal preco = 10m,
                                decimal quantidade = 100m, TipoProduto tipo = TipoProduto.Prateleira,
-                               string? codigoBarras = "7891000000001",
-                               string unidade = "un", bool permiteFracionado = false)
+                               string? codigoBarras = "7891000000001")
     {
         var p = new Produto
         {
@@ -70,9 +66,7 @@ public sealed class QaContext : IDisposable
             Preco = preco,
             Quantidade = quantidade,
             Tipo = tipo,
-            CodigoBarras = codigoBarras,
-            Unidade = unidade,
-            PermiteFracionado = permiteFracionado
+            CodigoBarras = codigoBarras
         };
         Context.Produtos.Add(p);
         Context.SaveChanges();
