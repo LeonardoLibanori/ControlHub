@@ -83,6 +83,83 @@ alguns **dados fictícios**, para navegar pela aplicação sem precisar cadastra
 
 ---
 
+## 🧰 Preparando uma máquina nova
+
+Em vez de refazer tudo na mão, rode o **`setup.ps1`** uma única vez:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -ComDados
+```
+
+Ele faz tudo em um comando só:
+
+1. **clone** do repositório (ou apenas ressincroniza, se a pasta já existir)
+2. **checkout** da `main`
+3. **copia** `controleestoque.exemplo.db` → `controleestoque.db`
+4. **`dotnet tool restore`** (manifesto local, instala o `dotnet-ef`)
+5. **`dotnet restore`** (pacotes NuGet)
+6. **`dotnet build`**
+7. **lista as migrations** e avisa se houver pendentes
+8. **roda a suíte de testes**
+
+### Qual usar em cada caso
+
+| Situação | Comando |
+|---|---|
+| Máquina nova para desenvolver/testar | `.\setup.ps1 -ComDados` |
+| Máquina da loja, com o banco real copiado do PC antigo | copie o `controleestoque.db` para a pasta e rode `.\setup.ps1` |
+| Só sincronizar (dia a dia) | `git pull origin main` |
+| Aplicar migrations, depois de ler o SQL delas | `.\setup.ps1 -AplicarMigrations` |
+
+Parâmetros úteis: `-PularBuild`, `-PularTestes`, `-Destino` e `-Repositorio`.
+
+> ⚠️ **O `-ComDados` só serve para testar.** Ele copia o banco de exemplo, que tem
+> produtos e vendas fictícios. Na máquina da loja, copie o `controleestoque.db`
+> real do PC antigo antes de rodar o script.
+
+### O aviso das migrations pendentes
+
+O script **nunca aplica migration sozinho**, mesmo quando encontra pendentes. Isso é
+proposital, porque o `Program.cs` chama `Database.Migrate()` no start da aplicação — ou seja,
+**`dotnet run` aplica as migrations pendentes sem perguntar nada**.
+
+Se uma delas altera dados que já existem, o estrago é silencioso. Por isso o script
+apenas mostra um alerta em destaque, lista quais são e deixa a decisão na mão:
+
+```
+   ATENCAO: HAI MIGRATIONS PENDENTES NESTE BANCO
+
+  1 migration ainda NAO aplicada(s) neste controleestoque.db:
+
+      20260930134556_DecimalParaCentavos
+
+  O Program.cs chama Database.Migrate() no start da aplicacao. Portanto:
+
+      dotnet run   ->   APLICA TUDO ISSO SOZINHO, SEM PERGUNTAR
+```
+
+Depois de ler o SQL em `Migrations/` e fazer o backup, aplique de propósito:
+
+```powershell
+Copy-Item controleestoque.db "$env:TEMP\backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
+dotnet ef migrations list          # ver o que falta
+.\setup.ps1 -AplicarMigrations      # aplicar de propósito
+```
+
+### Depois do setup
+
+O dia a dia passa a ser só sincronizar:
+
+```powershell
+git pull origin main      # buscar
+git add -A; git commit -m "..."; git push origin main   # enviar
+```
+
+O `controleestoque.db` é ignorado pelo Git, então ele **nunca entra no diff** e nunca causa
+conflito de merge entre máquinas. É por isso que ele é local de cada máquina.
+
+---
+
 ## ­ƒôª M├│dulo de Estoque
 
 - Listagem de todos os produtos com busca por nome
