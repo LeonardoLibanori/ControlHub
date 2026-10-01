@@ -152,7 +152,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string codigoBarras)
+        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras)
         {
             // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
             decimal.TryParse(preco, out decimal valorBruto);
@@ -198,7 +198,7 @@ namespace ControleEstoqueLoja.Controllers
 
             var p = new Produto
             {
-                Nome = nomeLimpo?.ToUpper(),
+                Nome = nomeLimpo?.ToUpper() ?? string.Empty,
                 Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
@@ -225,7 +225,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Editar(int id, string nome, string tipo, string quantidade, string preco)
+        public IActionResult Editar(int id, string nome, string tipo, string? quantidade, string preco)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();

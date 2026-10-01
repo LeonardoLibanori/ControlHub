@@ -46,6 +46,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- NU1903 / CVE-2025-6965 (GHSA-2m69-gcr7-jv3q): o EF Core Sqlite traz
+         SQLitePCLRaw 2.1.11 (SQLite 3.49.1, vulneravel). Pin direto na linha 2.x:
+         o bundle 2.1.12 referencia lib.e_sqlite3 3.53.3 (SQLite corrigido, >= 3.50.2)
+         sem mudar de major - zero breaking change com o provider do EF Core 10. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
   </ItemGroup>
 
   <ItemGroup>

@@ -41,7 +41,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeOperarPDV)]
-        public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
+        public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string? cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
         {
             // BUG-18: valida e finaliza a venda com o MESMO critério de comparação
             // (NormalizarCupom), senão o cupom validado seria rejeitado na venda.
@@ -397,9 +397,12 @@ namespace ControleEstoqueLoja.Controllers
 
         public class ItemVendaSimples
         {
-            public string ProdutoId { get; set; }
-            public string Quantidade { get; set; }
-            public string Preco { get; set; }
+            // Anulaiveis: chegam do POST e o model binding deixa em branco o que o
+            // formulario nao envia. Todo o consumo ja trata null (TryParse / ?.) —
+            // declarar como string? apenas reconhece a realidade (elimina CS8618).
+            public string? ProdutoId { get; set; }
+            public string? Quantidade { get; set; }
+            public string? Preco { get; set; }
         }
 
         // Métodos de Histórico e Cupom (Mantidos conforme seu original)
@@ -736,7 +739,7 @@ namespace ControleEstoqueLoja.Controllers
 
             _context.Vendedores.Add(new Vendedor
             {
-                Nome = nome?.Trim(),
+                Nome = nome?.Trim() ?? string.Empty,
                 Codigo = cupom,
                 Ativo = true
             });
