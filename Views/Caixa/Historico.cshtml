@@ -1,69 +1,59 @@
 ﻿@model IEnumerable<ControleEstoqueLoja.Models.Venda>
 
-<div class="container py-4">
-    <br> <br />
-    <div class="row justify-content-center mb-5">
-        <div class="col-md-6 text-center">
-            <div class="p-4 shadow" style="background: linear-gradient(135deg, #004d1a 0%, #008f32 100%); border-radius: 20px; border: 2px solid #ffd700;">
-                <h6 class="text-white text-uppercase fw-light mb-2" style="letter-spacing: 2px;">Vendas de Hoje</h6>
-                <h1 class="display-4 fw-bold mb-0" style="color: #ffd700;">
+<div class="container history-summary py-4">
+    <div class="row g-3 align-items-stretch mb-4">
+        <div class="col-12 col-lg-5">
+            <section class="history-hero h-100 p-4">
+                <div class="section-eyebrow"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>VENDAS DE HOJE</div>
+                <h1 class="history-today-total mb-0">
                     @{
                         var totalHoje = Model?.Where(v => v.DataVenda.Date == DateTime.Today).Sum(v => v.TotalVenda) ?? 0;
                     }
                     @totalHoje.ToString("C")
                 </h1>
-            </div>
+            </section>
+        </div>
+        <div class="col-12 col-md-4 col-lg-2">
+            <section class="history-metric h-100 p-3">
+                <div class="section-eyebrow">ESTA SEMANA</div>
+                <h3 class="mb-0">@(ViewBag.FaturamentoSemana?.ToString("C") ?? "R$ 0,00")</h3>
+            </section>
+        </div>
+        <div class="col-12 col-md-4 col-lg-2">
+            <section class="history-metric h-100 p-3">
+                <div class="section-eyebrow">ESTE MÊS</div>
+                <h3 class="mb-0">@(ViewBag.FaturamentoMes?.ToString("C") ?? "R$ 0,00")</h3>
+            </section>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+            <section class="history-metric h-100 p-3">
+                <div class="section-eyebrow">ESTE ANO</div>
+                <h3 class="mb-0">@(ViewBag.FaturamentoAno?.ToString("C") ?? "R$ 0,00")</h3>
+            </section>
         </div>
     </div>
 
-    <div class="row g-4 justify-content-center mb-5">
-        <div class="col-md-4 col-lg-3">
-            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #008f32 !important;">
-                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Esta Semana</small>
-                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoSemana?.ToString("C") ?? "R$ 0,00")</h3>
-            </div>
+    <form method="get" class="history-filter d-flex flex-wrap gap-3 align-items-end mb-4">
+        <div class="flex-grow-1">
+            <label class="form-label fw-semibold" for="historico-data">Filtrar por dia</label>
+            <input type="date"
+                   id="historico-data"
+                   name="data"
+                   class="form-control fw-bold"
+                   value="@DateTime.Today.ToString("yyyy-MM-dd")"
+                   max="@DateTime.Today.ToString("yyyy-MM-dd")" />
         </div>
-
-        <div class="col-md-4 col-lg-3">
-            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #ffd700 !important;">
-                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Este Mês</small>
-                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoMes?.ToString("C") ?? "R$ 0,00")</h3>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-lg-3">
-            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 20px; border-top: 5px solid #004d1a !important;">
-                <small class="text-muted fw-bold text-uppercase d-block mb-3" style="letter-spacing: 1px;">Este Ano</small>
-                <h3 class="fw-bold text-dark mb-0">@(ViewBag.FaturamentoAno?.ToString("C") ?? "R$ 0,00")</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <form method="get" class="d-flex gap-3 align-items-center bg-white p-3 rounded-pill shadow-sm border">
-                <span class="ps-3 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; white-space: nowrap;">Filtrar Dia:</span>
-
-                <input type="date"
-                       name="data"
-                       class="form-control border-0 fw-bold"
-                       value="@DateTime.Today.ToString("yyyy-MM-dd")"
-                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
-                       style="font-size: 1.1rem;">
-
-                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold text-uppercase shadow-sm">
-                    Buscar
-                </button>
-            </form>
-        </div>
-    </div>
+        <button type="submit" class="btn btn-primary text-uppercase">
+            <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
+        </button>
+    </form>
 </div>
 
 
 
 <div class="main-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="fw-bold mb-0">📜 HISTÓRICO DE VENDAS</h1>
+        <h1 class="fw-bold mb-0"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>HISTÓRICO DE VENDAS</h1>
     </div>
 
     <div class="tabela-card p-0">
@@ -89,16 +79,16 @@
                             <td>@venda.MetodoPagamento</td>
                             <td class="text-center" style="vertical-align: middle;">
                                 <div class="d-flex justify-content-center align-items-center gap-2">
-                                    <button class="btn btn-info btn-sm d-flex align-items-center justify-content-center"
+                                    <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="verDetalhes(@venda.Id)"
-                                            style="width: 40px; height: 35px; border-radius: 6px;">
-                                        <span style="font-size: 1.2rem;">🔍</span>
+                                            title="Ver detalhes" aria-label="Ver detalhes da venda @venda.Id">
+                                        <i class="bi bi-search" aria-hidden="true"></i>
                                     </button>
 
-                                    <button class="btn btn-dark btn-sm d-flex align-items-center justify-content-center gap-2"
+                                    <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="reimprimirVenda(@venda.Id)"
-                                            style="height: 35px; border-radius: 6px; padding: 0 10px;">
-                                        <span style="font-size: 1.1rem;">🖨️</span>
+                                            title="Reimprimir cupom" aria-label="Reimprimir venda @venda.Id">
+                                        <i class="bi bi-printer" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </td>
@@ -117,9 +107,9 @@
 </div>
 
 <div id="modalDetalhes" class="modal-overlay">
-    <div class="modal-box" style="width: 500px; max-height: 80vh; overflow-y: auto;">
+    <div class="modal-box history-details-modal">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold mb-0" style="color: #004d1a;">DETALHES DA COMPRA</h4>
+            <h4 class="fw-bold mb-0">DETALHES DA VENDA</h4>
             <button class="btn-close" onclick="fecharDetalhes()"></button>
         </div>
 
@@ -138,9 +128,14 @@
                 let itensHtml = '<table class="table table-sm text-start"><thead><tr><th>Produto</th><th>Qtd</th><th>Total</th></tr></thead><tbody>';
 
                 data.itens.forEach(item => {
+                    const unidade = item.unidade || 'un';
+                    const quantidade = Number(item.quantidade).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: unidade === 'kg' ? 3 : 0
+                    });
                     itensHtml += `<tr>
                         <td>${item.produto}</td>
-                        <td>${item.quantidade}</td>
+                        <td>${quantidade} ${unidade}</td>
                         <td>R$ ${item.total.toFixed(2)}</td>
                     </tr>`;
                 });

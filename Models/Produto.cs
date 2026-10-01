@@ -4,10 +4,10 @@ namespace ControleEstoqueLoja.Models
 {
     public enum TipoProduto
     {
-        Granel,
-        Prateleira,
-        Geladeira,
-        Freezer
+        PorPeso = 0,
+        Prateleira = 1,
+        Geladeira = 2,
+        Freezer = 3
     }
     public class Produto
     {

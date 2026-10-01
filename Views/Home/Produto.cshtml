@@ -19,7 +19,7 @@
 
 <div class="main-container">
     <div class="text-center mb-4">
-        <h1 class="fw-bold" style="color: #004d1a;">@Model.Nome</h1>
+        <h1 class="fw-bold product-detail-title">@Model.Nome</h1>
         <p class="text-muted">Gerenciamento de Estoque Individual</p>
     </div>
 
@@ -28,16 +28,18 @@
             <div class="tabela-card text-center">
                 <h4 class="mb-3">Estoque Atual</h4>
                 <div class="display-1 fw-bold @(Model.Quantidade <= 5 ? "text-danger" : "text-success")">
-                    @if (Model.Tipo.ToString() == "Unidade" || Model.Tipo.ToString() == "Prateleira")
+                    @if (Model.Tipo == TipoProduto.PorPeso)
                     {
-                        @Model.Quantidade.ToString("0") @* Tira as casas decimais *@
+                        @Model.Quantidade.ToString("0.###")
+                        <span>kg</span>
                     }
                     else
                     {
-                        @Model.Quantidade.ToString("N1") @* Mantém uma casa decimal para Granel/Quilos *@
+                        @Model.Quantidade.ToString("0")
+                        <span>un</span>
                     }
                 </div>
-                <p class="fs-5 text-muted">@(Model.Tipo.ToString() == "Granel" ? "Quilos" : "Unidades")</p>
+                <p class="fs-5 text-muted">@(Model.Tipo == TipoProduto.PorPeso ? "Quilos" : "Unidades")</p>
 
                 <hr />
 
@@ -54,10 +56,10 @@
 
                         <div class="d-flex gap-3 justify-content-center">
                             <button type="submit" name="operacao" value="adicionar" class="btn-ajuste btn-add">
-                                + ADICIONAR
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i>ADICIONAR
                             </button>
                             <button type="submit" name="operacao" value="remover" class="btn-ajuste btn-rem">
-                                - REMOVER
+                                <i class="bi bi-dash-lg" aria-hidden="true"></i>REMOVER
                             </button>
                         </div>
                     </form>

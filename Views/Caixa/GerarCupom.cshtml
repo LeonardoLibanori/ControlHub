@@ -73,11 +73,13 @@
             }
             @foreach (var item in Model.Itens)
             {
+                var unidade = item.Produto.Tipo == ControleEstoqueLoja.Models.TipoProduto.PorPeso ? "kg" : "un";
+                var quantidade = item.Quantidade.ToString(unidade == "kg" ? "0.###" : "0");
                 var totalItem = (item.PrecoUnitario * item.Quantidade);
                 <tr>
                     <td>@((i++).ToString("D2")) @item.Produto.Nome.ToUpper()</td>
-                    <td class="center">@item.Quantidade.ToString("N2")</td>
-                    <td class="right">@item.PrecoUnitario.ToString("N2")</td>
+                    <td class="center">@quantidade @unidade</td>
+                    <td class="right">@item.PrecoUnitario.ToString("N2")/@unidade</td>
                     <td class="right">@totalItem.ToString("N2")</td>
                 </tr>
             }

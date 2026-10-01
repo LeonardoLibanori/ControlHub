@@ -70,16 +70,10 @@ Já os **dados fiscais impressos no cupom ainda são fictícios e fixos no HTML*
 
 ### Banco de exemplo
 
-O arquivo `controleestoque.exemplo.db` já vem com o schema atualizado (migrations aplicadas) e
-alguns **dados fictícios**, para navegar pela aplicação sem precisar cadastrar nada:
-
-- **Produtos:** Café Torrado e Moído (Prateleira, R$ 18,90), Achocolatado em Pó
-  (Prateleira, R$ 7,50) e Café em Grão (Granel, R$ 45,00/kg)
-- **Vendedor:** Vendedor Exemplo — cupom `EXEMPLO1`
-- **Vendas:** 2 vendas de exemplo (R$ 37,80 e R$ 675,00)
-
-> O cupom é normalizado em **maiúsculas** (`EXEMPLO1`). O preenchimento no PDV não diferencia
-> maiúsculas de minúsculas, então `exemplo1` funciona igual.
+O arquivo `controleestoque.exemplo.db` é uma base legada; `Program.cs` aplica as migrations
+pendentes no primeiro start. Ele não fornece um catálogo inicial confiável, então cadastre os
+produtos depois de criar a conta Dono. Para produtos **Por peso**, cadastre o preço diretamente
+em **R$/kg**; a venda multiplica esse valor pela quantidade em kg, sem fator adicional.
 
 ---
 
@@ -167,7 +161,7 @@ conflito de merge entre máquinas. É por isso que ele é local de cada máquina
 - Edi├º├úo de produto existente
 - Exclus├úo de produto
 - Movimenta├º├úo de estoque (entrada e sa├¡da de quantidade)
-- Produtos organizados por tipo: **Granel**, **Prateleira**, **Geladeira** e **Freezer**
+- Produtos organizados por tipo: **Por peso**, **Prateleira**, **Geladeira** e **Freezer**
 
 ---
 

@@ -1,7 +1,7 @@
 ﻿@model ControleEstoqueLoja.Models.Produto
 @using ControleEstoqueLoja.Models
 
-<div style="max-width: 500px; margin: 40px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; font-family: sans-serif;">
+<div class="product-form-panel">
     
     <h2 style="text-align: center; margin-bottom: 25px;">Editar Produto</h2>
 
@@ -10,12 +10,12 @@
         <input type="hidden" name="id" value="@Model.Id" />
 
         <label style="font-weight: bold;">Nome do produto:</label><br />
-        <input type="text" name="nome" value="@Model.Nome" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;" required />
+        <input type="text" name="nome" value="@Model.Nome" class="form-control mb-3" required />
 
         <label style="font-weight: bold;">Tipo do produto:</label><br />
-        <select name="tipo" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;" required>
-            @if (Model.Tipo == TipoProduto.Granel) { <option value="Granel" selected>Granel</option> } 
-            else { <option value="Granel">Granel</option> }
+        <select name="tipo" id="tipoProduto" onchange="atualizarRotuloPreco()" class="form-select mb-3" required>
+            @if (Model.Tipo == TipoProduto.PorPeso) { <option value="PorPeso" selected>Por peso</option> }
+            else { <option value="PorPeso">Por peso</option> }
 
             @if (Model.Tipo == TipoProduto.Prateleira) { <option value="Prateleira" selected>Prateleira</option> } 
             else { <option value="Prateleira">Prateleira</option> }
@@ -27,10 +27,10 @@
             else { <option value="Freezer">Freezer</option> }
         </select>
 
-        <label style="font-weight: bold;">Preço Unitário:</label><br />
-        <div style="display: flex; margin-bottom: 15px; margin-top: 5px;">
-            <span style="background: #eee; padding: 8px; border: 1px solid #ccc; border-right: none; border-radius: 4px 0 0 4px;">R$</span>
-            <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" oninput="formatarMoeda(this)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 0 4px 4px 0;" required />
+        <label id="labelPreco" style="font-weight: bold;">Preço por kg (R$/kg):</label><br />
+        <div class="input-group mb-3">
+            <span class="input-group-text">R$</span>
+            <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" oninput="formatarMoeda(this)" class="form-control" required />
         </div>
         <input type="hidden" name="preco" id="precoReal" value="@((Model.Preco * 100).ToString("0"))">
 
@@ -38,8 +38,8 @@
         <input type="text" id="quantidadeVisual" oninput="atualizarQuantidade()" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 4px;" required />
         <input type="hidden" name="quantidade" id="quantidadeReal" value="@Model.Quantidade.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
  *@
-        <button type="submit" style="background-color: #28a745; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px;">
-            SALVAR ALTERAÇÕES
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+            <i class="bi bi-check2 me-2" aria-hidden="true"></i>SALVAR ALTERAÇÕES
         </button>
     </form>
 
@@ -50,20 +50,14 @@
 </div>
 
 <script>
-    // Executa assim que a página abre para preencher os campos visuais
-    window.onload = function() {
-        const qtdReal = document.getElementById('quantidadeReal').value;
-        const inputQtd = document.getElementById('quantidadeVisual');
+    function atualizarRotuloPreco() {
+        const tipo = document.getElementById('tipoProduto').value;
+        document.getElementById('labelPreco').innerText = tipo === 'PorPeso'
+            ? 'Preço por kg (R$/kg):'
+            : 'Preço unitário (R$):';
+    }
 
-        // Formata a quantidade inicial
-        if ("@Model.Tipo" === "Granel") {
-            inputQtd.value = parseFloat(qtdReal).toFixed(1).replace('.', ',') + " kg";
-        } else {
-            inputQtd.value = parseInt(qtdReal);
-        }
-
-        // O preço já vem preenchido pelo value="@Model.Preco.ToString("N2")"
-    };
+    atualizarRotuloPreco();
 
     function formatarMoeda(input) {
         let valor = input.value.replace(/\D/g, "");
@@ -76,23 +70,6 @@
         document.getElementById("precoReal").value = valor;
     }
 
-    function atualizarQuantidade() {
-        const tipo = document.getElementsByName('tipo')[0].value;
-        const input = document.getElementById('quantidadeVisual');
-        const hidden = document.getElementById('quantidadeReal');
-
-        let valor = input.value.replace(/\D/g, '');
-
-        if (tipo === 'Granel') {
-            if (valor === '') return;
-            let numero = (parseInt(valor) / 10).toFixed(1);
-            input.value = numero.replace('.', ',') + ' kg';
-            hidden.value = numero;
-        } else {
-            input.value = valor;
-            hidden.value = valor;
-        }
-    }
 </script>
 
 

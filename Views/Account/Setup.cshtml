@@ -4,10 +4,10 @@
     Layout = "_Layout";
 }
 
-<div class="container" style="max-width: 480px; margin-top: 40px;">
-    <div class="card shadow-sm border-warning">
+<div class="container auth-shell">
+    <div class="card shadow-sm">
         <div class="card-body p-4">
-            <h2 class="text-center mb-1">⚙️ CONFIGURAÇÃO INICIAL</h2>
+            <h2 class="text-center mb-1"><i class="bi bi-gear-wide-connected" aria-hidden="true"></i> CONFIGURAÇÃO INICIAL</h2>
             <p class="text-center text-muted mb-4">
                 Primeira execução: crie a conta de <strong>Dono</strong> (acesso total).
                 Esta tela só aparece uma vez.
@@ -43,7 +43,7 @@
                     <span asp-validation-for="ConfirmarSenha" class="text-danger small"></span>
                 </div>
 
-                <button type="submit" class="btn btn-warning w-100 py-2 fw-bold">CRIAR DONO E ENTRAR</button>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>CRIAR DONO E ENTRAR</button>
             </form>
         </div>
     </div>

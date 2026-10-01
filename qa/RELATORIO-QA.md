@@ -47,11 +47,26 @@ o banco versionado mudar.
 
 | Métrica | Valor |
 |---|---|
-| Total de testes | **57** |
-| ✅ Aprovados (comportamento correto) | **57** |
+| Total de testes | **72** |
+| ✅ Aprovados (comportamento correto) | **72** |
 | ❌ Falhando (bug presente) | **0** |
 
-Última atualização: **30/09/2026** — **dinheiro em `INTEGER` de centavos (BUG-20)**:
+Última atualização: **01/10/2026** — **preço direto por kg (`PorPeso`)** e **tema corporativo**:
+o tipo do produto deixou de se chamar `Granel` (nome do *local de guarda*, não da forma de
+venda) e virou `PorPeso`; a tabela guarda o preço em **R$/kg** e a venda multiplica pela
+quantidade, **sem fator escondido** (`CalcularSubtotalItem` perdeu o `x10`, e o cupom, o
+carrinho e o JS do admin passaram a receber `unidade`/`regra` do servidor em vez de adivinhar
+pelo nome do tipo). A migration `20261001120000_ProdutoPrecoDiretoPorQuilo` converte o preço
+**já gravado** dos produtos por peso (centavos inteiros, `x10` exato, com uma guarda que
+**aborta a migration sem alterar nada** se algum preço por peso não estiver em centavos
+inteiros ou se o `x10` puder estourar o `INTEGER`); o `Down` é **proibido de propósito** —
+depois de cadastrar preço em R$/kg não dá mais para separar os convertidos dos novos. A suíte
+está **100% verde (72/72)**: entram o teste da conversão (`ProdutoPrecoPorQuilo_...`, medido no
+arquivo da base legada) e os **dois testes de troco** que o `falhas.csv` (FIX-04) já citava e
+que **não existiam** na suíte. `wwwroot/css/site.css` saiu e entrou
+`wwwroot/css/corporate-theme.css` (com `.btn-voltar-borda`, que vivia no `site.css`).
+
+Antes disso, **30/09/2026** — **dinheiro em `INTEGER` de centavos (BUG-20)**:
 as 7 colunas monetárias saíram de `TEXT` para `INTEGER` de centavos
 (`Data/ConversorCentavos.cs` + a migration `DecimalParaCentavos`, que **converte o
 dado já gravado** e recria os índices das tabelas reconstruídas). A suíte voltou a
@@ -101,11 +116,11 @@ serem confundidos com falhas nem redescobertos como "novidade" em uma próxima f
   senha ou inativar.
 
 - **`Quantidade` continua `TEXT` no SQLite** — a conversão de centavos (BUG-20)
-  cobre **dinheiro**, e quantidade não é dinheiro: produto a granel tem 3+ casas
-  decimais (`1,235 kg`) e quilo não tem centavo. Aplicar o conversor a ela seria
+   cobre **dinheiro**, e quantidade não é dinheiro: produto PorPeso tem 3+ casas
+   decimais (`1,235 kg`) e quilo não tem centavo. Aplicar o conversor a ela seria
   errado por princípio: o `ConversorCentavos` **recusa** a 3ª casa decimal (por
   design — ele não arredonda dinheiro), então a pesagem passaria a lançar exceção
-  na primeira venda de granel. Consequência aceita: `ORDER BY`/`SUM` por
+   na primeira venda por peso. Consequência aceita: `ORDER BY`/`SUM` por
   **quantidade** segue lexicográfico no banco, e o valor não é monetário — não
   entra em troco, sangria nem total. O teste do BUG-20 **audita a lista**: se
   nascer coluna nova de dinheiro como `decimal`/`TEXT`, a suíte quebra — a dívida
@@ -494,8 +509,8 @@ abre o arquivo e, como o template vai para `controleestoque.db` por `copy`, um
 
 ## Já corrigido (Fase 1 — commit `1016148`)
 
-Preço de tabela ignorando o POST, quantidade `<= 0` rejeitada, granel `x10` via
-`CalcularSubtotalItem`, troco recalculado no servidor, produto/vendedor inexistente
+Preço de tabela ignorando o POST, quantidade `<= 0` rejeitada, preço PorPeso direto
+em R$/kg via `CalcularSubtotalItem`, troco recalculado no servidor, produto/vendedor inexistente
 rejeitado, estoque insuficiente barrado, sangria gravada negativa e fechamento idempotente.
 São os 32 testes verdes — ver `qa/falhas.csv` (`Status = corrigido`).
 

@@ -6,8 +6,8 @@
         position: absolute;
         width: 100%;
         z-index: 9999; /* Garante que aparece na frente de tudo */
-        background: white;
-        border: 1px solid #ccc;
+        background: var(--surface-2);
+        border: 1px solid var(--border-strong);
         max-height: 200px;
         overflow-y: auto;
     }
@@ -29,8 +29,8 @@
     <div class="row">
         <div class="col-md-5">
             <div class="tabela-card">
-                <div class="card-header bg-primary text-white text-center py-2 rounded-top">
-                    <h5 class="mb-0">ENTRADA DE ITENS</h5>
+                <div class="card-header cash-section-header text-center py-2 rounded-top">
+                    <h5 class="mb-0"><i class="bi bi-upc-scan me-2" aria-hidden="true"></i>ENTRADA DE ITENS</h5>
                 </div>
 
                 <div class="p-3">
@@ -46,7 +46,7 @@
                     <div class="modal fade" id="modalVendaConfirmacao" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
-                                <div class="modal-header bg-primary text-white">
+                                <div class="modal-header cash-section-header">
                                     <h5 class="modal-title">Confirmar Item</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
@@ -63,7 +63,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-primary" onclick="confirmarItem()">Confirmar</button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmarItem()"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Confirmar</button>
                                 </div>
                             </div>
                         </div>
@@ -77,7 +77,7 @@
 
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <label class="fw-bold">QUANTIDADE</label>
+                            <label id="labelQtd" class="fw-bold">QUANTIDADE</label>
                             <input type="number"
                                    id="campoQtd"
                                    class="form-control form-control-lg"
@@ -87,8 +87,8 @@
                                    onfocus="this.select()" />
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
-                            <button type="button" id="btnConfirmar" onclick="confirmarItem()" class="btn btn-success">
-                                CONFIRMAR
+                            <button type="button" id="btnConfirmar" onclick="confirmarItem()" class="btn btn-primary">
+                                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>CONFIRMAR
                             </button>
                         </div>
                     </div>
@@ -98,12 +98,12 @@
 
         <div class="col-md-7">
             <div class="tabela-card">
-                <div class="card-header bg-primary text-white py-2 rounded-top">
-                    <h5 class="mb-0">🧾 LISTA DE COMPRAS</h5>
+                <div class="card-header cash-section-header py-2 rounded-top">
+                    <h5 class="mb-0"><i class="bi bi-receipt me-2" aria-hidden="true"></i>LISTA DE COMPRAS</h5>
                 </div>
 
                 <div class="p-0">
-                    <div style="height: 300px; overflow-y: auto; background: white;">
+                    <div class="cart-table-window">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
@@ -118,14 +118,14 @@
                         </table>
                     </div>
 
-                    <div class="bg-white text-dark p-3 d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">TOTAL:</h3>
-                        <h1 id="displayTotal" class="mb-0 text-warning fw-bold">R$ 0,00</h1>
+                    <div class="cart-total-bar p-3 d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">TOTAL</h3>
+                        <h2 id="displayTotal" class="mb-0 fw-bold">R$ 0,00</h2>
                     </div>
 
                     <div class="p-3 bg-light border-top">
-                        <button type="button" class="btn btn-success btn-lg w-100 fw-bold py-3 shadow" onclick="abrirModalPagamento()">
-                            <i class="bi bi-cart-check"></i> FINALIZAR VENDA
+                        <button type="button" class="btn btn-primary btn-lg w-100 fw-bold py-3" onclick="abrirModalPagamento()">
+                            <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>FINALIZAR VENDA
                         </button>
                     </div>
 
@@ -150,7 +150,9 @@
                  data-nome="@itemProd.Nome"
                  data-codigo="@itemProd.CodigoBarras"
                  data-preco="@itemProd.Preco.ToString("F2").Replace(",", ".")"
-                 data-tipo="@((int)itemProd.Tipo)">
+                 data-tipo="@((int)itemProd.Tipo)"
+                 data-regra="@itemProd.Tipo.ToString().ToUpperInvariant()"
+                 data-unidade="@(itemProd.Tipo == ControleEstoqueLoja.Models.TipoProduto.PorPeso ? "kg" : "un")">
             </div>
         }
     }
@@ -159,19 +161,19 @@
 
 @* --- MODAIS UNIFICADOS --- *@
 <div id="modalPagamento" class="modal-overlay">
-    <div class="modal-box" style="width: 450px; border-top: 5px solid #004d1a;">
+    <div class="modal-box payment-modal">
 
         <div id="secaoPagamento">
-            <h3 class="fw-bold mb-4" style="color: #004d1a;">PAGAMENTO</h3>
+            <h3 class="fw-bold mb-4 payment-title">PAGAMENTO</h3>
             <div class="d-grid gap-2 mb-4">
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Crédito')">💳 Cartão Crédito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Débito')">💳 Cartão Débito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')">📱 PIX</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')">🎟️ Voucher</button> 
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')">💵 Dinheiro</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Crédito')"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i>Cartão Crédito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Débito')"><i class="bi bi-credit-card" aria-hidden="true"></i>Cartão Débito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')"><i class="bi bi-qr-code" aria-hidden="true"></i>PIX</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')"><i class="bi bi-ticket-perforated" aria-hidden="true"></i>Voucher</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')"><i class="bi bi-cash-stack" aria-hidden="true"></i>Dinheiro</button>
             </div>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-success flex-grow-1 py-3 fw-bold" onclick="irParaCPF()">CONFIRMAR</button>
+                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>CONFIRMAR</button>
                 <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="fecharModal()">CANCELAR</button>
             </div>
         </div>
@@ -198,12 +200,12 @@
         </div>
 
         <div id="secaoCPF" style="display: none;">
-            <h4 class="fw-bold mb-3" style="color: #004d1a;">CPF NA NOTA?</h4>
+            <h4 class="fw-bold mb-3 payment-title">CPF NA NOTA?</h4>
             <p class="text-muted small">Opcional. Deixe em branco se não desejar.</p>
             <input type="text" id="cpfClienteInput" class="form-control form-control-lg text-center mb-4" placeholder="000.000.000-00" maxlength="14">
 
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-success flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()">FINALIZAR E IMPRIMIR</button>
+                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()"><i class="bi bi-printer me-2" aria-hidden="true"></i>FINALIZAR E IMPRIMIR</button>
                 <button type="button" class="btn btn-outline-secondary" onclick="voltarParaPagamento()">VOLTAR</button>
             </div>
         </div>
@@ -282,10 +284,13 @@
                 ProdutoId: itemAtual.id,
                 nome: itemAtual.nome,
                 preco: itemAtual.preco,
+                regra: itemAtual.regra,
+                tipo: itemAtual.regra,
+                unidade: itemAtual.unidade,
                 qtd: quantidade,
                 Quantidade: qtdString,
                 Preco: precoString,
-                labelQtd: qtdString,
+                labelQtd: itemAtual.unidade === "kg" ? `${qtdString} kg` : qtdString,
                 subtotal: (itemAtual.preco || 0) * quantidade,
                 estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
             };
@@ -321,9 +326,13 @@ function adicionarItemAoCarrinho() {
         id: itemAtual.id,
         nome: itemAtual.nome,
         preco: itemAtual.preco,
+        regra: itemAtual.regra,
+        tipo: itemAtual.regra,
+        unidade: itemAtual.unidade,
         qtd: quantidade,
         Quantidade: qtdString,
         Preco: precoString,
+        labelQtd: itemAtual.unidade === "kg" ? `${qtdString} kg` : qtdString,
         subtotal: (itemAtual.preco || 0) * quantidade,
         estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
     };
@@ -363,9 +372,13 @@ function confirmarItem() {
         ProdutoId: itemAtual.id.toString(),
         nome: itemAtual.nome,
         preco: itemAtual.preco,
+        regra: itemAtual.regra,
+        tipo: itemAtual.regra,
+        unidade: itemAtual.unidade,
         qtd: qtdNumerica,
         Quantidade: qtdDigitada,
         Preco: precoString,
+        labelQtd: itemAtual.unidade === "kg" ? `${qtdDigitada} kg` : qtdDigitada,
         subtotal: (itemAtual.preco || 0) * qtdNumerica,
         estoque: (itemAtual.estoque !== undefined && itemAtual.estoque !== null) ? parseFloat(itemAtual.estoque) : 0
     };
@@ -394,7 +407,7 @@ function abrirModalPagamento() {
         const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
 
         if (qtdPedida > estoqueReal) {
-            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            let unidade = item.unidade || (String(item.regra || item.tipo || '').toUpperCase() === "PORPESO" ? "kg" : "un");
             errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
         }
     });

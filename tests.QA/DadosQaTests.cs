@@ -191,6 +191,110 @@ public class DadosQaTests
     /// dinheiro como TEXT do jeito do Inicial_Nova, roda o Database.Migrate() do
     /// Program.cs e mede o numero cru no arquivo. Banco sempre em %TEMP%.
     /// </summary>
+    [Fact]
+    public void ProdutoPrecoPorQuilo_MigrationMultiplicaSomenteProdutosPorPeso()
+    {
+        var db = Path.Combine(Path.GetTempPath(), $"qa-preco-peso-{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={db};Pooling=False")
+            .Options;
+
+        try
+        {
+            using (var ctx = new ApplicationDbContext(options))
+                ctx.Database.Migrate("20260930134556_DecimalParaCentavos");
+
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                Executar(ctx, @"
+                    INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                    VALUES (1, 1, NULL, 'CAFE PESO', 500, '10.000', 0);
+                    INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                    VALUES (2, 1, NULL, 'CAFE UNIDADE', 1234, '10', 1);
+                    INSERT INTO Vendas (Id, CPFCliente, CodigoVendedor, DataVenda, IsFechado,
+                                        MetodoPagamento, TotalVenda, ValorRecebido, ValorTroco)
+                    VALUES (1, NULL, 'ABC123', '2026-10-01 10:00:00', 0,
+                            'Dinheiro', 900, 1000, 100);
+                    INSERT INTO VendaItens (Id, PrecoUnitario, ProdutoId, Quantidade, VendaId)
+                    VALUES (1, 900, 1, '1.000', 1);");
+            }
+
+            using (var ctx = new ApplicationDbContext(options))
+                ctx.Database.Migrate();
+
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                Assert.Equal(0, (int)TipoProduto.PorPeso);
+                Assert.Equal("5000", Bruto(ctx, "SELECT Preco FROM Produtos WHERE Id = 1"));
+                Assert.Equal("1234", Bruto(ctx, "SELECT Preco FROM Produtos WHERE Id = 2"));
+                Assert.Equal("10.000", Bruto(ctx, "SELECT Quantidade FROM Produtos WHERE Id = 1"));
+                Assert.Equal("900", Bruto(ctx, "SELECT TotalVenda FROM Vendas WHERE Id = 1"));
+                Assert.Equal("900", Bruto(ctx, "SELECT PrecoUnitario FROM VendaItens WHERE Id = 1"));
+                Assert.Equal(50m, ctx.Produtos.AsNoTracking().Single(p => p.Id == 1).Preco);
+                Assert.Equal(12.34m, ctx.Produtos.AsNoTracking().Single(p => p.Id == 2).Preco);
+            }
+        }
+        finally
+        {
+            foreach (var sufixo in new[] { "", "-shm", "-wal" })
+            {
+                var arquivo = db + sufixo;
+                try
+                {
+                    if (File.Exists(arquivo)) File.Delete(arquivo);
+                }
+                catch (IOException)
+                {
+                    // Arquivo temporario pode estar bloqueado; os dados medidos ja foram verificados.
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void ProdutoPrecoPorQuilo_MigrationRejeitaOverflowSemAlterarBase()
+    {
+        var db = Path.Combine(Path.GetTempPath(), $"qa-preco-peso-overflow-{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"Data Source={db};Pooling=False")
+            .Options;
+
+        try
+        {
+            using (var ctx = new ApplicationDbContext(options))
+                ctx.Database.Migrate("20260930134556_DecimalParaCentavos");
+
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                Executar(ctx, @"
+                    INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                    VALUES (1, 1, NULL, 'PRECO GRANDE', 922337203685477581, '1.000', 0);");
+
+                var erro = Record.Exception(() => ctx.Database.Migrate());
+                Assert.NotNull(erro);
+                Assert.Contains("CHECK constraint failed", erro!.ToString(), StringComparison.OrdinalIgnoreCase);
+                Assert.Equal("922337203685477581", Bruto(ctx, "SELECT Preco FROM Produtos WHERE Id = 1"));
+                Assert.Equal("0", Bruto(ctx, @"SELECT COUNT(*) FROM __EFMigrationsHistory
+                    WHERE MigrationId = '20261001120000_ProdutoPrecoDiretoPorQuilo'"));
+            }
+        }
+        finally
+        {
+            foreach (var sufixo in new[] { "", "-shm", "-wal" })
+            {
+                var arquivo = db + sufixo;
+                try
+                {
+                    if (File.Exists(arquivo)) File.Delete(arquivo);
+                }
+                catch (IOException)
+                {
+                    // Arquivo temporario pode estar bloqueado; os dados medidos ja foram verificados.
+                }
+            }
+        }
+    }
+
     private static void VerificarConversaoNoArquivoReal()
     {
         var db = Path.Combine(Path.GetTempPath(), $"qa-centavos-{Guid.NewGuid():N}.db");
@@ -231,6 +335,12 @@ public class DadosQaTests
                 // barato (10.00) antes do mais caro (9.99) porque '1' < '9'.
                 Assert.Equal("10.00,9.99", Bruto(ctx,
                     "SELECT group_concat(Preco, ',') FROM (SELECT Preco FROM Produtos ORDER BY Preco)"));
+
+                // Produto PorPeso legado: 5,00/100g ainda está em texto antes da cadeia.
+                Executar(ctx, @"INSERT INTO Produtos (Id, Ativo, CodigoBarras, Nome, Preco, Quantidade, Tipo)
+                                VALUES (3, 1, NULL, 'CAFE PESO LEGADO', '5.00', '10.0', 0);");
+                Assert.Equal("text=5.00", Bruto(ctx,
+                    "SELECT typeof(Preco) || '=' || Preco FROM Produtos WHERE Id = 3"));
             }
 
             // 2c. aplica o resto da cadeia (Identity + DecimalParaCentavos).
@@ -242,6 +352,8 @@ public class DadosQaTests
                 // O dado legado foi convertido NO ARQUIVO, nao apenas no modelo.
                 Assert.Equal("integer=999", Bruto(ctx,
                     "SELECT typeof(Preco) || '=' || Preco FROM Produtos WHERE Id = 1"));
+                Assert.Equal("integer=5000", Bruto(ctx,
+                    "SELECT typeof(Preco) || '=' || Preco FROM Produtos WHERE Id = 3"));
                 Assert.Equal("integer=999", Bruto(ctx,
                     "SELECT typeof(TotalVenda) || '=' || TotalVenda FROM Vendas WHERE Id = 1"));
                 Assert.Equal("integer=1001", Bruto(ctx,
@@ -255,6 +367,7 @@ public class DadosQaTests
 
                 // 3a. o modelo devolve decimal com precisao.
                 Assert.Equal(9.99m, ctx.Produtos.AsNoTracking().Single(p => p.Id == 1).Preco);
+                Assert.Equal(50m, ctx.Produtos.AsNoTracking().Single(p => p.Id == 3).Preco);
 
                 // 3b. e grava: 1234.56 no C# tem que sair 123456 do arquivo.
                 ctx.Produtos.Add(new Produto
@@ -270,11 +383,10 @@ public class DadosQaTests
                 Assert.Equal("integer=123456", Bruto(ctx,
                     "SELECT typeof(Preco) || '=' || Preco FROM Produtos WHERE Nome = 'CENTAVOS'"));
 
-                // 3c. o SINTOMA ao contrario: a MESMA ORDER BY do bloco 2b agora e
-                //     numerica - 9,99 < 10,00 < 1.234,56, a ordem do dinheiro.
-                Assert.Equal("999,1000,123456", Bruto(ctx,
+                // 3c. a mesma ORDER BY agora e numerica e inclui R$ 50,00/kg direto.
+                Assert.Equal("999,1000,5000,123456", Bruto(ctx,
                     "SELECT group_concat(Preco, ',') FROM (SELECT Preco FROM Produtos ORDER BY Preco)"));
-                Assert.Equal(new[] { 9.99m, 10.00m, 1234.56m },
+                Assert.Equal(new[] { 9.99m, 10.00m, 50.00m, 1234.56m },
                     ctx.Produtos.AsNoTracking().OrderBy(p => p.Preco).Select(p => p.Preco).ToArray());
             }
         }

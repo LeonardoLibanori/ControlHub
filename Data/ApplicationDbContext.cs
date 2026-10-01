@@ -48,7 +48,7 @@ namespace ControleEstoqueLoja.Data
             // BUG-20: dinheiro vira INTEGER de centavos no banco.
             //
             // As 7 colunas abaixo sao a superficie monetaria do sistema. Quantidade
-            // (Produto e VendaItem) fica de FORA de proposito: quantidade de granel
+            // (Produto e VendaItem) fica de FORA de proposito: quantidade por peso
             // tem 3+ casas (1,235 kg) e nao e dinheiro; converter centavo nao vale
             // para quilo, e a correcao nao pode quebrar pesagem. Ela permanece TEXT
             // e segue como divida separada no relatorio de QA.

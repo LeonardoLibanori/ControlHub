@@ -7,13 +7,13 @@
 <div class="container mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="mb-0">👤 USUÁRIOS DO SISTEMA</h2>
+            <h2 class="mb-0"><i class="bi bi-people" aria-hidden="true"></i> USUÁRIOS DO SISTEMA</h2>
             <small class="text-muted">
                 Quem entra no sistema e com qual papel. Só o Dono acessa esta tela
                 (<code>/Usuarios</code>).
             </small>
         </div>
-        <a href="/Usuarios/Criar" class="btn btn-success fw-bold">+ NOVA CONTA</a>
+        <a href="/Usuarios/Criar" class="btn btn-primary fw-bold"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>NOVA CONTA</a>
     </div>
 
     @* TempData vem do POST Criar; o redirect para cá evita reenvio do formulário. *@
@@ -72,7 +72,7 @@
                             </td>
                             <td class="text-end">
                                 <a asp-controller="Usuarios" asp-action="Editar" asp-route-id="@u.Id"
-                                   class="btn btn-outline-primary btn-sm">Editar</a>
+                                   class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Editar</a>
                             </td>
                         </tr>
                     }

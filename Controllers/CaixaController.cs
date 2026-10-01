@@ -102,9 +102,8 @@ namespace ControleEstoqueLoja.Controllers
                         return Json(new { success = false, message = $"Quantidade inválida para {produto.Nome}." });
                     }
 
-                    // FASE 1: produto unitário (não granel) só aceita quantidade inteira.
-                    string tipoRegra = produto.Tipo.ToString().ToUpper();
-                    if (tipoRegra != "GRANEL" && tipoRegra != "PESO" && qtdVendida != decimal.Truncate(qtdVendida))
+                    // Produto vendido por peso aceita quantidade fracionária em kg.
+                    if (produto.Tipo != TipoProduto.PorPeso && qtdVendida != decimal.Truncate(qtdVendida))
                     {
                         return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome}." });
                     }
@@ -112,7 +111,7 @@ namespace ControleEstoqueLoja.Controllers
                     // 2. VALIDAÇÃO DE ESTOQUE COM MENSAGEM DETALHADA
                     if (produto.Quantidade < qtdVendida)
                     {
-                        string unidadeMedida = (tipoRegra == "PESO" || tipoRegra == "GRANEL") ? "kg" : "un";
+                        string unidadeMedida = produto.Tipo == TipoProduto.PorPeso ? "kg" : "un";
 
                         // Retorna o erro parando o loop e avisando o vendedor exatamente o saldo
                         return Json(new
@@ -126,7 +125,7 @@ namespace ControleEstoqueLoja.Controllers
 
                     // FASE 1: o preço de venda é SEMPRE o preço de tabela (produto.Preco).
                     // O campo item.Preco do POST é ignorado para impedir fraude via POST manual.
-                    // Granel: a tabela guarda o preço por 100 g -> o preço efetivo por kg é preco*10.
+                    // Para venda por peso, produto.Preco já está em R$/kg.
                     // Regra centralizada em CalcularSubtotalItem (única fonte de verdade).
                     decimal precoUnit = CalcularSubtotalItem(produto, 1m);
                     decimal subtotalItem = CalcularSubtotalItem(produto, qtdVendida);
@@ -326,17 +325,11 @@ namespace ControleEstoqueLoja.Controllers
         /// REGRA ÚNICA de subtotal de item de venda (fonte de verdade para FinalizarVenda,
         /// cupom e ObterDetalhesVenda).
         /// O preço vem SEMPRE da tabela (produto.Preco), nunca do POST.
-        /// Granel: o cadastro (Novo.cshtml) guarda o preço por 100 g e a quantidade em kg,
-        /// então multiplica por 10 (R$ 5,00/100 g = R$ 50,00/kg x qtd em kg).
+        /// Para venda por peso, o cadastro guarda o preço em R$/kg e a quantidade em kg.
         /// </summary>
         public static decimal CalcularSubtotalItem(Produto produto, decimal quantidade)
         {
-            decimal subtotal = produto.Preco * quantidade;
-
-            if (produto.Tipo == TipoProduto.Granel)
-                subtotal *= 10;
-
-            return Math.Round(subtotal, 2, MidpointRounding.AwayFromZero);
+            return Math.Round(produto.Preco * quantidade, 2, MidpointRounding.AwayFromZero);
         }
 
         // ------------------------------------------------------------------
@@ -680,6 +673,7 @@ namespace ControleEstoqueLoja.Controllers
                 .Select(i => new {
                     produto = i.Produto.Nome,
                     quantidade = i.Quantidade,
+                    unidade = i.Produto.Tipo == TipoProduto.PorPeso ? "kg" : "un",
                     preco = i.PrecoUnitario,
                     total = i.PrecoUnitario * i.Quantidade // Cálculo em tempo real
                 }).ToListAsync();
@@ -835,6 +829,7 @@ namespace ControleEstoqueLoja.Controllers
                 nome = p.Nome,
                 preco = p.Preco,
                 regra = p.Tipo.ToString().ToUpper(),
+                unidade = p.Tipo == TipoProduto.PorPeso ? "kg" : "un",
                 estoque = p.Quantidade // Aqui deve retornar 4 se estiver no banco
             });
         }
@@ -855,6 +850,8 @@ namespace ControleEstoqueLoja.Controllers
                 id = p.Id,
                 nome = p.Nome,
                 preco = p.Preco,
+                regra = p.Tipo.ToString().ToUpper(),
+                unidade = p.Tipo == TipoProduto.PorPeso ? "kg" : "un",
                 // Garante que o nome enviado seja 'estoque' para o seu JS não se perder
                 estoque = p.Quantidade
             });

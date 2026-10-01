@@ -8,7 +8,7 @@
 
       * preco de venda adulterado no POST (deve ser ignorado)
       * quantidade negativa (deve ser rejeitada)
-      * granel com multiplicador x10
+    * preço direto em R$/kg e quantidade fracionária por peso
       * sangria acima do saldo (deve ser rejeitada)
       * valor <= 0 (deve ser rejeitado)
       * saldo da gaveta deve ignorar vendas nao-Dinheiro
@@ -187,11 +187,11 @@ if ($r.Ok -and $r.Dados.success) { Write-Ok 'vendedor QA123 cadastrado' } else {
 
 # HomeController.Novo espera o preco em CENTS (divide por 100).
 $codBarras1 = 'QA0000000001'   # Prateleira 10,00
-$codBarras2 = 'QA0000000002'   # Granel 5,00 por 100 g
+$codBarras2 = 'QA0000000002'   # PorPeso R$ 50,00/kg
 $codBarras3 = 'QA0000000003'   # Prateleira 20,00
 
 Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto Prateleira QA'; tipo = 'Prateleira'; quantidade = '100'; preco = '1000'; codigoBarras = $codBarras1 } | Out-Null
-Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto Granel QA';      tipo = 'Granel';      quantidade = '50';  preco = '500';  codigoBarras = $codBarras2 } | Out-Null
+Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto PorPeso QA';     tipo = 'PorPeso';    quantidade = '50';  preco = '5000'; codigoBarras = $codBarras2 } | Out-Null
 Get-Form "$BaseUrl/Home/Novo" @{ nome = 'Produto Caro QA';       tipo = 'Prateleira'; quantidade = '100'; preco = '2000'; codigoBarras = $codBarras3 } | Out-Null
 Write-Ok '3 produtos cadastrados'
 
@@ -199,7 +199,7 @@ $p1 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras1").Dados
 $p2 = (Get-Json "$BaseUrl/Caixa/BuscarPorCodigo?codigo=$codBarras2").Dados
 $p1id = $p1.id
 $p2id = $p2.id
-Write-Host "  produto prateleira id=$p1id   granel id=$p2id"
+Write-Host "  produto prateleira id=$p1id   por peso id=$p2id"
 
 # =============================================================================
 # VENDAS (VendasQaTests)
@@ -241,9 +241,9 @@ if ($r.Ok -and $r.Dados.success -eq $false) {
     Write-Falha "quantidade negativa NAO foi rejeitada (Ok=$($r.Ok) success=$($r.Dados.success) erro=$($r.Erro))"
 }
 
-Write-Titulo 'VENDAS - granel aplica multiplicador x10'
+Write-Titulo 'VENDAS - usa preço direto em R$/kg'
 
-# Granel: tabela 5,00 por 100 g, quantidade 2 kg -> 5,00 x 2 x 10 = 100,00
+# PorPeso: preço 50,00/kg, quantidade 2 kg -> 50,00 x 2 = 100,00
 $r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
     metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
     valorRecebido   = '100';     valorTroco  = '0'
@@ -255,12 +255,12 @@ if ($r.Ok -and $r.Dados.success) {
     $det = (Get-Json "$BaseUrl/Caixa/ObterDetalhesVenda?id=$vendaId").Dados
     $total = ($det.itens | Measure-Object -Property total -Sum).Sum
     if ([Math]::Abs($total - 100.0) -lt 0.01) {
-        Write-Ok "granel com x10 correto: total R$ $total (esperado 100.00)"
+        Write-Ok "preço direto por kg correto: total R$ $total (esperado 100.00)"
     } else {
-        Write-Falha "granel: esperado 100.00, obtido $total (multiplicador x10 ausente)"
+        Write-Falha "preço por kg: esperado 100.00, obtido $total"
     }
 } else {
-    Write-Falha "venda de granel falhou: $($r.Erro) $($r.Dados.message)"
+    Write-Falha "venda por peso falhou: $($r.Erro) $($r.Dados.message)"
 }
 
 Write-Titulo 'VENDAS - troco recalculado no servidor'
@@ -323,7 +323,7 @@ else { Write-Falha "venda Pix falhou: $($r.Erro) $($r.Dados.message)" }
 $status = (Get-Json "$BaseUrl/Caixa/ObterStatusAtual").Dados
 Write-Host "  ObterStatusAtual -> vendas=$($status.vendas) suprimento=$($status.suprimento) saldo=$($status.saldo)"
 
-# Vendas em DINHEIRO: 20 (preco tabela) + 100 (granel) + 10 (1 un x 10,00) = 130.
+# Vendas em DINHEIRO: 20 (preco tabela) + 100 (peso) + 10 (1 un x 10,00) = 130.
 # A venda no Pix NAO entra na gaveta. Mais o suprimento de 500.
 $esperado = 130 + 500
 Write-Host "  esperado (dinheiro 130 + suprimento 500, Pix fora) = $esperado"

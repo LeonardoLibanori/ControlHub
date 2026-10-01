@@ -24,19 +24,19 @@
 @* QUADRÃO PRINCIPAL (O EXTERNO) *@
 <div class="main-container">
 
-    <h1 class="text-center fw-bold">ESTOQUE - LOJA</h1>
+    <h1 class="fw-bold"><i class="bi bi-boxes me-2" aria-hidden="true"></i>ESTOQUE</h1>
 
     <div class="busca-container">
         <form method="get" asp-controller="Home" asp-action="Index" class="busca-form">
             <input type="text" name="busca" placeholder="Procurar produto..." />
-            <button type="submit">Pesquisar</button>
+            <button type="submit"><i class="bi bi-search me-2" aria-hidden="true"></i>Buscar</button>
         </form>
     </div>
 
     @if (podeGerenciarEstoque)
     {
         <div class="mb-4 text-start">
-            <a asp-controller="Home" asp-action="Novo" class="btn-novo">+ Novo Produto</a>
+            <a asp-controller="Home" asp-action="Novo" class="btn-novo"><i class="bi bi-plus-lg" aria-hidden="true"></i>Novo produto</a>
         </div>
     }
 
@@ -61,28 +61,26 @@
                         <td>
                             <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.Id" class="produto-link">@item.Nome</a>
                         </td>
-                        <td>@item.Tipo</td>
+                        <td>@(item.Tipo == TipoProduto.PorPeso ? "Por peso" : item.Tipo.ToString())</td>
                         <td>
-                                     @if (item.Tipo.ToString() == "Unidade" || item.Tipo.ToString() == "Prateleira")
-                                        {
-                                            @* Exibe como número inteiro *@ 
-                                            @item.Quantidade.ToString("0") <span>un</span>
-                                        }
-                                     else
-                                        {
-                                            @* Mantém uma casa decimal para produtos a Granel *@
-                                            @item.Quantidade.ToString("N1") <span>kg</span>
-                                        }
+                            @if (item.Tipo == TipoProduto.PorPeso)
+                            {
+                                @item.Quantidade.ToString("0.###") <span>kg</span>
+                            }
+                            else
+                            {
+                                @item.Quantidade.ToString("0") <span>un</span>
+                            }
                         </td>
                         @if (podeGerenciarEstoque)
                         {
                             <td>
                                 <div class="acoes">
-                                    <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
+                                    <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar"><i class="bi bi-pencil-square" aria-hidden="true"></i>Editar</a>
                                     <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@item.Id" />
-                                        <button type="submit" class="btn-excluir">Excluir</button>
+                                        <button type="submit" class="btn-excluir"><i class="bi bi-trash3" aria-hidden="true"></i>Excluir</button>
                                     </form>
                                 </div>
                             </td>

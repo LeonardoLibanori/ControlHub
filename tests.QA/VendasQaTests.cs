@@ -56,21 +56,37 @@ public class VendasQaTests
         Assert.Empty(qa.Context.Vendas.AsNoTracking().ToList());
     }
 
-    // JA CORRIGIDO: granel usa multiplicador x10 (preco da tabela e por 100 g, quantidade em kg).
+    // BUG-03: preço em R$/kg multiplicado diretamente pela quantidade fracionária em kg.
     [Fact]
-    public async Task FinalizarVenda_DeveAplicarMultiplicadorX10EmGranel()
+    public async Task FinalizarVenda_UsaPrecoDiretoPorQuilo()
     {
         using var qa = new QaContext();
         qa.SeedVendedor(codigo: "ABC123");
-        // R$ 5,00 por 100 g
-        var granel = qa.SeedProduto(preco: 5m, quantidade: 50m, tipo: TipoProduto.Granel);
+        // R$ 50,00/kg
+        var porPeso = qa.SeedProduto(preco: 50m, quantidade: 50m, tipo: TipoProduto.PorPeso);
 
         var controller = new CaixaController(qa.Context);
         await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
-            Item(granel.Id.ToString(), "2"));   // 2 kg
+            Item(porPeso.Id.ToString(), "2"));
 
         var venda = qa.Context.Vendas.AsNoTracking().Single();
-        Assert.Equal(100m, venda.TotalVenda);   // 5,00 x 2 x 10
+        Assert.Equal(100m, venda.TotalVenda);   // 50,00/kg x 2 kg
+        Assert.Equal(50m, qa.Context.VendaItens.AsNoTracking().Single().PrecoUnitario);
+    }
+
+    [Fact]
+    public async Task FinalizarVenda_UsaPrecoDiretoComQuantidadeFracionariaEmQuilos()
+    {
+        using var qa = new QaContext();
+        qa.SeedVendedor(codigo: "ABC123");
+        var porPeso = qa.SeedProduto(preco: 50m, quantidade: 10m, tipo: TipoProduto.PorPeso);
+
+        var controller = new CaixaController(qa.Context);
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+            Item(porPeso.Id.ToString(), "0,125"));
+
+        var venda = qa.Context.Vendas.AsNoTracking().Single();
+        Assert.Equal(6.25m, venda.TotalVenda);
     }
 
     // JA CORRIGIDO: produto inexistente invalida a venda (sem venda vazia).
@@ -135,7 +151,7 @@ public class VendasQaTests
         Assert.False(result.IsSuccess());
     }
 
-    // JA CORRIGIDO: quantidade fracionada em produto NAO-granel (unidades inteiras).
+    // Produto vendido por unidade continua aceitando apenas quantidades inteiras.
     [Fact]
     public async Task FinalizarVenda_DeveRejeitarQuantidadeFracionadaEmUnitario()
     {
@@ -164,5 +180,47 @@ public class VendasQaTests
 
         var salvo = qa.Context.Produtos.AsNoTracking().First(p => p.Id == produto.Id);
         Assert.Equal(7m, salvo.Quantidade);
+    }
+
+    // JA CORRIGIDO (Fase 1): o troco e recalculado no servidor
+    // (recebido - total). O valorTroco do POST e ignorado: o vendedor nao pode
+    // informar quanto devolver, senao daria para "devolver" menos que o devido.
+    // Este nome e o que qa/falhas.csv (FIX-04) promete como evidencia.
+    [Fact]
+    public async Task FinalizarVenda_DeveCalcularTrocoNoServidor()
+    {
+        using var qa = new QaContext();
+        qa.SeedVendedor(codigo: "ABC123");
+        var produto = qa.SeedProduto(preco: 10m, quantidade: 100m, tipo: TipoProduto.Prateleira);
+
+        var controller = new CaixaController(qa.Context);
+        // 2 un x 10,00 = 20,00; recebido 50,00 -> troco 30,00.
+        // O POST mente no troco (999,00) e o servidor precisa ignorar.
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 50m, 999m,
+            Item(produto.Id.ToString(), "2"));
+
+        var venda = qa.Context.Vendas.AsNoTracking().Single();
+        Assert.Equal(20m, venda.TotalVenda);
+        Assert.Equal(50m, venda.ValorRecebido);
+        Assert.Equal(30m, venda.ValorTroco);
+    }
+
+    // Pagamento eletronico nao devolve troco e o recebido vira o proprio total,
+    // senao a gaveta (que soma apenas vendas em Dinheiro) inflaria pelo POST.
+    [Fact]
+    public async Task FinalizarVenda_DeveZerarTrocoEmPagamentoEletronico()
+    {
+        using var qa = new QaContext();
+        qa.SeedVendedor(codigo: "ABC123");
+        var produto = qa.SeedProduto(preco: 10m, quantidade: 100m, tipo: TipoProduto.Prateleira);
+
+        var controller = new CaixaController(qa.Context);
+        await controller.FinalizarVenda("Pix", null, "ABC123", 999m, 999m,
+            Item(produto.Id.ToString(), "2"));
+
+        var venda = qa.Context.Vendas.AsNoTracking().Single();
+        Assert.Equal(20m, venda.TotalVenda);
+        Assert.Equal(20m, venda.ValorRecebido);
+        Assert.Equal(0m, venda.ValorTroco);
     }
 }

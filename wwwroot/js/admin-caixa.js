@@ -103,14 +103,14 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
             const dados = await response.json();
 
             Swal.fire({
-                title: '🏧 CONFERÊNCIA DE CAIXA',
+                title: 'CONFERÊNCIA DE CAIXA',
                 html: `
                     <div style="text-align: left;">
                         <p><b>(+) Suprimento (Abertura):</b> R$ ${dados.suprimento.toFixed(2)}</p>
                         <p><b>(+) Total Vendas:</b> R$ ${dados.vendas.toFixed(2)}</p>
-                        <p><b>(-) Total Sangrias:</b> <span style="color:red">R$ ${dados.sangrias.toFixed(2)}</span></p>
+                        <p><b>(-) Total Sangrias:</b> <span class="cash-negative">R$ ${dados.sangrias.toFixed(2)}</span></p>
                         <hr>
-                        <h3 style="color:green"><b>SALDO EM GAVETA: R$ ${dados.saldo.toFixed(2)}</b></h3>
+                        <h3 class="cash-positive"><b>SALDO EM GAVETA: R$ ${dados.saldo.toFixed(2)}</b></h3>
                     </div>
                 `,
                 icon: 'info'
@@ -167,7 +167,7 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
                 <td>${descricaoTexto || tipoTexto}</td>
                 <td class="${cor} text-end"><strong>${sinal} R$ ${valorDisplay}</strong></td>
                 <td class="text-center">
-                    ${m.vendaId ? `<button onclick="reimprimirVenda(${m.vendaId})" class="btn btn-sm btn-primary">🖨️</button>` : ''}
+                    ${m.vendaId ? `<button onclick="reimprimirVenda(${m.vendaId})" class="btn btn-sm btn-primary" title="Reimprimir cupom" aria-label="Reimprimir cupom"><i class="bi bi-printer" aria-hidden="true"></i></button>` : ''}
                 </td>
             </tr>`;
             });
@@ -176,7 +176,8 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
             tabelaHtml += `</tbody></table></div>`;
 
             Swal.fire({
-                title: '📊 RELATÓRIO DE MOVIMENTAÇÕES',
+                title: 'RELATÓRIO DE MOVIMENTAÇÕES',
+                icon: 'info',
                 html: tabelaHtml,
                 width: '600px',
                 confirmButtonText: 'FECHAR'
@@ -202,7 +203,8 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         if (modalAtalhos) modalAtalhos.hide();
 
         const { value: opcao } = await Swal.fire({
-            title: '🖨️ IMPRESSÃO',
+            title: 'IMPRESSÃO',
+            icon: 'info',
             html: `
                 <div style="text-align: left; margin-bottom: 10px;">
                     <b>1</b> - Última Venda<br>
@@ -237,7 +239,8 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         if (modalAtalhos) modalAtalhos.hide();
 
         const { value: opcao } = await Swal.fire({
-            title: '🖨️ IMPRESSÃO',
+            title: 'IMPRESSÃO',
+            icon: 'info',
             html: `
             <div style="text-align: left; margin-bottom: 10px;">
                 <b>1</b> - Última Venda<br>
@@ -282,7 +285,8 @@ async function realizarFechamento() {
         `).join('');
 
         Swal.fire({
-            title: '🔍 AUDITORIA E FECHAMENTO',
+            title: 'AUDITORIA E FECHAMENTO',
+            icon: 'info',
             html: `
                 <div class="text-start" style="font-size: 13px;">
                     <h6 class="fw-bold">1. Saídas de Estoque</h6>
@@ -308,8 +312,8 @@ async function realizarFechamento() {
             `,
             width: '650px',
             showCancelButton: true,
-            confirmButtonText: '✅ TUDO OK, ZERAR DIA',
-            confirmButtonColor: '#198754'
+            confirmButtonText: '<i class="bi bi-check2-circle me-2"></i>TUDO OK, ZERAR DIA',
+            confirmButtonColor: '#c2a36d'
         }).then((result) => {
             if (result.isConfirmed) {
                 confirmarZeramentoFinal();
@@ -358,6 +362,7 @@ async function buscarProdutoPorCodigo(codigo) {
                 nome: data.nome,
                 preco: parseFloat(data.preco),
                 regra: data.regra,
+                unidade: data.unidade || (String(data.regra || '').toUpperCase() === 'PORPESO' ? 'kg' : 'un'),
                 estoque: data.estoque ?? 0
             };
 
@@ -365,12 +370,15 @@ async function buscarProdutoPorCodigo(codigo) {
             const displayNome = document.getElementById("displayNome");
             const exibirPreco = document.getElementById("exibirPreco");
             const campoQtd = document.getElementById("modalCampoQtd");
+            const labelQtd = document.getElementById("labelQtd");
+            const campoQuantidade = document.getElementById("campoQtd");
 
             if (displayNome) displayNome.innerText = itemAtual.nome;
-            if (exibirPreco) exibirPreco.innerText = "R$ " + (itemAtual.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            if (exibirPreco) exibirPreco.innerText = "R$ " + (itemAtual.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ` /${itemAtual.unidade}`;
+            if (labelQtd) labelQtd.innerText = itemAtual.unidade === "kg" ? "QUANTIDADE (kg)" : "QUANTIDADE (un)";
+            if (campoQuantidade) campoQuantidade.step = itemAtual.unidade === "kg" ? "0.001" : "1";
             if (campoQtd) {
-                // Se for UNIDADE, já coloca 1; se for GRANEL, limpa para o operador informar
-                campoQtd.value = (String(itemAtual.regra || "").toUpperCase() === "UNIDADE") ? "1" : "";
+                campoQtd.value = itemAtual.unidade === "kg" ? "" : "1";
                 campoQtd.focus();
                 campoQtd.select();
             }
@@ -473,7 +481,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 nomeEl.textContent = nomeOriginal;
                 const precoEl = document.createElement("small");
                 precoEl.className = "text-muted float-end";
-                precoEl.textContent = `R$ ${div.dataset.preco}`;
+                precoEl.textContent = `R$ ${div.dataset.preco} /${div.dataset.unidade || 'un'}`;
                 btn.appendChild(nomeEl);
                 btn.appendChild(document.createTextNode(" "));
                 btn.appendChild(precoEl);
@@ -525,7 +533,7 @@ function renderCarrinho() {
         tdQtd.textContent = String(labelQtd);
 
         const tdPreco = document.createElement("td");
-        tdPreco.textContent = `R$ ${precoDisplay}`;
+        tdPreco.textContent = `R$ ${precoDisplay} /${item.unidade || 'un'}`;
 
         const tdSubtotal = document.createElement("td");
         tdSubtotal.className = "fw-bold";
@@ -574,7 +582,7 @@ function abrirModalPagamento() {
         const qtdPedida = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
         const estoqueReal = parseFloat(String(item.estoque ?? 0).replace(',', '.')) || 0;
         if (qtdPedida > estoqueReal) {
-            let unidade = (String(item.tipo || '').toUpperCase() === "PESO" || String(item.tipo || '').toUpperCase() === "GRANEL") ? "kg" : "un";
+            let unidade = item.unidade || (String(item.regra || item.tipo || '').toUpperCase() === "PORPESO" ? "kg" : "un");
             errosEstoque.push(`Produto: <b>${item.nome}</b><br>Solicitado: ${qtdPedida}${unidade} | Disponível: ${estoqueReal}${unidade}`);
         }
     });
@@ -630,17 +638,8 @@ function fecharModal() {
 
 // Função adicionada para selecionar método de pagamento (preserve padrão visual que você tinha)
 function marcarMetodo(btn, metodo) {
-    // Restaura estilo padrão em todos
-    document.querySelectorAll('.btn-metodo-sel').forEach(b => {
-        b.style.background = "#f8f9fa";
-        b.style.color = "#004d1a";
-    });
-
-    // Destaca o selecionado
-    if (btn) {
-        btn.style.background = "#004d1a";
-        btn.style.color = "white";
-    }
+    document.querySelectorAll('.btn-metodo-sel').forEach(button => button.classList.remove('is-selected'));
+    btn?.classList.add('is-selected');
 
     // Atualiza variável global e campo oculto (se presente)
     metodoSelecionado = metodo;

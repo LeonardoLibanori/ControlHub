@@ -4,14 +4,14 @@
     ViewData["Title"] = "Histórico de Vendas";
     }
     
-        <div class="container-fluid min-vh-100 py-4" style="background-color: #2e7d32;">
+        <div class="container-fluid min-vh-100 py-4 legacy-history">
             
             <div class="container mb-5">
                 <div class="row justify-content-center mb-5">
                     <div class="col-md-6 text-center">
-                        <div class="p-4 shadow" style="background: linear-gradient(135deg, #004d1a 0%, #008f32 100%); border-radius: 20px; border: 2px solid #ffd700;">
+                        <div class="history-hero p-4">
                             <h6 class="text-white text-uppercase fw-light mb-2" style="letter-spacing: 2px;">Vendas de Hoje</h6>
-                            <h1 class="display-4 fw-bold mb-0" style="color: #ffd700;">
+                            <h1 class="history-today-total display-4 fw-bold mb-0">
                                 @Model.Where(v => v.DataVenda.Date == DateTime.Today).Sum(v => v.TotalVenda).ToString("C")
                             </h1>
                         </div>
@@ -20,19 +20,19 @@
 
                 <div class="row g-4 justify-content-center mb-5">
                     <div class="col-md-4 col-lg-3 text-center">
-                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #008f32 !important;">
+                        <div class="history-metric p-4 h-100">
                             <small class="text-muted fw-bold text-uppercase d-block mb-3">Esta Semana</small>
                             <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoSemana.ToString("C")</h3>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-3 text-center">
-                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #ffd700 !important;">
+                        <div class="history-metric p-4 h-100">
                             <small class="text-muted fw-bold text-uppercase d-block mb-3">Este Mês</small>
                             <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoMes.ToString("C")</h3>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-3 text-center">
-                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; border-top: 5px solid #004d1a !important;">
+                        <div class="history-metric p-4 h-100">
                             <small class="text-muted fw-bold text-uppercase d-block mb-3">Este Ano</small>
                             <h3 class="fw-bold text-dark mb-0" style="white-space: nowrap;">@ViewBag.FaturamentoAno.ToString("C")</h3>
                         </div>
@@ -41,21 +41,21 @@
 
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6">
-                        <form method="get" class="d-flex gap-3 align-items-center bg-white p-3 rounded-pill shadow-sm border">
+                        <form method="get" class="history-filter d-flex gap-3 align-items-center">
                             <span class="ps-3 fw-bold text-muted text-uppercase" style="font-size: 0.8rem; white-space: nowrap;">Filtrar Dia:</span>
                             <input type="date" name="data" class="form-control border-0 fw-bold"
                                    value="@(Context.Request.Query[" data"].ToString() ?? DateTime.Today.ToString("yyyy-MM-dd"))"
                                    max="@DateTime.Today.ToString(" yyyy-MM-dd")">
-                            <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold text-uppercase shadow-sm">Buscar</button>
+                            <button type="submit" class="btn btn-primary fw-bold text-uppercase"><i class="bi bi-search me-2" aria-hidden="true"></i>Buscar</button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div class="card shadow border-0" style="border-radius: 15px; overflow: hidden;">
+            <div class="card shadow border-0">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                    <h4 class="mb-0">📜 LISTAGEM DE VENDAS</h4>
-                    <a href="/Caixa" class="btn btn-outline-light btn-sm rounded-pill px-3">Voltar ao Caixa</a>
+                    <h4 class="mb-0"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>LISTAGEM DE VENDAS</h4>
+                    <a href="/Caixa" class="btn btn-outline-secondary btn-sm">Voltar ao Caixa</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -78,9 +78,9 @@
                                     <td><span class="badge bg-light text-dark border">@venda.MetodoPagamento</span></td>
                                     <td class="fw-bold text-success">@venda.TotalVenda.ToString("C2")</td>
                                     <td class="text-center pe-4">
-                                        <button class="btn btn-info btn-sm rounded-pill px-3"
+                                        <button class="btn btn-outline-secondary btn-sm"
                                                 onclick="verDetalhes('@venda.Id')">
-                                            🔍 Detalhes
+                                            <i class="bi bi-search me-1" aria-hidden="true"></i>Detalhes
                                         </button>
                                     </td>
                                 </tr>
@@ -100,7 +100,7 @@
                 title: 'Venda #' + id,
                 text: 'Funcionalidade de detalhes em desenvolvimento.',
                 icon: 'info',
-                confirmButtonColor: '#004d1a'
+                confirmButtonColor: '#c2a36d'
             });
         }
     </script>
