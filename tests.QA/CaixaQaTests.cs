@@ -244,6 +244,65 @@ public class CaixaQaTests
         Assert.Matches(@"id=""secaoCPF""[^>]*style=""display: none;""", view);
     }
 
+    // ---------------------------------------------------------------------
+    // VISUAL - botao "Buscar" da tela de Estoque (Views/Home/Index.cshtml):
+    // na troca pelo tema a regra herdou so as cores; sem padding, raio e peso
+    // o browser desenhava o botaozinho padrao (1px 6px, radius 0), feio e fora
+    // do padrao do lado do input. As medidas casam com .btn-novo.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Tema_DeveEstilizarBotaoBuscarDoEstoque()
+    {
+        var tema = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("wwwroot", "css", "corporate-theme.css")));
+
+        var regra = ExtrairRegra(tema, ".busca-form button {");
+        Assert.Contains("padding", regra);
+        Assert.Contains("border-radius: 6px", regra);
+        Assert.Contains("font-weight: 600", regra);
+        Assert.Contains("white-space: nowrap", regra);
+    }
+
+    // ---------------------------------------------------------------------
+    // VISUAL - Historico: o resumo no topo nasceu em .container (max 1320 no
+    // xxl) enquanto o titulo/tabela ficam em .main-container (min(100% - 2rem,
+    // 1440px)). No desktop a secao HISTORICO DE VENDAS passava dos cards de
+    // cima dos dois lados e, no celular, o resumo sangrava para fora. As duas
+    // caixas precisam da MESMA largura - no base e no @media mobile.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Tema_DeveAlinharResumoDoHistoricoAoMainContainer()
+    {
+        var tema = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("wwwroot", "css", "corporate-theme.css")));
+
+        var regra = ExtrairRegra(tema, ".container.history-summary {");
+        Assert.Contains("width: min(100% - 2rem, 1440px)", regra);
+        Assert.Contains("padding-inline: 0", regra);
+
+        var inicioMedia = tema.IndexOf(
+            "@media (max-width: 767.98px)", StringComparison.Ordinal);
+        Assert.True(inicioMedia >= 0, "Media query mobile nao encontrada no tema.");
+        Assert.Matches(
+            @"\.container\.history-summary\s*\{\s*width:\s*calc\(100% - 1\.25rem\)",
+            tema.Substring(inicioMedia));
+    }
+
+    // ---------------------------------------------------------------------
+    // VISUAL - Historico/Estoque: a tabela tem colunas demais para a largura
+    // no celular; sem rolagem horizontal dentro do card as colunas estouravam
+    // o card e corriam por cima dos demais elementos da pagina.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Tema_TabelaDoHistoricoNaoDeveEstourarOCard()
+    {
+        var tema = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("wwwroot", "css", "corporate-theme.css")));
+
+        var regra = ExtrairRegra(tema, ".tabela-card {");
+        Assert.Contains("overflow-x: auto", regra);
+    }
+
     private static string ExtrairRegra(string css, string seletor)
     {
         var inicio = css.IndexOf(seletor, StringComparison.Ordinal);

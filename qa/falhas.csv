@@ -52,4 +52,7 @@ FIX-28,Lacunas,Ok,"Historico sem filtro traz todas as vendas",LacunasQaTests.His
 FIX-29,Vendas,Ok,"Pagamento eletronico nao devolve troco e o recebido passa a ser o total (gaveta nao infla)",VendasQaTests.FinalizarVenda_DeveZerarTrocoEmPagamentoEletronico,corrigido,
 FIX-30,Caixa,Ok,"Bloco de pagamento aparecia na tela do Caixa antes de finalizar: a troca site.css -> corporate-theme.css descartou display:none/centralizacao do .modal-overlay (#modalPagamento e #modalDetalhes nasciam visiveis)",CaixaQaTests.Tema_DeveEsconderModalDePagamentoDoCaixa,corrigido,
 FIX-31,Caixa,Ok,"Secoes internas do modal de pagamento (troco e CPF) tem que nascer com style display:none proprio, independente do tema",CaixaQaTests.Caixa_SecoesDeTrocoENotaDevemNascerEscondidas,corrigido,
+FIX-32,Estoque,Ok,"Botao Buscar nasceu sem padding/raio/peso na troca pelo tema: o browser desenhava o botaozinho padrao, feico e fora do padrao do lado do input",CaixaQaTests.Tema_DeveEstilizarBotaoBuscarDoEstoque,corrigido,
+FIX-33,Caixa,Ok,"Resumo do Historico em .container (1320) nao tinha a largura do .main-container (1440): a secao HISTORICO DE VENDAS passava dos cards de cima no desktop e o resumo sangrava no celular",CaixaQaTests.Tema_DeveAlinharResumoDoHistoricoAoMainContainer,corrigido,
+FIX-34,Caixa,Ok,"Tabela do Historico sem rolagem horizontal: no celular as colunas estouravam o card e corriam por cima dos demais elementos da pagina",CaixaQaTests.Tema_TabelaDoHistoricoNaoDeveEstourarOCard,corrigido,
 
