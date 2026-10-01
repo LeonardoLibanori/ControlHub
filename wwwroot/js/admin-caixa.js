@@ -664,69 +664,23 @@ function marcarMetodo(btn, metodo) {
     }
 }
 
-// Abre a etapa do CPF / valida cupom vendedor
-async function irParaCPF() {
+// Abre a etapa do CPF. O cupom do vendedor NAO e mais obrigatorio: virou um
+// botao opcional dentro da propria etapa (ver gerenciarCupomVendedor), para
+// lojas que usam programa de recompensa por venda.
+function irParaCPF() {
     if (!metodoSelecionado || metodoSelecionado === "") {
         Swal.fire('Atenção', 'Escolha o método de pagamento!', 'warning');
         return;
     }
 
-    // Fecha temporariamente o modal custom para exibir o SweetAlert do cupom
-    fecharModal();
+    // Esconde a seção de pagamento e mostra a do CPF (sem fechar o modal)
+    const secaoPagamento = document.getElementById("secaoPagamento");
+    const secaoCPF = document.getElementById("secaoCPF");
+    if (secaoPagamento) secaoPagamento.style.display = "none";
+    if (secaoCPF) secaoCPF.style.display = "block";
 
-    // Pede o código do vendedor via SweetAlert
-    const { value: cupom } = await Swal.fire({
-        title: 'CÓDIGO DO VENDEDOR',
-        input: 'text',
-        inputLabel: 'Identifique o vendedor para continuar',
-        inputPlaceholder: 'Digite o código (ex: LEO)',
-        showCancelButton: true,
-        confirmButtonText: 'Validar',
-        cancelButtonText: 'Cancelar',
-        allowOutsideClick: false,
-        inputValidator: (value) => {
-            if (!value) return 'O cupom é obrigatório!';
-        }
-    });
-
-    if (!cupom) {
-        // Cancelou: reabre a tela de seleção de método
-        abrirModalPagamento();
-        return;
-    }
-
-    try {
-        const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(cupom)}`);
-        const data = await resp.json();
-
-        if (data.exists) {
-            codigoVendedorInformado = cupom;
-
-            // Mostra a seção CPF dentro do mesmo modal custom
-            const modal = document.getElementById("modalPagamento");
-            if (modal) {
-                // garante que o modal esteja visível e em foco
-                modal.style.display = "flex";
-                modal.style.zIndex = "11000";
-            }
-
-            // Esconde a seção de pagamento e mostra a do CPF
-            const secaoPagamento = document.getElementById("secaoPagamento");
-            const secaoCPF = document.getElementById("secaoCPF");
-            if (secaoPagamento) secaoPagamento.style.display = "none";
-            if (secaoCPF) secaoCPF.style.display = "block";
-
-            // Foca no campo de CPF
-            setTimeout(() => document.getElementById("cpfClienteInput")?.focus(), 100);
-        } else {
-            await Swal.fire('Erro', 'Cupom não encontrado!', 'error');
-            // Reabre e pede novamente
-            irParaCPF();
-        }
-    } catch (e) {
-        console.error("Erro validando cupom:", e);
-        Swal.fire('Erro', 'Falha ao validar cupom. Tente novamente.', 'error').then(() => abrirModalPagamento());
-    }
+    // Foca no campo de CPF
+    setTimeout(() => document.getElementById("cpfClienteInput")?.focus(), 100);
 }
 
 // Volta para a seção de seleção de método dentro do modal de pagamento
@@ -741,6 +695,87 @@ function voltarParaPagamento() {
     if (modal) {
         modal.style.display = "flex";
         modal.style.zIndex = "11000";
+    }
+}
+
+// CUPOM DO VENDEDOR (opcional): botao na etapa do CPF para adicionar, trocar
+// ou remover o cupom. A venda so e validada quando o operador decide informar.
+function atualizarBotaoCupomVendedor() {
+    const btn = document.getElementById("btnCupomVendedor");
+    const texto = document.getElementById("btnCupomVendedorTexto");
+    if (!btn || !texto) return;
+
+    if (codigoVendedorInformado) {
+        texto.textContent = `VENDEDOR: ${codigoVendedorInformado} ✓`;
+        btn.classList.remove("btn-outline-secondary");
+        btn.classList.add("btn-outline-success");
+    } else {
+        texto.textContent = "CUPOM DO VENDEDOR (opcional)";
+        btn.classList.remove("btn-outline-success");
+        btn.classList.add("btn-outline-secondary");
+    }
+}
+
+async function gerenciarCupomVendedor() {
+    // Ja tem cupom informado: deixa manter ou remover.
+    if (codigoVendedorInformado) {
+        const r = await Swal.fire({
+            title: 'CUPOM DO VENDEDOR',
+            text: `Vendedor informado: ${codigoVendedorInformado}`,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'MANTER',
+            denyButtonText: 'REMOVER',
+            cancelButtonText: 'CANCELAR'
+        });
+
+        if (r.isDenied) {
+            codigoVendedorInformado = "";
+            atualizarBotaoCupomVendedor();
+        }
+        return;
+    }
+
+    // Sem cupom: pede e valida. Cancelar mantem a venda sem vendedor.
+    await pedirCupomVendedor();
+}
+
+async function pedirCupomVendedor() {
+    while (true) {
+        const { value } = await Swal.fire({
+            title: 'CÓDIGO DO VENDEDOR',
+            input: 'text',
+            inputLabel: 'Cupom do vendedor (opcional)',
+            inputPlaceholder: 'Digite o código (ex: LEO)',
+            showCancelButton: true,
+            confirmButtonText: 'Validar',
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            inputValidator: (v) => {
+                if (!v || !v.trim()) return 'Digite o cupom ou cancele.';
+            }
+        });
+
+        // Cancelou (ou fechou): a venda segue sem vendedor identificado.
+        if (!value) return;
+
+        try {
+            const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(value.trim())}`);
+            const data = await resp.json();
+
+            if (data.exists) {
+                codigoVendedorInformado = value.trim();
+                atualizarBotaoCupomVendedor();
+                return;
+            }
+
+            await Swal.fire('Cupom não encontrado', 'Verifique o código e tente novamente.', 'error');
+            // Volta ao prompt (loop) ate acertar ou cancelar.
+        } catch (e) {
+            console.error("Erro validando cupom:", e);
+            await Swal.fire('Erro', 'Falha ao validar cupom. Tente novamente.', 'error');
+            return;
+        }
     }
 }
 

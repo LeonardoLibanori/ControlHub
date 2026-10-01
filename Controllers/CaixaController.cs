@@ -43,15 +43,22 @@ namespace ControleEstoqueLoja.Controllers
         [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string? cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
         {
-            // BUG-18: valida e finaliza a venda com o MESMO critério de comparação
-            // (NormalizarCupom), senão o cupom validado seria rejeitado na venda.
+            // CUPOM DO VENDEDOR E OPCIONAL (programa de recompensa por venda):
+            // valida somente quando informado; sem cupom a venda segue com o
+            // vendedor nao identificado (CodigoVendedor = null). BUG-18 mantido:
+            // valida e finaliza com o MESMO criterio (NormalizarCupom), senao o
+            // cupom validado seria rejeitado na venda.
             var cupomNormalizado = NormalizarCupom(codigoVendedor);
-            var vendedor = await _context.Vendedores
-                .FirstOrDefaultAsync(v => v.Codigo.ToUpper() == cupomNormalizado && v.Ativo);
-
-            if (vendedor == null)
+            Vendedor? vendedor = null;
+            if (!string.IsNullOrEmpty(cupomNormalizado))
             {
-                return Json(new { success = false, message = $"O cupom '{codigoVendedor}' não foi encontrado!" });
+                vendedor = await _context.Vendedores
+                    .FirstOrDefaultAsync(v => v.Codigo.ToUpper() == cupomNormalizado && v.Ativo);
+
+                if (vendedor == null)
+                {
+                    return Json(new { success = false, message = $"O cupom '{codigoVendedor}' não foi encontrado!" });
+                }
             }
 
             // FASE 1: método de pagamento é obrigatório (evita TEXT NOT NULL / HTTP 500).
@@ -67,7 +74,9 @@ namespace ControleEstoqueLoja.Controllers
                 DataVenda = DateTime.Now,
                 MetodoPagamento = metodoPagamento,
                 CPFCliente = cpfCliente,
-                CodigoVendedor = codigoVendedor,
+                // Grava normalizado (caixa unica) quando informado; null quando
+                // a venda foi fechada sem cupom (opcional).
+                CodigoVendedor = string.IsNullOrEmpty(cupomNormalizado) ? null : cupomNormalizado,
                 TotalVenda = 0,
                 ValorRecebido = 0, // recalculado abaixo a partir do total (nunca confia no POST)
                 ValorTroco = 0,

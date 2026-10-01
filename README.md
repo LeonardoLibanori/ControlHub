@@ -182,7 +182,7 @@ conflito de merge entre máquinas. É por isso que ele é local de cada máquina
 5. Finalize a venda ÔÇö o sistema calcula o troco automaticamente
 6. O cupom fiscal ├® gerado para impress├úo
 
-> ÔÜá´©Å **Para registrar uma venda ├® obrigat├│rio cadastrar ao menos um vendedor antes.** O c├│digo do vendedor (cupom) ├® vinculado ├á venda.
+> **Cupom do vendedor é opcional:** a venda pode ser registrada sem identificar vendedor. Se a loja usa o programa de recompensa por venda, clique em **CUPOM DO VENDEDOR** (etapa do CPF) e informe o código — o vendedor precisa estar cadastrado e ativo para o cupom ser aceito.
 
 ### Cadastrando um Vendedor
 1. Pressione `Alt + M` para abrir o Menu Administrativo

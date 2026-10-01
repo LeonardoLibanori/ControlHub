@@ -204,6 +204,15 @@
             <p class="text-muted small">Opcional. Deixe em branco se não desejar.</p>
             <input type="text" id="cpfClienteInput" class="form-control form-control-lg text-center mb-4" placeholder="000.000.000-00" maxlength="14">
 
+            @* CUPOM DO VENDEDOR (opcional - programa de recompensa por venda):
+               antes era obrigatorio e bloqueava a finalizacao; agora e um botao
+               que o operador clica so quando a empresa usa essa recompensa. *@
+            <div class="d-grid mb-3">
+                <button type="button" id="btnCupomVendedor" class="btn btn-outline-secondary py-2 fw-bold" onclick="gerenciarCupomVendedor()">
+                    <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i><span id="btnCupomVendedorTexto">CUPOM DO VENDEDOR (opcional)</span>
+                </button>
+            </div>
+
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()"><i class="bi bi-printer me-2" aria-hidden="true"></i>FINALIZAR E IMPRIMIR</button>
                 <button type="button" class="btn btn-outline-secondary" onclick="voltarParaPagamento()">VOLTAR</button>
