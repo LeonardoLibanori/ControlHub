@@ -52,6 +52,7 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
         options.Password.RequireUppercase = true;
         options.Password.RequireLowercase = true;
         options.Password.RequireNonAlphanumeric = false;
+        options.User.RequireUniqueEmail = true;
 
         // Bloqueio progressivo apos tentativas erradas.
         options.Lockout.MaxFailedAccessAttempts = 5;
@@ -60,6 +61,9 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+builder.Services.Configure<SecurityStampValidatorOptions>(
+    CookieSecurityEvents.ConfigureSecurityStampValidator);
 
 // ------------------------------------------------------------------
 // COOKIE DE AUTENTICACAO
@@ -84,18 +88,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-    var reemitir = TimeSpan.FromMinutes(30);
-    options.Events.OnValidatePrincipal = async context =>
-    {
-        // A cada 30 min, renova o token antiforgery do MESMO cookie de sessao.
-        if (DateTimeOffset.UtcNow - context.Properties.IssuedUtc < reemitir)
-            return;
-
-        var antiforgery = context.HttpContext.RequestServices
-            .GetRequiredService<IAntiforgery>();
-        var tokens = antiforgery.GetAndStoreTokens(context.HttpContext);
-        context.Properties.UpdateTokenValue(tokens.FormFieldName, tokens.RequestToken);
-    };
+    options.Events.OnValidatePrincipal = CookieSecurityEvents.ValidatePrincipalAsync;
 
     // ------------------------------------------------------------------
     // ACESSO NEGADO: DUAS RESPOSTAS PARA DOIS CLIENTES DIFERENTES.

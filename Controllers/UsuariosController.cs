@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -27,11 +28,19 @@ namespace ControleEstoqueLoja.Controllers;
 public class UsuariosController : Controller
 {
     private readonly UserManager<Usuario> _userManager;
+    private readonly SignInManager<Usuario> _signInManager;
+    private readonly ApplicationDbContext _db;
     private readonly ILogger<UsuariosController> _log;
 
-    public UsuariosController(UserManager<Usuario> userManager, ILogger<UsuariosController> log)
+    public UsuariosController(
+        UserManager<Usuario> userManager,
+        SignInManager<Usuario> signInManager,
+        ApplicationDbContext db,
+        ILogger<UsuariosController> log)
     {
         _userManager = userManager;
+        _signInManager = signInManager;
+        _db = db;
         _log = log;
     }
 
@@ -82,6 +91,7 @@ public class UsuariosController : Controller
         {
             Id = usuario.Id,
             Nome = usuario.NomeExibicao ?? string.Empty,
+            Email = usuario.Email ?? string.Empty,
             Papel = papeis.Contains(Roles.Dono) ? Roles.Dono : Roles.Operador
         });
     }
@@ -93,6 +103,14 @@ public class UsuariosController : Controller
         if (model.Papel != Roles.Dono && model.Papel != Roles.Operador)
             ModelState.AddModelError(nameof(model.Papel), "Selecione um papel válido.");
 
+        var senhaInformada = !string.IsNullOrEmpty(model.NovaSenha);
+        var confirmacaoInformada = !string.IsNullOrEmpty(model.ConfirmarNovaSenha);
+        if (senhaInformada != confirmacaoInformada ||
+            (senhaInformada && model.NovaSenha != model.ConfirmarNovaSenha))
+        {
+            ModelState.AddModelError(nameof(model.ConfirmarNovaSenha), "As senhas não conferem.");
+        }
+
         if (!ModelState.IsValid)
             return View(model);
 
@@ -100,50 +118,100 @@ public class UsuariosController : Controller
         if (usuario is null)
             return NotFound();
 
+        var email = model.Email?.Trim() ?? string.Empty;
+        var emailAlterado = !string.Equals(usuario.Email, email, StringComparison.Ordinal) ||
+                            !string.Equals(usuario.UserName, email, StringComparison.Ordinal);
+        var nomeAlterado = !string.Equals(usuario.NomeExibicao, model.Nome, StringComparison.Ordinal);
+        var idUsuarioAtual = _userManager.GetUserId(User);
+        var editaPropriaConta = usuario.Id == idUsuarioAtual;
+
+        var papelOposto = model.Papel == Roles.Dono ? Roles.Operador : Roles.Dono;
+        await using var transacao = await _db.Database.BeginTransactionAsync();
         var papeisAtuais = await _userManager.GetRolesAsync(usuario);
-        if (model.Papel != Roles.Dono && papeisAtuais.Contains(Roles.Dono))
+        var papelAlterado = !papeisAtuais.Contains(model.Papel) || papeisAtuais.Contains(papelOposto);
+
+        if (model.Papel == Roles.Operador && papeisAtuais.Contains(Roles.Dono))
         {
             var donos = await _userManager.GetUsersInRoleAsync(Roles.Dono);
-            if (usuario.Id == _userManager.GetUserId(User))
-                ModelState.AddModelError(nameof(model.Papel), "Você não pode remover o papel Dono da própria conta.");
-            else if (donos.Count <= 1)
-                ModelState.AddModelError(nameof(model.Papel), "O sistema precisa manter pelo menos uma conta Dono.");
-
-            if (!ModelState.IsValid)
-                return View(model);
-        }
-
-        var papelDesejado = model.Papel;
-        if (!papeisAtuais.Contains(papelDesejado))
-        {
-            var adicionado = await _userManager.AddToRoleAsync(usuario, papelDesejado);
-            if (!adicionado.Succeeded)
+            if (donos.Count == 1)
             {
-                ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
+                ModelState.AddModelError(nameof(model.Papel),
+                    "Esta é a única conta Dono. Crie outro Dono antes de rebaixar esta.");
                 return View(model);
             }
         }
 
-        var outroPapel = papelDesejado == Roles.Dono ? Roles.Operador : Roles.Dono;
-        if (papeisAtuais.Contains(outroPapel))
+        var qualquerAlteracao = emailAlterado || nomeAlterado || papelAlterado || senhaInformada;
+        if (emailAlterado)
         {
-            var removido = await _userManager.RemoveFromRoleAsync(usuario, outroPapel);
-            if (!removido.Succeeded)
-            {
-                ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
-                return View(model);
-            }
+            usuario.Email = email;
+            usuario.UserName = email;
+            usuario.EmailConfirmed = true;
         }
 
         usuario.NomeExibicao = model.Nome;
-        var atualizado = await _userManager.UpdateAsync(usuario);
-        if (!atualizado.Succeeded)
+        var usuarioAtualizado = await _userManager.UpdateAsync(usuario);
+        if (!usuarioAtualizado.Succeeded)
         {
-            ModelState.AddModelError(string.Empty, "Não foi possível atualizar os dados da conta.");
+            foreach (var erro in usuarioAtualizado.Errors)
+                ModelState.AddModelError(string.Empty, MensagemAmigavel(erro));
             return View(model);
         }
 
+        if (papelAlterado)
+        {
+            if (!papeisAtuais.Contains(model.Papel))
+            {
+                var adicionado = await _userManager.AddToRoleAsync(usuario, model.Papel);
+                if (!adicionado.Succeeded)
+                {
+                    ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
+                    return View(model);
+                }
+            }
+
+            if (papeisAtuais.Contains(papelOposto))
+            {
+                var removido = await _userManager.RemoveFromRoleAsync(usuario, papelOposto);
+                if (!removido.Succeeded)
+                {
+                    ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
+                    return View(model);
+                }
+            }
+        }
+
+        if (senhaInformada)
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(usuario);
+            var senhaAtualizada = await _userManager.ResetPasswordAsync(usuario, token, model.NovaSenha!);
+            if (!senhaAtualizada.Succeeded)
+            {
+                foreach (var erro in senhaAtualizada.Errors)
+                    ModelState.AddModelError(nameof(model.NovaSenha), MensagemAmigavel(erro));
+                return View(model);
+            }
+        }
+
+        if (emailAlterado || papelAlterado || senhaInformada)
+        {
+            var stampAtualizado = await _userManager.UpdateSecurityStampAsync(usuario);
+            if (!stampAtualizado.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, "Não foi possível invalidar as sessões anteriores.");
+                return View(model);
+            }
+        }
+
+        await transacao.CommitAsync();
+
+        if (editaPropriaConta && qualquerAlteracao)
+            await _signInManager.RefreshSignInAsync(usuario);
+
         TempData["Aviso"] = $"Conta atualizada: {model.Nome}.";
+        if (editaPropriaConta && model.Papel == Roles.Operador)
+            return Redirect("/Caixa/Index");
+
         return RedirectToAction(nameof(Index));
     }
 
@@ -289,7 +357,23 @@ public class EditarUsuarioViewModel
     [Display(Name = "Nome exibido")]
     public string Nome { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Informe o e-mail.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+    [StringLength(120, ErrorMessage = "O e-mail deve ter no máximo 120 caracteres.")]
+    [Display(Name = "E-mail (login)")]
+    public string Email { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Selecione o papel.")]
     [Display(Name = "Papel")]
     public string Papel { get; set; } = Roles.Operador;
+
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter no mínimo 6 caracteres.")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Nova senha (opcional)")]
+    public string? NovaSenha { get; set; }
+
+    [DataType(DataType.Password)]
+    [Compare(nameof(NovaSenha), ErrorMessage = "As senhas não conferem.")]
+    [Display(Name = "Confirmar nova senha")]
+    public string? ConfirmarNovaSenha { get; set; }
 }

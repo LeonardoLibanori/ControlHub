@@ -7,7 +7,7 @@
     <div class="card shadow-sm">
         <div class="card-body p-4">
             <h2 class="text-center mb-1">EDITAR CONTA</h2>
-            <p class="text-center text-muted mb-4">Atualize o nome exibido e o papel de acesso.</p>
+            <p class="text-center text-muted mb-4">Atualize os dados de acesso da conta.</p>
 
             <div asp-validation-summary="All" class="text-danger small mb-3"></div>
 
@@ -19,6 +19,24 @@
                     <label asp-for="Nome" class="form-label fw-bold"></label>
                     <input asp-for="Nome" class="form-control" autofocus autocomplete="off" />
                     <span asp-validation-for="Nome" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-bold"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="username" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="NovaSenha" class="form-label fw-bold"></label>
+                    <input asp-for="NovaSenha" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="NovaSenha" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="ConfirmarNovaSenha" class="form-label fw-bold"></label>
+                    <input asp-for="ConfirmarNovaSenha" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmarNovaSenha" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-4">
