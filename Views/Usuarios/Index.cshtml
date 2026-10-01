@@ -6,13 +6,10 @@
 
 <div class="container mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h2 class="mb-0"><i class="bi bi-people" aria-hidden="true"></i> USUÁRIOS DO SISTEMA</h2>
-            <small class="text-muted">
-                Quem entra no sistema e com qual papel. Só o Dono acessa esta tela
-                (<code>/Usuarios</code>).
-            </small>
-        </div>
+        @* Topo enxuto de propósito: so titulo + NOVA CONTA. Nao ha aviso de
+           "quem entra no sistema" nem botao de voltar - a volta para o Caixa
+           ja existe na navbar, e a tela fica limpa. *@
+        <h2 class="mb-0"><i class="bi bi-people" aria-hidden="true"></i> USUÁRIOS DO SISTEMA</h2>
         <a href="/Usuarios/Criar" class="btn btn-primary fw-bold"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>NOVA CONTA</a>
     </div>
 
@@ -80,8 +77,4 @@
             </table>
         </div>
     }
-
-    <div class="mt-3">
-        <a href="/Caixa/Index" class="btn btn-outline-secondary btn-sm">Voltar ao caixa</a>
-    </div>
 </div>
