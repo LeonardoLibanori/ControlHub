@@ -36,6 +36,7 @@
                         <th>E-mail (login)</th>
                         <th>Papel</th>
                         <th>Situação</th>
+                        <th class="text-end">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,6 +69,10 @@
                                 {
                                     <span class="text-success">Ativo</span>
                                 }
+                            </td>
+                            <td class="text-end">
+                                <a asp-controller="Usuarios" asp-action="Editar" asp-route-id="@u.Id"
+                                   class="btn btn-outline-primary btn-sm">Editar</a>
                             </td>
                         </tr>
                     }

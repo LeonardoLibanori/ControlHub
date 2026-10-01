@@ -67,6 +67,87 @@ public class UsuariosController : Controller
     }
 
     // =================================================================
+    // EDITAR CONTA
+    // =================================================================
+
+    [HttpGet]
+    public async Task<IActionResult> Editar(string id)
+    {
+        var usuario = await _userManager.FindByIdAsync(id);
+        if (usuario is null)
+            return NotFound();
+
+        var papeis = await _userManager.GetRolesAsync(usuario);
+        return View(new EditarUsuarioViewModel
+        {
+            Id = usuario.Id,
+            Nome = usuario.NomeExibicao ?? string.Empty,
+            Papel = papeis.Contains(Roles.Dono) ? Roles.Dono : Roles.Operador
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Editar(EditarUsuarioViewModel model)
+    {
+        if (model.Papel != Roles.Dono && model.Papel != Roles.Operador)
+            ModelState.AddModelError(nameof(model.Papel), "Selecione um papel válido.");
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var usuario = await _userManager.FindByIdAsync(model.Id);
+        if (usuario is null)
+            return NotFound();
+
+        var papeisAtuais = await _userManager.GetRolesAsync(usuario);
+        if (model.Papel != Roles.Dono && papeisAtuais.Contains(Roles.Dono))
+        {
+            var donos = await _userManager.GetUsersInRoleAsync(Roles.Dono);
+            if (usuario.Id == _userManager.GetUserId(User))
+                ModelState.AddModelError(nameof(model.Papel), "Você não pode remover o papel Dono da própria conta.");
+            else if (donos.Count <= 1)
+                ModelState.AddModelError(nameof(model.Papel), "O sistema precisa manter pelo menos uma conta Dono.");
+
+            if (!ModelState.IsValid)
+                return View(model);
+        }
+
+        var papelDesejado = model.Papel;
+        if (!papeisAtuais.Contains(papelDesejado))
+        {
+            var adicionado = await _userManager.AddToRoleAsync(usuario, papelDesejado);
+            if (!adicionado.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
+                return View(model);
+            }
+        }
+
+        var outroPapel = papelDesejado == Roles.Dono ? Roles.Operador : Roles.Dono;
+        if (papeisAtuais.Contains(outroPapel))
+        {
+            var removido = await _userManager.RemoveFromRoleAsync(usuario, outroPapel);
+            if (!removido.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, "Não foi possível atualizar o papel da conta.");
+                return View(model);
+            }
+        }
+
+        usuario.NomeExibicao = model.Nome;
+        var atualizado = await _userManager.UpdateAsync(usuario);
+        if (!atualizado.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, "Não foi possível atualizar os dados da conta.");
+            return View(model);
+        }
+
+        TempData["Aviso"] = $"Conta atualizada: {model.Nome}.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    // =================================================================
     // CRIAR CONTA
     // =================================================================
 
@@ -193,6 +274,21 @@ public class CriarUsuarioViewModel
     /// Dono ou Operador. O padrao e o MENOR privilegio (Operador): quem cria
     /// conta para o balcao nao deve ganhar acesso financeiro por descuido.
     /// </summary>
+    [Required(ErrorMessage = "Selecione o papel.")]
+    [Display(Name = "Papel")]
+    public string Papel { get; set; } = Roles.Operador;
+}
+
+/// <summary>Dados editaveis de uma conta existente.</summary>
+public class EditarUsuarioViewModel
+{
+    public string Id { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Informe o nome do usuário.")]
+    [StringLength(80, ErrorMessage = "O nome deve ter no máximo 80 caracteres.")]
+    [Display(Name = "Nome exibido")]
+    public string Nome { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Selecione o papel.")]
     [Display(Name = "Papel")]
     public string Papel { get; set; } = Roles.Operador;

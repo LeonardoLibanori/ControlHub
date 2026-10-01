@@ -1,0 +1,41 @@
+@model ControleEstoqueLoja.Controllers.EditarUsuarioViewModel
+@{
+    ViewData["Title"] = "Editar conta";
+}
+
+<div class="container" style="max-width: 520px; margin-top: 40px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h2 class="text-center mb-1">EDITAR CONTA</h2>
+            <p class="text-center text-muted mb-4">Atualize o nome exibido e o papel de acesso.</p>
+
+            <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+            <form method="post" asp-controller="Usuarios" asp-action="Editar">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="mb-3">
+                    <label asp-for="Nome" class="form-label fw-bold"></label>
+                    <input asp-for="Nome" class="form-control" autofocus autocomplete="off" />
+                    <span asp-validation-for="Nome" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Papel" class="form-label fw-bold"></label>
+                    <select asp-for="Papel" class="form-select">
+                        <option value="@Roles.Operador">@Roles.Operador - só o PDV (vender e suprimento)</option>
+                        <option value="@Roles.Dono">@Roles.Dono - acesso total (financeiro, estoque, usuários)</option>
+                    </select>
+                    <span asp-validation-for="Papel" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">SALVAR ALTERAÇÕES</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="/Usuarios/Index" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+            </div>
+        </div>
+    </div>
+</div>
