@@ -284,8 +284,37 @@ public class CaixaQaTests
             "@media (max-width: 767.98px)", StringComparison.Ordinal);
         Assert.True(inicioMedia >= 0, "Media query mobile nao encontrada no tema.");
         Assert.Matches(
-            @"\.container\.history-summary\s*\{\s*width:\s*calc\(100% - 1\.25rem\)",
+            @"\.container\.history-summary\s*\{\s*width:\s*calc\(100% - 1\.5rem\)",
             tema.Substring(inicioMedia));
+    }
+
+    // ---------------------------------------------------------------------
+    // CONTROLE - overflow horizontal da pagina no mobile (sonda headless):
+    // o .main-container com 10px de cada lado nao acomoda as .row do
+    // Bootstrap, que puxam margem negativa de -12px (g-4). No Caixa a row
+    // passava 2px da viewport (scrollWidth 483 vs clientWidth 481) e a
+    // pagina inteira ganhava barra de rolagem horizontal, deslocando o
+    // conteudo - inclusive o titulo CAIXA - LOJA. Lado de 12px cobre a
+    // maior margem negativa e mantém as duas caixas (resumo e titulo)
+    // com a mesma largura.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Tema_MobileDeveAcomodarMargensNegativasDaRow()
+    {
+        var tema = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("wwwroot", "css", "corporate-theme.css")));
+
+        var inicioMedia = tema.IndexOf(
+            "@media (max-width: 767.98px)", StringComparison.Ordinal);
+        Assert.True(inicioMedia >= 0, "Media query mobile nao encontrada no tema.");
+        var media = tema.Substring(inicioMedia);
+
+        Assert.Matches(
+            @"\.main-container\s*\{\s*[^}]*width:\s*calc\(100% - 1\.5rem\)",
+            media);
+        Assert.Matches(
+            @"\.container\.history-summary\s*\{\s*width:\s*calc\(100% - 1\.5rem\)",
+            media);
     }
 
     // ---------------------------------------------------------------------

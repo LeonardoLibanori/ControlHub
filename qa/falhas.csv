@@ -55,4 +55,5 @@ FIX-31,Caixa,Ok,"Secoes internas do modal de pagamento (troco e CPF) tem que nas
 FIX-32,Estoque,Ok,"Botao Buscar nasceu sem padding/raio/peso na troca pelo tema: o browser desenhava o botaozinho padrao, feico e fora do padrao do lado do input",CaixaQaTests.Tema_DeveEstilizarBotaoBuscarDoEstoque,corrigido,
 FIX-33,Caixa,Ok,"Resumo do Historico em .container (1320) nao tinha a largura do .main-container (1440): a secao HISTORICO DE VENDAS passava dos cards de cima no desktop e o resumo sangrava no celular",CaixaQaTests.Tema_DeveAlinharResumoDoHistoricoAoMainContainer,corrigido,
 FIX-34,Caixa,Ok,"Tabela do Historico sem rolagem horizontal: no celular as colunas estouravam o card e corriam por cima dos demais elementos da pagina",CaixaQaTests.Tema_TabelaDoHistoricoNaoDeveEstourarOCard,corrigido,
+FIX-35,Visual,Ok,"Margens mobile de 10px nao acomodavam as .row do Bootstrap (-12px, g-4): no Caixa a pagina estourava 2px e ganhava barra de rolagem horizontal, deslocando todo o conteudo",CaixaQaTests.Tema_MobileDeveAcomodarMargensNegativasDaRow,corrigido,
 

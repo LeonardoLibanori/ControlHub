@@ -818,12 +818,15 @@ footer .container {
     }
 
     .main-container {
-        width: calc(100% - 1.25rem);
+        /* 12px de cada lado: as .row do Bootstrap puxam ate -12px (g-4);
+           com 10px a pagina ganhava 2px de overflow horizontal (barra de
+           rolagem que desloca todo o conteudo, inclusive o titulo). */
+        width: calc(100% - 1.5rem);
         margin-block: 1rem 1.5rem;
     }
 
     .container.history-summary {
-        width: calc(100% - 1.25rem);
+        width: calc(100% - 1.5rem);
     }
 
     .main-container > h1 {
