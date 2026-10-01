@@ -148,4 +148,111 @@ public class ProdutosQaTests
         var salvo = qa.Context.Produtos.AsNoTracking().First(p => p.Id == produto.Id);
         Assert.Equal(5m, salvo.Quantidade);
     }
+
+    // =====================================================================
+    // ESTOQUE MINIMO (item 1 da Fase A): cadastro + regra de alerta.
+    // A comparacao e feita em C# justamente porque decimal cai em TEXT no
+    // SQLite: em SQL a collation BINARY trataria "9" como maior que "10".
+    // =====================================================================
+
+    [Fact]
+    public async Task Novo_DeveCadastrarEstoqueMinimo()
+    {
+        using var qa = new QaContext();
+        var controller = new HomeController(qa.Context).ComTempData();
+
+        // O form manda o estoque minimo no mesmo formato da quantidade.
+        controller.Novo("LEITE", "Prateleira", "40", "599", null, "10");
+
+        var salvo = qa.Context.Produtos.AsNoTracking().Single();
+        Assert.Equal(10m, salvo.EstoqueMinimo);
+    }
+
+    // Sem estoque minimo enviado, o produto nasce NULL (= nunca avisa).
+    [Fact]
+    public async Task Novo_SemEstoqueMinimo_DeveGravarNulo()
+    {
+        using var qa = new QaContext();
+        var controller = new HomeController(qa.Context).ComTempData();
+
+        controller.Novo("LEITE", "Prateleira", "40", "599", null, null);
+
+        var salvo = qa.Context.Produtos.AsNoTracking().Single();
+        Assert.Null(salvo.EstoqueMinimo);
+    }
+
+    // Estoque minimo negativo e recusado (mesma politica do preco/quantidade).
+    [Fact]
+    public async Task Novo_DeveRejeitarEstoqueMinimoNegativo()
+    {
+        using var qa = new QaContext();
+        var controller = new HomeController(qa.Context).ComTempData();
+
+        controller.Novo("LEITE", "Prateleira", "40", "599", null, "-5");
+
+        Assert.Empty(qa.Context.Produtos.AsNoTracking().ToList());
+    }
+
+    [Theory]
+    [InlineData(4, 10, true)]      // 4 < 10   -> alerta
+    [InlineData(10, 10, false)]    // 10 == 10 -> igual nao e "abaixo"
+    [InlineData(50, 10, false)]    // 50 > 10  -> folgado
+    [InlineData(0.5, 1, true)]     // fracionado: 0,5 < 1 -> alerta
+    [InlineData(9, 10, true)]      // o caso que a collation BINARY erraria
+    public void EstoqueAbaixoDoMinimo_DeveUsarComparacaoNumerica(decimal quantidade, decimal minimo, bool esperado)
+    {
+        var produto = new Produto { Quantidade = quantidade, EstoqueMinimo = minimo };
+
+        Assert.Equal(esperado, produto.EstoqueAbaixoDoMinimo);
+    }
+
+    // Sem minimo definido (null ou 0) NUNCA gera alerta - mesmo com estoque 0.
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0.0)]
+    public void EstoqueMinimoNaoDefinido_NuncaGeraAlerta(double? minimo)
+    {
+        var produto = new Produto { Quantidade = 0m, EstoqueMinimo = (decimal?)minimo };
+
+        Assert.False(produto.EstoqueAbaixoDoMinimo);
+    }
+
+    // Estoque zerado com minimo > 0: e o alerta mais importante (produto acabou).
+    [Fact]
+    public void EstoqueZerado_ComMinimo_DeveAlertar()
+    {
+        var produto = new Produto { Quantidade = 0m, EstoqueMinimo = 3m };
+
+        Assert.True(produto.EstoqueAbaixoDoMinimo);
+    }
+
+    // Editar nao pode ZERAR o minimo configurado quando o campo nao vem no POST
+    // (mesma politica do BUG-07, que zerava o estoque a cada edicao).
+    [Fact]
+    public async Task Editar_SemEstoqueMinimoEnviado_DevePreservarOConfigurado()
+    {
+        using var qa = new QaContext();
+        var produto = qa.SeedProduto(nome: "LEITE", preco: 5.99m, quantidade: 40m);
+        produto.EstoqueMinimo = 10m;
+        qa.Context.SaveChanges();
+
+        var controller = new HomeController(qa.Context).ComTempData();
+        controller.Editar(produto.Id, "LEITE", "Prateleira", null, "599", null);
+
+        var salvo = qa.Context.Produtos.AsNoTracking().Single();
+        Assert.Equal(10m, salvo.EstoqueMinimo);
+    }
+
+    [Fact]
+    public async Task Editar_ComEstoqueMinimoValido_DeveGravar()
+    {
+        using var qa = new QaContext();
+        var produto = qa.SeedProduto(nome: "LEITE", preco: 5.99m, quantidade: 40m);
+        var controller = new HomeController(qa.Context).ComTempData();
+
+        controller.Editar(produto.Id, "LEITE", "Prateleira", null, "599", "25");
+
+        var salvo = qa.Context.Produtos.AsNoTracking().Single();
+        Assert.Equal(25m, salvo.EstoqueMinimo);
+    }
 }

@@ -57,7 +57,7 @@
             <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr>
+                    <tr class="@(item.EstoqueAbaixoDoMinimo ? "linha-estoque-baixo" : null)">
                         <td>
                             <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.Id" class="produto-link">@item.Nome</a>
                         </td>
@@ -70,6 +70,18 @@
                             else
                             {
                                 @item.Quantidade.ToString("0") <span>un</span>
+                            }
+                            @* Estoque mínimo (item 1): só aparece se o dono configurou
+                               um mínimo > 0 E o estoque atual caiu abaixo dele. *@
+                            @if (item.EstoqueAbaixoDoMinimo)
+                            {
+                                <span class="badge badge-estoque-baixo" title="Abaixo do estoque mínimo configurado">
+                                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>ESTOQUE BAIXO
+                                </span>
+                                <div class="estoque-minimo-texto">
+                                    mínimo: @item.EstoqueMinimo!.Value.ToString(item.Tipo == TipoProduto.PorPeso ? "0.###" : "0")
+                                    <span>@(item.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+                                </div>
                             }
                         </td>
                         @if (podeGerenciarEstoque)

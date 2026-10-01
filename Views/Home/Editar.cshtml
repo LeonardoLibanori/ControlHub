@@ -38,6 +38,12 @@
         <input type="text" id="quantidadeVisual" oninput="atualizarQuantidade()" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 4px;" required />
         <input type="hidden" name="quantidade" id="quantidadeReal" value="@Model.Quantidade.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
  *@
+        <label style="font-weight: bold;">Estoque mínimo (alerta):</label><br />
+        <div class="input-group mb-3">
+            <input type="number" name="estoqueMinimo" value="@(Model.EstoqueMinimo?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "")" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
+            <span class="input-group-text">@(Model.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+        </div>
+
         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
             <i class="bi bi-check2 me-2" aria-hidden="true"></i>SALVAR ALTERAÇÕES
         </button>

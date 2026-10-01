@@ -89,6 +89,14 @@ namespace ControleEstoqueLoja.Controllers
             // BUG-08: produto desativado (soft delete) nao e acessivel pela tela.
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
+
+            // TEMP-COMMIT1: leitura do historico (item 2) fica no commit 2.
+            /* ViewData["HistoricoPrecos"] = _context.HistoricoPrecos
+                .Where(h => h.ProdutoId == produto.Id)
+                .OrderByDescending(h => h.DataAlteracao)
+                .ThenByDescending(h => h.Id)
+                .ToList(); */
+
             return View(produto);
         }
 
@@ -152,7 +160,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras)
+        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras, string? estoqueMinimo = null)
         {
             // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
             decimal.TryParse(preco, out decimal valorBruto);
@@ -176,6 +184,24 @@ namespace ControleEstoqueLoja.Controllers
             {
                 TempData["Erro"] = "A quantidade não pode ser negativa.";
                 return RedirectToAction("Index");
+            }
+
+            // Estoque minimo (alerta de estoque baixo). Vazio ou invalido = null
+            // (sem alerta). Mesmo parse e mesma trava de negativo da Quantidade.
+            decimal? minimo = null;
+            if (!string.IsNullOrWhiteSpace(estoqueMinimo) &&
+                decimal.TryParse(estoqueMinimo.Replace(",", "."),
+                                 System.Globalization.NumberStyles.Any,
+                                 System.Globalization.CultureInfo.InvariantCulture,
+                                 out decimal m))
+            {
+                if (m < 0m)
+                {
+                    TempData["Erro"] = "O estoque mínimo não pode ser negativo.";
+                    return RedirectToAction("Index");
+                }
+
+                minimo = m;
             }
 
             // BUG-09: o cadastro aceitava CÓDIGO DE BARRAS DUPLICADO. Com dois produtos
@@ -202,7 +228,8 @@ namespace ControleEstoqueLoja.Controllers
                 Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
-                CodigoBarras = codigoBarras
+                CodigoBarras = codigoBarras,
+                EstoqueMinimo = minimo
             };
 
             _context.Produtos.Add(p);
@@ -225,7 +252,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Editar(int id, string nome, string tipo, string? quantidade, string preco)
+        public IActionResult Editar(int id, string nome, string tipo, string? quantidade, string preco, string? estoqueMinimo = null)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
@@ -244,6 +271,7 @@ namespace ControleEstoqueLoja.Controllers
 
             // BUG-23 (XSS armazenado): mesmo saneamento do cadastro (item 1).
             produto.Nome = SanitizeTexto(nome) ?? produto.Nome;
+
             produto.Preco = precoFinal;
             produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : produto.Tipo;
             // BUG-07: Views/Home/Editar.cshtml NÃO tem o campo "quantidade". A action
@@ -265,6 +293,36 @@ namespace ControleEstoqueLoja.Controllers
 
                 produto.Quantidade = qtd;
             }
+
+            // Estoque minimo: mesma politica do BUG-07 acima — só sobrescreve
+            // quando o campo foi enviado E é um número válido, para a edição
+            // não zerar o alerta configurado.
+            if (!string.IsNullOrWhiteSpace(estoqueMinimo) &&
+                decimal.TryParse(estoqueMinimo.Replace(",", "."),
+                                 System.Globalization.NumberStyles.Any,
+                                 System.Globalization.CultureInfo.InvariantCulture,
+                                 out decimal m))
+            {
+                if (m < 0m)
+                {
+                    TempData["Erro"] = "O estoque mínimo não pode ser negativo.";
+                    return RedirectToAction("Index");
+                }
+
+                produto.EstoqueMinimo = m;
+            }
+
+            // TEMP-COMMIT1: gravacao do historico (item 2) fica no commit 2.
+            /* if (precoAnterior != precoFinal)
+            {
+                _context.HistoricoPrecos.Add(new HistoricoPreco
+                {
+                    ProdutoId = produto.Id,
+                    PrecoAnterior = precoAnterior,
+                    PrecoNovo = precoFinal,
+                    DataAlteracao = DateTime.Now
+                });
+            } */
 
             _context.SaveChanges();
             return RedirectToAction("Index");

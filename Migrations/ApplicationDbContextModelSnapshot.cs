@@ -42,7 +42,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CaixaMovimentacoes");
+                    b.ToTable("CaixaMovimentacoes", (string)null);
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Produto", b =>
@@ -55,6 +55,9 @@ namespace ControleEstoqueLoja.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CodigoBarras")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("EstoqueMinimo")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Nome")
@@ -72,7 +75,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Produtos");
+                    b.ToTable("Produtos", (string)null);
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Usuario", b =>
@@ -179,7 +182,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Vendas");
+                    b.ToTable("Vendas", (string)null);
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.VendaItem", b =>
@@ -206,7 +209,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasIndex("VendaId");
 
-                    b.ToTable("VendaItens");
+                    b.ToTable("VendaItens", (string)null);
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Vendedor", b =>
@@ -228,7 +231,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Vendedores");
+                    b.ToTable("Vendedores", (string)null);
                 });
 
             modelBuilder.Entity("FluxoCaixa", b =>
@@ -252,7 +255,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FluxoCaixa");
+                    b.ToTable("FluxoCaixa", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

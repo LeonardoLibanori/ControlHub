@@ -58,6 +58,16 @@
                 <input type="hidden" name="quantidade" id="quantidadeReal" />
             </div>
 
+            <div class="mb-3">
+                <label id="labelEstoqueMinimo" class="fw-bold">Estoque mínimo (alerta):</label>
+                <div class="input-group">
+                    <input type="number" id="estoqueMinimoVisual" class="form-control" min="0" step="any" placeholder="0 = sem alerta" oninput="sincronizarEstoqueMinimo()" />
+                    <span id="unidadeEstoqueMinimo" class="input-group-text">un</span>
+                </div>
+                <input type="hidden" name="estoqueMinimo" id="estoqueMinimoReal" />
+                <small class="text-muted">Zerado ou vazio = este produto nunca avisa "estoque baixo".</small>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100 btn-lg"><i class="bi bi-check2 me-2" aria-hidden="true"></i>SALVAR PRODUTO</button>
         </form>
 
@@ -89,6 +99,23 @@
         }
 
         hidden.value = input.value.replace(',', '.');
+        sincronizarEstoqueMinimo();
+    }
+
+    // O estoque mínimo usa a MESMA unidade da quantidade (kg / un). Mantém os
+    // dois labels em sincronia quando o tipo do produto muda.
+    function sincronizarEstoqueMinimo() {
+        const tipo = document.getElementById('tipoProduto').value;
+        const unidadeMin = document.getElementById('unidadeEstoqueMinimo');
+        const labelMin = document.getElementById('labelEstoqueMinimo');
+        const visual = document.getElementById('estoqueMinimoVisual');
+        const hidden = document.getElementById('estoqueMinimoReal');
+
+        const ePeso = tipo === 'PorPeso';
+        if (unidadeMin) unidadeMin.innerText = ePeso ? "kg" : "un";
+        if (labelMin) labelMin.innerText = ePeso ? "Estoque mínimo (alerta, kg):" : "Estoque mínimo (alerta, un):";
+        if (visual) visual.step = ePeso ? "any" : "1";
+        if (hidden) hidden.value = visual ? visual.value.replace(',', '.') : "";
     }
 
     atualizarQuantidade();
