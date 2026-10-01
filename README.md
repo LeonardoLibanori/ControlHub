@@ -6,7 +6,7 @@ Sistema web para gerenciamento de estoque e caixa de pequenas lojas, desenvolvid
 
 Acesse o sistema em produ├º├úo: **[http://controle-estoque-loja.runasp.net](http://controle-estoque-loja.runasp.net)**
 
-> ⚠️ O ambiente de demonstração é uma implantação anterior e **pode não refletir as últimas correções deste repositório** (branch `fix/fase1-dinheiro`). Para o comportamento atual, rode o projeto localmente como descrito abaixo.
+> ⚠️ O ambiente de demonstração é uma implantação anterior e **pode não refletir as últimas correções deste repositório** (branch `main`). Para o comportamento atual, rode o projeto localmente como descrito abaixo.
 >
 > O banco de dados é criado automaticamente na primeira execução (via migrations). Este repositório traz um banco de exemplo com dados fictícios — copie `controleestoque.exemplo.db` para `controleestoque.db` para começar rápido.
 
@@ -34,9 +34,16 @@ Para começar rápido, copie o banco de exemplo:
 copy controleestoque.exemplo.db controleestoque.db
 ```
 
-Depois é só subir a aplicação:
+Depois é só subir a aplicação. O `dotnet run` sem argumento só funciona **dentro** da pasta
+`ControleEstoqueLoja`; se o terminal estiver na pasta pai (é onde o VS Code abre o terminal),
+passe `--project`:
 
 ```powershell
+# na pasta pai do repositório:
+dotnet run --project ControleEstoqueLoja
+
+# ou dentro da pasta ControleEstoqueLoja:
+cd ControleEstoqueLoja
 dotnet run
 ```
 
@@ -275,9 +282,9 @@ Padr├úo MVC com separa├º├úo em `Controllers`, `Models`, `Views` e `Data
 ## 🧪 Desenvolvimento
 
 ```powershell
-dotnet build                       # compilar
-dotnet run                         # subir a aplicação
-cd tests.QA; dotnet test           # suíte de testes de caracterização (55 testes)
+dotnet build                              # compilar (0 avisos, 0 erros)
+dotnet run --project ControleEstoqueLoja  # subir a aplicação (http://localhost:5236)
+cd tests.QA; dotnet test                  # suíte de testes de caracterização (78 testes)
 ```
 
 ### Migrations
