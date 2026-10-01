@@ -50,4 +50,6 @@ FIX-26,Caixa,Ok,"suprimento valido e aceito e gravado positivo",CaixaQaTests.Reg
 FIX-27,Vendas,Ok,"venda baixa o estoque do produto",VendasQaTests.FinalizarVenda_DeveBaixarEstoqueDoProduto,corrigido,
 FIX-28,Lacunas,Ok,"Historico sem filtro traz todas as vendas",LacunasQaTests.Historico_SemFiltro_DeveTrazerTodasAsVendas,corrigido,
 FIX-29,Vendas,Ok,"Pagamento eletronico nao devolve troco e o recebido passa a ser o total (gaveta nao infla)",VendasQaTests.FinalizarVenda_DeveZerarTrocoEmPagamentoEletronico,corrigido,
+FIX-30,Caixa,Ok,"Bloco de pagamento aparecia na tela do Caixa antes de finalizar: a troca site.css -> corporate-theme.css descartou display:none/centralizacao do .modal-overlay (#modalPagamento e #modalDetalhes nasciam visiveis)",CaixaQaTests.Tema_DeveEsconderModalDePagamentoDoCaixa,corrigido,
+FIX-31,Caixa,Ok,"Secoes internas do modal de pagamento (troco e CPF) tem que nascer com style display:none proprio, independente do tema",CaixaQaTests.Caixa_SecoesDeTrocoENotaDevemNascerEscondidas,corrigido,
 

@@ -556,9 +556,26 @@ textarea.form-control {
     border-color: rgba(130, 174, 188, .3);
 }
 
+/* Modais custom (#modalPagamento no Caixa, #modalDetalhes no Historico). Nascem
+   ESCONDIDOS: quem abre e o JS, com style.display = "flex" / "none". A regra veio
+   do site.css, que saiu na troca pelo tema corporativo - sem ela o bloco de
+   pagamento (formas de pagamento, recebido/troco, CPF) aparecia aberto junto com
+   a tela do caixa, antes de finalizar a compra. */
 .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
     background: rgba(5, 8, 10, .78);
     backdrop-filter: blur(4px);
+}
+
+/* O aviso do SweetAlert precisa ficar ACIMA do modal custom (z-index 9999),
+   senao a mensagem de erro de estoque aparece atras do modal. */
+.swal2-container {
+    z-index: 12000 !important;
 }
 
 .modal-box {

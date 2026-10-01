@@ -6,6 +6,7 @@ namespace tests.QA;
 
 /// <summary>
 /// CARACTERIZACAO - Caixa (CaixaController: fechamento, status e movimentacoes).
+/// Tambem cobre o contrato da TELA do caixa (view + CSS do tema corporativo).
 /// Devem FALHAR enquanto o bug existir e PASSAR quando corrigido.
 /// </summary>
 public class CaixaQaTests
@@ -199,5 +200,70 @@ public class CaixaQaTests
 
         var result = controller.ObterDadosFechamento();
         Assert.Equal(0m, result.GetProp("saldoFinal"));
+    }
+
+    // ---------------------------------------------------------------------
+    // BUG - tela do Caixa: bloco de pagamento visivel antes de finalizar
+    // #modalPagamento nasce com class="modal-overlay" e SEM style inline; quem
+    // o esconde e o CSS. O site.css (removido na troca pelo corporate-theme.css)
+    // trazia display:none e a centralizacao; no novo tema sobrou so o visual
+    // (fundo/blur) e a regra de ocultacao sumiu, deixando formas de pagamento,
+    // recebido/troco e CPF abertos junto com a tela do caixa. #modalDetalhes
+    // (Historico) usa a mesma classe e tinha o mesmo defeito.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Tema_DeveEsconderModalDePagamentoDoCaixa()
+    {
+        var tema = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("wwwroot", "css", "corporate-theme.css")));
+
+        var regra = ExtrairRegra(tema, ".modal-overlay");
+        Assert.Contains("display: none", regra);
+        Assert.Contains("position: fixed", regra);
+        Assert.Contains("z-index: 9999", regra);
+
+        // SweetAlert tem que ficar ACIMA do modal custom (9999); sem isto o
+        // aviso de estoque insuficiente aparece atras do modal de pagamento.
+        Assert.Matches(@"\.swal2-container\s*\{[^}]*z-index:\s*12000\s*!important",
+            tema);
+    }
+
+    // ---------------------------------------------------------------------
+    // CONTROLE: as secoes internas do modal (troco e CPF) sao escondidas por
+    // style inline proprio; o CSS acima cuida so do wrapper. Os dois nascem
+    // escondidos - tirar qualquer um dos dois faz o pagamento reaparecer.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void Caixa_SecoesDeTrocoENotaDevemNascerEscondidas()
+    {
+        var view = File.ReadAllText(
+            LocalizarArquivo(Path.Combine("Views", "Caixa", "Index.cshtml")));
+
+        Assert.Contains("id=\"modalPagamento\" class=\"modal-overlay\"", view);
+        Assert.Matches(@"id=""secaoTroco""[^>]*style=""display: none;""", view);
+        Assert.Matches(@"id=""secaoCPF""[^>]*style=""display: none;""", view);
+    }
+
+    private static string ExtrairRegra(string css, string seletor)
+    {
+        var inicio = css.IndexOf(seletor, StringComparison.Ordinal);
+        Assert.True(inicio >= 0, $"Regra '{seletor}' nao encontrada no tema.");
+        var abre = css.IndexOf('{', inicio);
+        var fecha = css.IndexOf('}', abre);
+        Assert.True(abre > inicio && fecha > abre,
+            $"Regra '{seletor}' sem bloco no tema.");
+        return css.Substring(inicio, fecha - inicio + 1);
+    }
+
+    private static string LocalizarArquivo(string caminhoRelativo)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "ControleEstoqueLoja.csproj")))
+                return Path.Combine(dir.FullName, caminhoRelativo);
+            dir = dir.Parent;
+        }
+        throw new DirectoryNotFoundException("Raiz do projeto web nao encontrada.");
     }
 }
