@@ -82,5 +82,59 @@
                 </div>
             </div>
         </div>
+@* ---------------------------------------------------------------
+           Histórico de PREÇO (item 2). Log informativo: não entra em
+           nenhum cálculo de venda/saldo — é só a resposta para "isso
+           antes custava quanto?". Mais recente primeiro (ordem do
+           controller). Vem do ViewData, então pode ser nulo.
+        *@
+        @{
+            var historicoPrecos = ViewData["HistoricoPrecos"] as List<ControleEstoqueLoja.Models.HistoricoPreco>;
+        }
+        <div class="row justify-content-center mt-4">
+            <div class="col-12 col-lg-8">
+                <div class="tabela-card">
+                    <h5 class="mb-3"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>HISTÓRICO DE PREÇO</h5>
+
+                    @if (historicoPrecos == null || historicoPrecos.Count == 0)
+                    {
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                            Este produto ainda não teve o preço alterado.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data</th>
+                                        <th class="text-end">Preço anterior</th>
+                                        <th class="text-end">Preço novo</th>
+                                        <th class="text-end">Variação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var h in historicoPrecos)
+                                    {
+                                        var subiu = h.PrecoNovo > h.PrecoAnterior;
+                                        <tr>
+                                            <td>@h.DataAlteracao.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="text-end text-muted">R$ @h.PrecoAnterior.ToString("N2")</td>
+                                            <td class="text-end fw-bold">R$ @h.PrecoNovo.ToString("N2")</td>
+                                            <td class="text-end @(subiu ? "text-danger" : "text-success")">
+                                                <i class="bi @(subiu ? "bi-arrow-up-right" : "bi-arrow-down-right")" aria-hidden="true"></i>
+                                                @(subiu ? "subiu" : "caiu")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>

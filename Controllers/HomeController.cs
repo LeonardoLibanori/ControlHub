@@ -90,12 +90,14 @@ namespace ControleEstoqueLoja.Controllers
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
 
-            // TEMP-COMMIT1: leitura do historico (item 2) fica no commit 2.
-            /* ViewData["HistoricoPrecos"] = _context.HistoricoPrecos
+            // Histórico de preço (item 2 da Fase A): mais recente primeiro. Vai no
+            // ViewData em vez de criar um ViewModel novo, para não mexer na
+            // assinatura que o resto do sistema já consome.
+            ViewData["HistoricoPrecos"] = _context.HistoricoPrecos
                 .Where(h => h.ProdutoId == produto.Id)
                 .OrderByDescending(h => h.DataAlteracao)
                 .ThenByDescending(h => h.Id)
-                .ToList(); */
+                .ToList();
 
             return View(produto);
         }
@@ -272,6 +274,13 @@ namespace ControleEstoqueLoja.Controllers
             // BUG-23 (XSS armazenado): mesmo saneamento do cadastro (item 1).
             produto.Nome = SanitizeTexto(nome) ?? produto.Nome;
 
+            // Preço anterior capturado ANTES de sobrescrever. A gravação do
+            // histórico em si fica no fim da action (logo antes do SaveChanges),
+            // DEPOIS de todas as validações: assim nenhum POST rejeitado —
+            // por preço, quantidade ou estoque mínimo — consegue deixar uma
+            // linha de histórico "fantasma".
+            var precoAnterior = produto.Preco;
+
             produto.Preco = precoFinal;
             produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : produto.Tipo;
             // BUG-07: Views/Home/Editar.cshtml NÃO tem o campo "quantidade". A action
@@ -312,8 +321,13 @@ namespace ControleEstoqueLoja.Controllers
                 produto.EstoqueMinimo = m;
             }
 
-            // TEMP-COMMIT1: gravacao do historico (item 2) fica no commit 2.
-            /* if (precoAnterior != precoFinal)
+            // Histórico de PREÇO (item 2 da Fase A): log informativo para o dono
+            // responder "isso antes custava quanto?". Fica AQUI, depois de todas
+            // as validações e imediatamente antes do SaveChanges, para que um
+            // POST rejeitado por qualquer validação acima nunca produza uma
+            // linha órfã. E só grava quando o valor muda DE VERDADE — salvar
+            // sem mexer no preço não suja o histórico.
+            if (precoAnterior != precoFinal)
             {
                 _context.HistoricoPrecos.Add(new HistoricoPreco
                 {
@@ -322,7 +336,7 @@ namespace ControleEstoqueLoja.Controllers
                     PrecoNovo = precoFinal,
                     DataAlteracao = DateTime.Now
                 });
-            } */
+            }
 
             _context.SaveChanges();
             return RedirectToAction("Index");

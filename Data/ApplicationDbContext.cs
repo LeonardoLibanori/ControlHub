@@ -25,6 +25,7 @@ namespace ControleEstoqueLoja.Data
         public DbSet<VendaItem> VendaItens { get; set; }
         public DbSet<CaixaMovimentacao> CaixaMovimentacoes { get; set; }
         public DbSet<Vendedor> Vendedores { get; set; } // Adicione esta linha
+        public DbSet<HistoricoPreco> HistoricoPrecos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -71,6 +72,21 @@ namespace ControleEstoqueLoja.Data
             modelBuilder.Entity<CaixaMovimentacao>().Property(m => m.Valor).HasConversion(centavos);
 
             modelBuilder.Entity<FluxoCaixa>().Property(f => f.Valor).HasConversion(centavos);
+
+            // Histórico de preço (item 2 da Fase A): os dois valores são dinheiro,
+            // então entram na mesma lista de colunas monetárias (INTEGER de centavos).
+            modelBuilder.Entity<HistoricoPreco>().Property(h => h.PrecoAnterior).HasConversion(centavos);
+            modelBuilder.Entity<HistoricoPreco>().Property(h => h.PrecoNovo).HasConversion(centavos);
+
+            // Um produto pode ter vários registros de preço. A FK segue o mesmo
+            // espírito do BUG-08 (RESTRICT): apagar um produto que já teve preço
+            // alterado não pode destruir o histórico — e o cadastro é sempre
+            // exclusão lógica (Ativo = false), então isso é só uma rede de segurança.
+            modelBuilder.Entity<HistoricoPreco>()
+                .HasOne(h => h.Produto)
+                .WithMany()
+                .HasForeignKey(h => h.ProdutoId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

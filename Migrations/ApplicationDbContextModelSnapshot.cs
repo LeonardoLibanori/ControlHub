@@ -42,7 +42,32 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CaixaMovimentacoes", (string)null);
+                    b.ToTable("CaixaMovimentacoes");
+                });
+
+            modelBuilder.Entity("ControleEstoqueLoja.Models.HistoricoPreco", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DataAlteracao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PrecoAnterior")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("PrecoNovo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProdutoId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.ToTable("HistoricoPrecos");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Produto", b =>
@@ -75,7 +100,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Produtos", (string)null);
+                    b.ToTable("Produtos");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Usuario", b =>
@@ -182,7 +207,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Vendas", (string)null);
+                    b.ToTable("Vendas");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.VendaItem", b =>
@@ -209,7 +234,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasIndex("VendaId");
 
-                    b.ToTable("VendaItens", (string)null);
+                    b.ToTable("VendaItens");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Vendedor", b =>
@@ -231,7 +256,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Vendedores", (string)null);
+                    b.ToTable("Vendedores");
                 });
 
             modelBuilder.Entity("FluxoCaixa", b =>
@@ -255,7 +280,7 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FluxoCaixa", (string)null);
+                    b.ToTable("FluxoCaixa");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -384,6 +409,17 @@ namespace ControleEstoqueLoja.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("ControleEstoqueLoja.Models.HistoricoPreco", b =>
+                {
+                    b.HasOne("ControleEstoqueLoja.Models.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Produto");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.VendaItem", b =>
