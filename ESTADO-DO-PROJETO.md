@@ -1,0 +1,380 @@
+# 📋 ESTADO DO PROJETO — ControleEstoqueLoja
+
+> Documento de passagem de bastão. Gerado em **02/10/2026**.
+> Objetivo: permitir que outra pessoa (ou outra IA) compreenda o sistema
+> **sem ver o código**, e decida os próximos passos com base em fatos.
+>
+> **Repositório:** https://github.com/LeonardoLibanori/ControleEstoqueLoja
+> **Branch:** `main` · **HEAD:** `3af1342` (= `origin/main`, árvore limpa)
+
+---
+
+## 1. O QUE O SISTEMA É
+
+Sistema de **controle de estoque e frente de caixa (PDV)** para um pequeno
+comércio. Substituiu um sistema específico de uma loja de cereais
+(granel, balança, preço "por 100 g") e foi generalizado.
+
+**Finalidade:** cadastrar produtos com controle de estoque, registrar vendas
+no caixa, controlar o caixa (abertura, suprimento, sangria, fechamento),
+imprimir cupom e gerar relatórios — com login e perfis de acesso.
+
+| Aspecto | Valor |
+|---|---|
+| Stack | ASP.NET Core MVC · .NET 10 · EF Core 10 · SQLite |
+| Banco | arquivo único `controleestoque.db` (SQLite) |
+| Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
+| Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
+| Build | **0 erros, 0 avisos** |
+| Testes | **133/133** (`tests.QA`, xUnit) |
+| Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
+
+---
+
+## 2. ARQUITETURA (mapa dos arquivos)
+
+```
+ControleEstoqueLoja/
+├── Program.cs                  config, Identity, policies, Migrate() no boot
+├── Models/
+│   ├── Produto.cs              nome, Tipo, Preco(centavos), Quantidade, Unidade,
+│   │                           EstoqueMinimo, Ativo, CodigoBarras, VendaItems
+│   ├── Venda.cs                TotalVenda, ValorRecebido, ValorTroco, MetodoPagamento,
+│   │                           CpfCliente, DataVenda, Itens
+│   ├── VendaItem.cs            ProdutoId, Quantidade, PrecoUnitario
+│   ├── Vendedor.cs             rótulo do cupom (NÃO é login)
+│   ├── HistoricoPreco.cs       log de preço (ProdutoId, Anterior, Novo, Data)
+│   ├── Usuario.cs              IdentityUser + NomeExibicao
+│   ├── CaixaMovimentacao.cs    Suprimento / Sangria
+│   └── FluxoCaixa.cs           tabela ÓRFÃ (não usada pelo código)
+├── Controllers/
+│   ├── HomeController.cs       CRUD produtos + busca + ajuste de estoque
+│   ├── CaixaController.cs      PDV, vendas, caixa, sangria, relatórios, CSV
+│   ├── AccountController.cs    Login / Logout / Setup / AcessoNegado
+│   └── UsuariosController.cs   criar e listar contas (só Dono)
+├── Security/
+│   ├── Policies.cs             11 policies nomeadas (fonte única de verdade)
+│   └── SeedPapel.cs            cria roles Dono e Operador no startup
+├── Data/
+│   ├── ApplicationDbContext.cs IdentityDbContext<Usuario> + 7 DbSets
+│   ├── ConversorCentavos.cs    decimal <-> long (centavos)
+│   └── ExportacaoCsv.cs        CSV (UTF-8 com BOM, anti CSV-injection)
+├── Migrations/                 8 migrations (seção 5)
+├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
+├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
+├── tests.QA/                   133 testes xUnit de caracterização
+├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
+├── setup.ps1                   prepara máquina NOVA (uma vez)
+├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
+├── SINCRONIZAR.md              guia de sincronização
+├── RELATORIO-SESSAO.md         relatório de 01/10
+└── controleestoque.db          banco real — VERSIONADO no Git
+```
+
+**Padrão:** MVC direto, sem camada de serviço/DTO. Os controllers falam
+direto com o `ApplicationDbContext`. A suíte é de caracterização contra
+controllers (não há testes de UI automatizados, exceto o script PowerShell
+`qa/http-authz.ps1`).
+
+---
+
+## 3. REGRAS DE NEGÓCIO EMBUTIDAS (não óbvias para quem lê o código)
+
+| # | Regra | Onde |
+|---|---|---|
+| 1 | **Preço é gravado em centavos (`INTEGER`)**, nunca decimal. `Preco = 499` = R$ 4,99 | `Data/ConversorCentavos.cs` |
+| 2 | **Quantidade NÃO é dinheiro**: continua em `TEXT` decimal. Comparações de estoque são feitas **em C#**, nunca em SQL (em TEXT a collation ordenaria "10" antes de "9") | `Produto.Quantidade` |
+| 3 | Produto **"Por peso"** tem preço **direto em R$/kg** (não há mais ×10 escondido) | `Models/Produto.cs` |
+| 4 | Granel legado = centavos **×10** na migration, uma vez, com guard anti-overflow | `Migrations/20261001120000` |
+| 5 | **Todo cálculo financeiro é do servidor.** Preço e troco enviados pelo navegador são ignorados | `CaixaController.FinalizarVenda` |
+| 6 | **Venda em dinheiro** exige `ValorRecebido >= Total`; troco recalculado no servidor | idem |
+| 7 | **Sangria não pode exceder o saldo** (considera só o método "Dinheiro") | `CaixaController` |
+| 8 | **Estoque não pode ficar negativo** em venda; ajuste recusa valor negativo | idem |
+| 9 | **Exclusão de produto é lógica** (`Ativo=false`); nunca apaga histórico | `HomeController` |
+| 10 | **Todo POST exige token anti-forgery**; JS manda header `X-CSRF-TOKEN` | `Program.cs`, `admin-caixa.js` |
+| 11 | **Estoque mínimo = 0 ou nulo ⇒ sem alerta** | `Produto.EstoqueAbaixoDoMinimo` |
+| 12 | **Histórico de preço só grava se o preço mudar de verdade** (após validações, antes do `SaveChanges`) | `HomeController.Editar` |
+| 13 | Sessão **12 h com SlidingExpiration**; antiforgery reemitido a cada ~30 min | `Program.cs` |
+
+---
+
+## 4. AUTENTICAÇÃO E AUTORIZAÇÃO
+
+**Papéis:** `Dono` (acesso total) e `Operador` (só PDV).
+⚠️ `Vendedor` (tabela) **não é login** — é o rótulo impresso no cupom.
+
+**11 policies** em `Security/Policies.cs`, registradas em `Program.cs`:
+
+| Policy | Quem acessa |
+|---|---|
+| `PodeOperarPDV` | Dono + Operador |
+| `PodeReimprimirCupom` | Dono + Operador |
+| `PodeRegistrarSuprimento` | Dono + Operador |
+| `PodeAcessarAdmin` | Dono + Operador |
+| `PodeRegistrarSangria` | **só Dono** |
+| `PodeVerFinanceiro` | **só Dono** |
+| `PodeFecharCaixa` | **só Dono** |
+| `PodeGerenciarEstoque` | **só Dono** |
+| `PodeGerenciarVendedores` | **só Dono** |
+| `PodeGerenciarUsuarios` | **só Dono** |
+| `PodeUsarIA` | **só Dono** — *declarada e registrada, ainda sem endpoint* (pronta para a camada de IA) |
+
+**Extensibilidade:** autorização é declarativa, sem `if (User.IsInRole(...))`
+espalhado no código. Policy nova = **uma linha** em `Program.cs` + **uma
+constante** em `Policies.cs`.
+
+**Liberado ao Operador:** PDV (Index, FinalizarVenda, BuscarPorCodigo,
+BuscarPorId, ValidarCupom, ObterUltimaVendaId, GerarCupom,
+ObterDetalhesVenda, ListarVendedores, RegistrarSuprimento) e a **leitura** do
+estoque (Index/Produto em Home).
+
+**1º Dono:** tela `/Account/Setup`, acessível **enquanto `UserManager.Users`
+estiver vazio**. Depois, só o Dono cria contas em `/Usuarios`.
+
+---
+
+## 5. MIGRATIONS (8 aplicadas)
+
+| Migration | O que faz |
+|---|---|
+| `20260220171624_Inicial_Nova` | schema base |
+| `20260226131051_AddValorRecebidoValorTroco` | campos de pagamento |
+| `20260928234611_ProdutoAtivo_ExclusaoLogica_VendaItemRestrict` | exclusão lógica (BUG-08) |
+| `20260929184131_Identity_Usuarios_Roles_Policies` | tabelas do Identity |
+| `20260930134556_DecimalParaCentavos` | dinheiro de TEXT → INTEGER de centavos (BUG-20) |
+| `20261001120000_ProdutoPrecoDiretoPorQuilo` | "por 100 g" → R$/kg (×10, com guard) |
+| `20261001201327_EstoqueMinimoProduto` | coluna `EstoqueMinimo` |
+| `20261001204929_HistoricoPrecoProduto` | tabela `HistoricoPrecos` |
+
+**Processo padrão para migration nova (adotado no projeto):**
+1. Gerar com `dotnet ef migrations add`
+2. **Mostrar o SQL e esperar aprovação**
+3. Testar em **réplica** (`%TEMP%`), nunca no banco real
+4. Backup + aplicar no banco real
+5. O `Down()` da `20261001120000` é **proibido** de propósito (irreversível)
+
+⚠️ **`Program.cs` chama `Database.Migrate()` no startup** — `dotnet run` aplica
+migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
+
+---
+
+## 6. FEATURES ENTREGUES
+
+| Feature | Commit | Como usar |
+|---|---|---|
+| Estoque mínimo + alerta visual | `989acca` | badge "⚠ ESTOQUE BAIXO" na listagem |
+| Histórico de preço por produto | `643fec4` | tela de histórico, mais recente primeiro |
+| Exportação CSV (Estoque e Histórico) | `0fde7a0` | botão "Exportar CSV", respeita o filtro da tela, UTF-8 com BOM |
+| Cupom do vendedor **opcional** | `a193d0d` | botão na etapa do CPF (antes travava a venda) |
+| Menu de perfil (ícone + "Olá") | `45f22ea` | dropdown com Usuários e Sair |
+| Unidade por produto / preço por kg | `f2940c4` | fim do "granel" hardcoded |
+| Tema corporativo escuro | `f2940c4` | `corporate-theme.css` (substituiu `site.css`) |
+| Autenticação + policies | `ae12be8`…`702ae85` | 2 papéis, 11 policies |
+| Sincronização entre máquinas | `a49c399` | `sincronizar.ps1` |
+
+---
+
+## 7. DECISÃO CRÍTICA RECENTE: banco versionado no Git
+
+Em **02/10/2026** o usuário decidiu que **casa e trabalho devem usar o mesmo
+banco** (antes cada máquina tinha o seu, e os logins eram diferentes).
+
+- `controleestoque.db` **passou a ser versionado** (`.gitignore` tem
+  `!controleestoque.db` no final, depois das regras `*.db` do template).
+- `.gitattributes` marca `*.db` como **binary** → o Git **recusa** fazer merge
+  de dois bancos (nunca gera um `.db` corrompido em silêncio).
+- `sincronizar.ps1` encapsula o ritual: `-Enviar` / `-Receber` / `-Status`.
+  Faz backup automático em `backups-banco/`, recusa rodar com o app aberto,
+  e nunca usa `--force`.
+- `SINCRONIZAR.md` documenta o passo a passo e o que fazer em caso de conflito.
+
+### 🔴 RISCO DE SEGURANÇA EM ABERTO
+
+**O repositório é PÚBLICO no GitHub.** Com o banco versionado, estão públicos:
+- os **hashes de senha** das contas (não reversíveis, mas sensíveis);
+- os **dados de venda** da loja;
+- o histórico do Git guarda versões antigas mesmo após apagar algo.
+
+**Recomendação pendente (não executada):** tornar o repositório privado.
+
+```powershell
+gh repo edit LeonardoLibanori/ControleEstoqueLoja --visibility private --accept-visibility-change-consequences
+```
+
+---
+
+## 8. BUGS CORRIGIDOS
+
+### Fase 1 — integridade financeira
+| ID | Bug | Correção |
+|---|---|---|
+| BUG-01 | Servidor confiava no preço enviado pelo cliente | passa a usar o preço do banco |
+| BUG-02 | Quantidade negativa somava estoque | rejeita `quantidade <= 0` |
+| BUG-03 | Preço de granel ×10 inconsistente entre tela e banco | fórmula única, `MidpointRounding.AwayFromZero` |
+| BUG-04 | Sinal da sangria invertido (saldo crescia ao retirar) | convenção única, saldo coerente |
+| BUG-25 | Troco confiado ao navegador | recalculado no servidor |
+| BUG-10/11/26 | `metodoPagamento` nulo, texto, notação científica, overflow → HTTP 500 | retorna 400 com JSON amigável |
+| BUG-12/13/14/20 | Sangria > saldo, valor ≤ 0, sem motivo, fechamento não-idempotente | todos bloqueados/validados |
+| — | Venda não era atômica | **transação única** (baixa + itens + venda) |
+
+### Fase 2 — segurança
+| ID | Bug | Correção |
+|---|---|---|
+| BUG-23 | XSS armazenado no nome do produto | `textContent` no JS + `SanitizeTexto` no servidor |
+| BUG-12/16/17 | Vazamento de `ex.Message` ao cliente | log no servidor + mensagem genérica |
+| BUG-14 | Ausência de CSRF | `[ValidateAntiForgeryToken]` + token no header |
+| BUG-13 | Rotas sem autenticação | Identity + 11 policies |
+
+### Dados
+| ID | Bug | Correção |
+|---|---|---|
+| BUG-20 | Dinheiro gravado como `TEXT` (ordenava errado) | `INTEGER` de centavos |
+| BUG-08 | Excluir produto apagava histórico de venda | exclusão lógica + FK `Restrict` |
+| BUG-19 | `EnsureCreated()` ignorava migrations | trocado por `Migrate()` |
+
+### Build/infra
+| Correção |
+|---|
+| Avisos CS86xx (anulabilidade) — assinaturas corrigidas na origem, **0 avisos** |
+| NU1903 (SQLitePCLRaw, CVE) — pin `2.1.12` (SQLite 3.53.3) |
+| `dotnet run` na raiz do workspace — `.slnx` na raiz + README corrigido |
+| Banco na fila do Git — `sincronizar.ps1` |
+
+### Visuais
+Modal de pagamento aparecia antes da hora; botão Buscar fora do padrão;
+Histórico estourando a página; overflow de 2px no mobile; tela de Usuários
+com aviso e botão redundantes.
+
+---
+
+## 9. COMO TRABALHAR NESTE PROJETO
+
+### Rodar
+```powershell
+cd ControleEstoqueLoja
+dotnet run                # http://localhost:5236
+```
+
+### Testar
+```powershell
+dotnet build                              # deve terminar com 0 aviso, 0 erro
+dotnet test tests.QA\tests.QA.csproj     # deve dar 133/133
+```
+
+### Trocar de máquina
+```powershell
+git clone <url>
+cd ControleEstoqueLoja
+.\sincronizar.ps1 -Receber
+dotnet run
+```
+
+### Antes de mudar qualquer coisa
+1. **Não** commitar o banco à mão — use `.\sincronizar.ps1 -Enviar`
+2. **Não** rodar `dotnet ef database update` no banco real sem backup
+3. **Não** usar `--force` no git
+4. Rodar a suíte completa antes de commitar (133 testes)
+5. Mudança de segurança → atualizar `qa/falhas.csv`
+
+### Regras do repositório
+- Uma feature por commit, mensagem clara em português
+- Migration: mostrar o SQL e esperar aprovação antes de aplicar
+- Não alterar testes para fazê-los passar; se o teste estiver errado, **parar e perguntar**
+- Documentação de QA em `qa/RELATORIO-QA.md` e `qa/falhas.csv`
+
+---
+
+## 10. LACUNAS CONHECIDAS (candidatas a próximos passos)
+
+### Funcional
+- **Não existe** histórico de movimentação de estoque (entrada/saída) — só o saldo atual
+- **Não existe** multi-loja / multi-empresa (banco único, sem `LojaId`)
+- **Sem** controle de fornecedor, compras ou nota fiscal
+- **Sem** controle de lote/validade (relevante para perecíveis)
+- **Sem** relatórios de margem de lucro / custo
+- **Sem** dashboard
+- Tabela `FluxoCaixa` é **órfã** (criada, nunca usada pelo código)
+- **`Produto.Quantidade` continua em TEXT** (limitação consciente: comparação numérica em SQL seria errada)
+- Gestão de usuários **não permite editar/desativar** conta existente (só criar e listar) — desativar Operador exigiria alteração direta no banco
+- **Não há** backup automático do banco
+
+### Técnico
+- **Concorrência**: a leitura de estoque não tem lock pessimista nem `ConcurrencyCheck`; a proteção atual vem da revalidação de estoque no servidor
+- **Sem testes de UI/integração** automatizados (só unitários de controller + um script PowerShell de HTTP)
+- **Sem ILogger** — erros vão para `Console.Error`
+- Sem observabilidade, métricas ou health check
+- **Sem CI/CD** (o `.github/workflows` chegou a ser criado, mas está vazio)
+
+### Produto
+- **Sem** conversão de caixa por hora/dia útil
+- **Sem** perfis além de Dono/Operador (ex.: gerente)
+- **Sem** recuperação de senha nem 2FA
+- **Sem** suporte a múltiplas lojas
+
+---
+
+## 11. PRÓXIMOS PASSOS — SUGESTÕES DO CONTEXTO
+
+A **Fase A de baixo risco** já está **100% concluída** (estoque mínimo,
+histórico de preço, CSV).
+
+### (a) Essenciais para portfólio
+1. **Concorrência real**: transação explícita + teste de duas vendas simultâneas
+2. **Histórico de movimentação** de estoque (kardex) — sem isso não há rastreabilidade
+3. **Testes de integração HTTP** no CI (hoje é script manual)
+4. **CI/CD**: build + testes automatizados a cada push
+
+### (b) Essenciais para vender
+5. **Gestão de usuários completa**: editar/desativar, reset de senha
+6. **Backup automático** do banco (diário, com rotação)
+7. **Relatórios financeiros**: fechamento por período, margem, custo
+8. **Controle de fornecedor e compras**
+9. **Perfis mais finos** (gerente, caixa) além de Dono/Operador
+10. **Recuperação de senha** e 2FA
+
+### (c) Integrações com IA
+11. **Previsão de demanda / sugestão de reposição** (usa estoque mínimo + histórico)
+12. **Leitura de nota fiscal (OCR + LLM)** para entrada de produtos
+13. **Copiloto de consulta** sobre financeiro/estoque — a policy `PodeUsarIA`
+    **já está criada e registrada, sem endpoint**: pronta para ser usada
+
+---
+
+## 12. COMO VERIFICAR TUDO QUE ESTÁ AFIRMADO AQUI
+
+```powershell
+# build limpo
+dotnet build                              # 0 erros, 0 avisos
+
+# suíte completa
+dotnet test tests.QA\tests.QA.csproj     # 133/133
+
+# migrations aplicadas
+dotnet ef migrations list
+
+# estado da sincronização
+.\sincronizar.ps1 -Status
+
+# auditoria de segurança (3 perfis: anônimo / Operador / Dono)
+.\qa\http-authz.ps1                      # 115 checagens
+```
+
+---
+
+## 13. HISTÓRICO DE COMMITS (61 no total)
+
+| Data | Commits | Tema |
+|---|---|---|
+| 22–26/02 | `c48acf3`…`cd74e9d` | projeto original (sistema de cereais) |
+| 28/09 | `42e87d1`…`7a76e3b` | recriação da suíte de QA, **Fase 1** (integridade financeira), BUG-08/19 |
+| 29/09 | `4b06257`…`d71c2b2` | segurança (XSS, `ex.Message`, CSRF), **Identity + policies** (BUG-13) |
+| 30/09 | `fd30124`…`7d83fb9` | BUG-20 (centavos), `setup.ps1`, unidade/preço por kg, tema corporativo |
+| 01/10 | `c1f3f1b`…`62bbfa4` | menu de perfil, cupom opcional, **Fase A** (estoque mínimo, histórico de preço) |
+| 02/10 | `0fde7a0`…`3af1342` | **exportação CSV**, **banco versionado + `sincronizar.ps1`** |
+
+---
+
+*Fim do relatório. Gerado em 02/10/2026 a partir de `main@3af1342`.*
+
+
+
