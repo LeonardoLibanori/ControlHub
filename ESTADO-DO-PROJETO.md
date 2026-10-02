@@ -5,7 +5,7 @@
 > **sem ver o código**, e decida os próximos passos com base em fatos.
 >
 > **Repositório:** https://github.com/LeonardoLibanori/ControleEstoqueLoja
-> **Branch:** `main` · **HEAD:** `3af1342` (= `origin/main`, árvore limpa)
+> **Branch:** `main` · **HEAD:** `57b51a5` (= `origin/main`, árvore limpa)
 
 ---
 
@@ -245,6 +245,11 @@ Modal de pagamento aparecia antes da hora; botão Buscar fora do padrão;
 Histórico estourando a página; overflow de 2px no mobile; tela de Usuários
 com aviso e botão redundantes.
 
+### Rótulo enganoso
+| ID | Bug | Correção |
+|---|---|---|
+| — | No Histórico, o cabeçalho da 2ª coluna dizia **"Qtd. Itens"** mas a célula mostra `@venda.DataVenda` | cabeçalho corrigido para "Data" (`57b51a5`). Não era só enfeite: quem fecha o dia lia a coluna achando que era quantidade e conferia um número que nunca bate com o total |
+
 ---
 
 ## 9. COMO TRABALHAR NESTE PROJETO
@@ -262,19 +267,43 @@ dotnet test tests.QA\tests.QA.csproj     # deve dar 133/133
 ```
 
 ### Trocar de máquina
+
+O banco está versionado, então `push` e `pull` já levam **código e banco**.
+Sempre com a aplicação **fechada**:
+
 ```powershell
-git clone <url>
+# chegou na máquina
+git pull
+dotnet run
+
+# vai trocar de máquina, depois de mexer
+git add -A ; git commit -m "..." ; git push
+```
+
+Fechar o sistema antes do `pull` não é formalidade: com o app aberto o
+`controleestoque.db` fica travado e o Git não consegue trocar o arquivo.
+
+`.\sincronizar.ps1 -Receber` / `-Enviar` continuam existindo e são úteis
+quando se quer o ritual completo (backup do banco em `backups-banco/` e
+aplicação das migrations pendentes), mas **não são obrigatórios** para
+atualizar o projeto entre as duas máquinas.
+
+Primeira vez numa máquina nova:
+```powershell
+git clone https://github.com/LeonardoLibanori/ControleEstoqueLoja.git
 cd ControleEstoqueLoja
-.\sincronizar.ps1 -Receber
 dotnet run
 ```
 
 ### Antes de mudar qualquer coisa
-1. **Não** commitar o banco à mão — use `.\sincronizar.ps1 -Enviar`
+1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
 4. Rodar a suíte completa antes de commitar (133 testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
+6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
+   versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
+   projeto já cita
 
 ### Regras do repositório
 - Uma feature por commit, mensagem clara em português
@@ -296,7 +325,9 @@ dotnet run
 - Tabela `FluxoCaixa` é **órfã** (criada, nunca usada pelo código)
 - **`Produto.Quantidade` continua em TEXT** (limitação consciente: comparação numérica em SQL seria errada)
 - Gestão de usuários **não permite editar/desativar** conta existente (só criar e listar) — desativar Operador exigiria alteração direta no banco
-- **Não há** backup automático do banco
+- **Backup do banco só acontece na troca de máquina** (o `sincronizar.ps1` grava
+  uma cópia em `backups-banco/` quando roda). **Não há** backup automático
+  diário com rotação — se ninguém sincronizar, o GitHub é a única cópia
 
 ### Técnico
 - **Concorrência**: a leitura de estoque não tem lock pessimista nem `ConcurrencyCheck`; a proteção atual vem da revalidação de estoque no servidor
@@ -361,7 +392,7 @@ dotnet ef migrations list
 
 ---
 
-## 13. HISTÓRICO DE COMMITS (61 no total)
+## 13. HISTÓRICO DE COMMITS (63 no total)
 
 | Data | Commits | Tema |
 |---|---|---|
@@ -370,11 +401,12 @@ dotnet ef migrations list
 | 29/09 | `4b06257`…`d71c2b2` | segurança (XSS, `ex.Message`, CSRF), **Identity + policies** (BUG-13) |
 | 30/09 | `fd30124`…`7d83fb9` | BUG-20 (centavos), `setup.ps1`, unidade/preço por kg, tema corporativo |
 | 01/10 | `c1f3f1b`…`62bbfa4` | menu de perfil, cupom opcional, **Fase A** (estoque mínimo, histórico de preço) |
-| 02/10 | `0fde7a0`…`3af1342` | **exportação CSV**, **banco versionado + `sincronizar.ps1`** |
+| 02/10 | `0fde7a0`…`2c30b34` | **exportação CSV**, **banco versionado + `sincronizar.ps1`**, doc de passagem de bastão |
+| 02/10 | `57b51a5` | correção do cabeçalho do Histórico ("Qtd. Itens" → "Data") |
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026 a partir de `main@3af1342`.*
+*Fim do relatório. Gerado em 02/10/2026, atualizado a partir de `main@57b51a5`.*
 
 
 
