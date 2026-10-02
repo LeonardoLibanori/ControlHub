@@ -5,7 +5,7 @@
 > **sem ver o código**, e decida os próximos passos com base em fatos.
 >
 > **Repositório:** https://github.com/LeonardoLibanori/ControleEstoqueLoja
-> **Branch:** `main` · **HEAD:** `57b51a5` (= `origin/main`, árvore limpa)
+> **Branch:** `main` · **HEAD:** `bfd9d43` (= `origin/main`, árvore limpa)
 
 ---
 
@@ -188,18 +188,79 @@ banco** (antes cada máquina tinha o seu, e os logins eram diferentes).
   e nunca usa `--force`.
 - `SINCRONIZAR.md` documenta o passo a passo e o que fazer em caso de conflito.
 
-### 🔴 RISCO DE SEGURANÇA EM ABERTO
+### 🔒 Visibilidade do repositório — PRIVADO (verificado em 02/10/2026)
 
-**O repositório é PÚBLICO no GitHub.** Com o banco versionado, estão públicos:
-- os **hashes de senha** das contas (não reversíveis, mas sensíveis);
-- os **dados de venda** da loja;
-- o histórico do Git guarda versões antigas mesmo após apagar algo.
+**O repositório é PRIVADO.** Isto não é recomendação pendente: é fato
+verificado. (O bloco anterior afirmava que ele era público e recomendava
+torná-lo privado — estava errado.)
 
-**Recomendação pendente (não executada):** tornar o repositório privado.
+Consulta à API do GitHub em **02/10/2026**:
 
-```powershell
-gh repo edit LeonardoLibanori/ControleEstoqueLoja --visibility private --accept-visibility-change-consequences
+| Requisição | Resultado |
+|---|---|
+| `GET /repos/LeonardoLibanori/ControleEstoqueLoja` **sem credencial** | `404 Not Found` |
+| mesmo `GET` **com a credencial do dono** | `200` · `"visibility": "private"` · `"private": true` |
+| `raw.githubusercontent.com/.../main/README.md` sem credencial | `404` |
+| página `github.com/LeonardoLibanori/ControleEstoqueLoja` sem credencial | `404` |
+
+⚠️ O `404` anônimo **sozinho não prova nada**: o GitHub devolve `404` (e não
+`403`) tanto para repositório privado quanto para inexistente, exatamente para
+não revelar a existência de repositórios privados. A prova é o **`200`
+autenticado**. O token não foi impresso em momento algum da verificação.
+
+**O banco entrou no histórico num único commit:**
+
+```text
+$ git log --oneline --follow -- controleestoque.db
+a49c399 chore(banco): sincroniza dados e estoque entre maquinas
 ```
+
+Só isso. E `controleestoque.db` não foi alterado em nenhum commit posterior —
+ou seja, **não existem versões antigas do banco espalhadas pelo histórico**,
+com dados diferentes dos atuais.
+
+Com o repositório privado, deixam de estar expostos:
+
+- os **hashes de senha** das contas;
+- os **dados de venda** da loja;
+- as versões do banco guardadas pelo histórico do Git.
+
+### ❓ Pendência: o repositório já esteve público antes de 02/10/2026?
+
+A API do GitHub **não expõe histórico de visibilidade**. A única fonte é o
+**Security log** da conta. Campo **a confirmar**:
+
+| Pergunta | Status |
+|---|---|
+| É privado hoje? | ✅ **Sim** — verificado em 02/10/2026 |
+| Tem forks / watchers? | 0 / 0 — tranqüilizador, mas **não é prova** (scrapers e o GitHub Archive não geram forks nem watchers) |
+| **Já esteve público com o banco dentro?** | ❓ **A CONFIRMAR** |
+
+**Como verificar:** foto de perfil → **Settings** → na seção *Archives* da
+barra lateral → **Security log**. Filtrar por
+`repo:LeonardoLibanori/ControleEstoqueLoja`, olhar as entradas da categoria
+`repo` (os qualificadores `operation:create` / `operation:access` /
+`operation:modify` ajudam) e ler o campo **`visibility`** (`public` /
+`private`). A tela também exporta JSON ou CSV.
+
+⏳ **Prazo real — o log guarda apenas 90 dias.** Em 02/10/2026 ele alcança
+somente até ~**04/07/2026**:
+
+- ✅ **Cobre a data que importa**: `a49c399`, quando o banco entrou no
+  histórico (02/10/2026);
+- ❌ **Não cobre** a criação do repositório (22/02/2026) — esse trecho já
+  expirou e não volta mais;
+- ⚠️ **A janela está andando**: depois de ~**31/12/2026** o evento de
+  02/10/2026 sai do log e a pergunta fica sem resposta para sempre.
+
+**Por que importa:** o banco guarda **hashes de senha** das contas e os
+**dados de venda** da loja. Se o repositório esteve público em qualquer
+momento a partir de `a49c399`, trate esse conteúdo como potencialmente
+exposto — mesmo que tenha sido tornado privado depois.
+
+**Se a verificação indicar que esteve público:** trocar as senhas das contas
+do sistema. Se indicar que **nunca** foi público, este bloco inteiro pode
+encolher para uma linha de nota.
 
 ---
 
@@ -406,7 +467,7 @@ dotnet ef migrations list
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado a partir de `main@57b51a5`.*
+*Fim do relatório. Gerado em 02/10/2026, atualizado a partir de `main@bfd9d43`.*
 
 
 
