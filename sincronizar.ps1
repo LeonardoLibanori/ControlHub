@@ -95,13 +95,29 @@ function Erro  { param([string]$M) Write-Host "  $M" -ForegroundColor Red }
 function Invoke-Git {
     param([string[]]$Argumentos, [string]$Diretorio)
 
-    $saida = & git @Argumentos 2>&1
-    $codigo = $LASTEXITCODE
+    # O Git escreve as mensagens de progresso no STDERR ("From https://...",
+    # "Already up to date") e devolve 0 no sucesso. Se usarmos
+    # $ErrorActionPreference='Stop' o PowerShell transforma esse stderr em
+    # excecao TERMINANDO o script - foi o que aconteceu de primeira.
+    # Solucao: o Preference vai para 'Continue' dentro da chamada, e quem
+    # decide se falhou e o codigo de saida do git (LastExitCode), nunca o
+    # texto escrito.
+    $antigo = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $saida = & git @Argumentos 2>&1
+        $codigo = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $antigo
+    }
+
+    $texto = ($saida | ForEach-Object { $_.ToString() }) -join "`n"
+
     if ($codigo -ne 0) {
-        $texto = ($saida | Out-String).Trim()
         throw "git $($Argumentos -join ' ') falhou (codigo $codigo):`n$texto"
     }
-    return @($saida)
+    return $texto
 }
 
 # ---------------------------------------------------------- guarda: app viva ---
@@ -140,9 +156,9 @@ function FazerBackup {
 function MostrarStatus {
     Passo 'Situacao do repositorio'
     try {
-        $branch = (Invoke-Git @('rev-parse', '--abbrev-ref', 'HEAD')).Trim()
+        $branch = Invoke-Git @('rev-parse', '--abbrev-ref', 'HEAD')
         Info "branch: $branch"
-        $hashLocal = (Invoke-Git @('rev-parse', 'HEAD')).Trim()
+        $hashLocal = Invoke-Git @('rev-parse', 'HEAD')
         Info "HEAD local: $($hashLocal.Substring(0, 7))"
     }
     catch {
@@ -151,9 +167,9 @@ function MostrarStatus {
     }
 
     try {
-        $remoto = (Invoke-Git @('rev-parse', 'origin/main')).Trim()
+        $remoto = Invoke-Git @('rev-parse', 'origin/main')
         $dentro = Invoke-Git @('rev-list', '--left-right', '--count', 'origin/main...HEAD')
-        $partes = (($dentro | Select-Object -Last 1) -split '\s+')
+        $partes = ($dentro -split '\s+' | Where-Object { $_ -ne '' })
         $atras = [int]$partes[0]
         $frente = [int]$partes[1]
 
@@ -199,7 +215,7 @@ function MostrarStatus {
         }
 
         $sujo = Invoke-Git @('status', '--porcelain', 'controleestoque.db')
-        if ($sujo) { Info "pendente no git: $($sujo -join ', ')" }
+        if ($sujo) { Info "pendente no git: $($sujo -replace "`n", ', ')" }
     }
     else {
         Aviso 'controleestoque.db NAO existe nesta maquina'
@@ -248,7 +264,7 @@ if ($Receber) {
     Passo 'git pull'
     try {
         $saida = Invoke-Git @('pull', '--ff-only', 'origin', 'main')
-        $saida | Select-Object -Last 3 | ForEach-Object { Info $_ }
+        $saida.Split("`n") | Select-Object -Last 3 | ForEach-Object { Info $_ }
         Ok 'pull concluido sem conflito'
     }
     catch {
@@ -260,13 +276,27 @@ if ($Receber) {
         exit 1
     }
 
-    Passo 'Migrations pendentes'
-    $saidaMig = (& dotnet ef migrations list --no-build 2>&1 | Out-String)
+    Passo 'Ferramentas e migrations'
+    # Numa maquina recien-clonada faltam duas coisas: o manifesto de
+    # ferramentas (dotnet-ef vive no dotnet-tools.json versionado) e o
+    # project.assets.json do restore. Sem eles o "dotnet ef" aborta com
+    # NETSDK1004. O restore e rapido e so acontece quando falta.
+    if (-not (Test-Path (Join-Path $raiz 'obj\project.assets.json'))) {
+        Info 'projeto ainda nao restaurado nesta maquina - restaurando...'
+        & dotnet tool restore 2>&1 | Out-Null
+        & dotnet restore 2>&1 | Select-Object -Last 1 | ForEach-Object { Info $_ }
+        Ok 'restore concluido'
+    }
+    if (-not (Test-Path (Join-Path $env:USERPROFILE '.nuget\packages\dotnet-ef'))) {
+        & dotnet tool restore 2>&1 | Out-Null
+    }
+
+    $saidaMig = (& dotnet ef migrations list 2>&1 | Out-String)
     $temPendente = @($saidaMig -split "`r?`n" | Where-Object { $_ -match '^\d{14,}.*Pendente' })
     if ($temPendente.Count -gt 0) {
         $temPendente | ForEach-Object { Info $_.Trim() }
         Info 'aplicando (o app faria o mesmo ao subir, mas aqui fica registrado)...'
-        (& dotnet ef database update --no-build 2>&1 | Select-Object -Last 2) | ForEach-Object { Info $_ }
+        (& dotnet ef database update 2>&1 | Select-Object -Last 2) | ForEach-Object { Info $_ }
         Ok 'migrations aplicadas'
     }
     else {
@@ -291,7 +321,7 @@ if ($Enviar) {
     Passo 'git add'
     Invoke-Git @('add', '-A') | Out-Null
     $pendentes = Invoke-Git @('status', '--porcelain')
-    $reais = @($pendentes | Where-Object { $_ -notmatch '\.db-(wal|shm)$' })
+    $reais = @($pendentes -split "`n" | Where-Object { $_ -ne '' -and $_ -notmatch '\.db-(wal|shm)$' })
 
     if ($reais.Count -eq 0) {
         Ok 'nada para enviar - as maquinas ja estao iguais'
@@ -311,12 +341,12 @@ if ($Enviar) {
     }
 
     Passo 'git commit'
-    (Invoke-Git @('commit', '-m', $Mensagem) | Select-Object -Last 2) | ForEach-Object { Info $_ }
+    (Invoke-Git @('commit', '-m', $Mensagem)).Split("`n") | Select-Object -Last 2 | ForEach-Object { Info $_ }
     Ok "commit: $Mensagem"
 
     Passo 'git push'
     try {
-        (Invoke-Git @('push', 'origin', 'main') | Select-Object -Last 3) | ForEach-Object { Info $_ }
+        (Invoke-Git @('push', 'origin', 'main')).Split("`n") | Select-Object -Last 3 | ForEach-Object { Info $_ }
         Ok 'push concluido'
     }
     catch {
