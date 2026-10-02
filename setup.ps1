@@ -34,8 +34,11 @@
     Requer ExecutionPolicy Bypass:
         powershell -ExecutionPolicy Bypass -File .\setup.ps1
 
-    O banco de trabalho (controleestoque.db) NAO e versionado: ele e local de
-    cada maquina e esta no .gitignore.
+    O banco de trabalho (controleestoque.db) E VERSIONADO no Git (decisao de
+    02/10/2026) para que as duas maquinas tenham os mesmos logins e dados. Por
+    ser binario, ele nao pode ser mergeado: use .\sincronizar.ps1 -Enviar /
+    -Receber no dia a dia (ver SINCRONIZAR.md). Este script cuida so da
+    preparacao inicial da maquina.
 
 .EXAMPLE
     Maquina nova, so para desenvolver/testar:

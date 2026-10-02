@@ -24,10 +24,14 @@ Acesse o sistema em produ├º├úo: **[http://controle-estoque-loja.runasp.net
 
 ## 🚪 Rodando pela primeira vez
 
-O repositório **não versiona o banco de dados real** (`controleestoque.db`): ele é ignorado
-pelo Git, porque contém dados de operação e só faz sentido na máquina da loja.
+O banco de dados **é versionado no Git** (decisão de 02/10/2026): assim as duas máquinas
+(casa e trabalho) usam **o mesmo banco** e portanto **os mesmos logins**.
 
-Para começar rápido, copie o banco de exemplo:
+> 📖 **Leia [SINCRONIZAR.md](SINCRONIZAR.md)** — é o guia do dia a dia:
+> `.\sincronizar.ps1 -Enviar` antes de trocar de máquina, `-Receber` ao chegar.
+> O `controleestoque.exemplo.db` continua no repositório como template para começar do zero.
+
+Para começar do zero, copie o banco de exemplo:
 
 ```powershell
 # dentro da pasta ControleEstoqueLoja
@@ -149,15 +153,18 @@ dotnet ef migrations list          # ver o que falta
 
 ### Depois do setup
 
-O dia a dia passa a ser só sincronizar:
+O dia a dia passa a ser só sincronizar, com a aplicação **fechada**:
 
 ```powershell
-git pull origin main      # buscar
-git add -A; git commit -m "..."; git push origin main   # enviar
+.\sincronizar.ps1 -Enviar      # antes de trocar de máquina
+.\sincronizar.ps1 -Receber     # ao chegar na outra máquina
+.\sincronizar.ps1 -Status      # só diagnóstico
 ```
 
-O `controleestoque.db` é ignorado pelo Git, então ele **nunca entra no diff** e nunca causa
-conflito de merge entre máquinas. É por isso que ele é local de cada máquina.
+O `controleestoque.db` **é versionado**, então os logins e os dados são os mesmos nas
+duas máquinas. Por ser binário, ele **não pode ser mergeado**: se as duas máquinas
+gravarem nele sem sincronizar, o Git recusa e o script explica como resolver — nunca
+combina bytes por conta própria. Detalhes em [SINCRONIZAR.md](SINCRONIZAR.md).
 
 ---
 

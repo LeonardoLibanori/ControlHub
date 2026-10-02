@@ -407,3 +407,23 @@ FodyWeavers.xsd
 # `copy controleestoque.exemplo.db controleestoque.db`, um -wal desacompanhado
 # ao lado de um .db copiado e vetor de corrupcao. Ficam entao cobertos pelas
 # regras *.db-shm / *.db-wal do template do Visual Studio acima.
+# ---------------------------------------------------------------------------
+# Banco REAL: AGORA VERSIONADO (decisao de 02/10/2026).
+# ---------------------------------------------------------------------------
+# O objetivo e ter o MESMO banco (e portanto os MESMOS logins) na maquina de
+# casa e na do trabalho, com o dia a dia sendo so `git pull` / `git push`.
+# A regra `!controleestoque.db` precisa vir DEPOIS das regras *.db do template
+# (a ultima regra que casa com o caminho e a que vale) - por isso esta secao
+# fica no fim do arquivo.
+# LEIA SINCRONIZAR.md antes do primeiro push: explica o porque, o fluxo certo
+# e o que fazer quando as duas maquinas mexerem no mesmo banco.
+!controleestoque.db
+# Os sidecars de runtime NAO sao versionados: sao artefato temporario de quem
+# ---------------------------------------------------------------------------
+# Backups locais do banco (criados por sincronizar.ps1 antes de cada pull/push).
+# Ficam so na maquina: sao copias de trabalho, nao pertencem ao repositorio.
+# ---------------------------------------------------------------------------
+backups-banco/
+
+# abriu o arquivo e nao fazem sentido longe da maquina. O .gitattributes marca
+# os dois como binarios; aqui eles ficam de fora do repositorio de proposito.

@@ -45,6 +45,16 @@
 #*.gif   binary
 
 ###############################################################################
+# SQLite: arquivo BINARIO de verdade.
+# Sem esta linha o Git tenta decodificar o .db como texto para gerar diff e, pior,
+# para fazer merge: dois commits que gravaram o mesmo banco em maquinas
+# diferentes seriam combinados byte a byte, produzindo um .db corrompido em
+# silencio. Com "binary", o Git recusa o merge e exige resolucao manual -
+# que e exatamente o comportamento seguro aqui (ver SINCRONIZAR.md).
+*.db binary
+*.db-shm binary
+*.db-wal binary
+
 # diff behavior for common document formats
 # 
 # Convert binary document formats to text before diffing them. This feature
