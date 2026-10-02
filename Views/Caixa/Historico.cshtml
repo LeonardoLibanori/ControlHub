@@ -1,5 +1,17 @@
 ﻿@model IEnumerable<ControleEstoqueLoja.Models.Venda>
 
+@{
+    // FASE A - ITEM 3: a data REALMENTE filtrada nesta tela. O campo do form
+    // abre em "hoje", mas depois de buscar outro dia e a querystring que manda:
+    // sem ler daqui, o botao Exportar baixaria sempre o dia de hoje enquanto a
+    // tela mostra outro - que e exatamente o tipo de divergencia que faz o dono
+    // fechar o mes pelo arquivo errado. DataTime.TryParse em vez de converter
+    // direto porque a querystring chega como string e pode vir invalida.
+    var dataTela = DateTime.Today;
+    var dataBruta = Context.Request.Query["data"].ToString();
+    if (DateTime.TryParse(dataBruta, out var dataLida)) dataTela = dataLida;
+}
+
 <div class="container history-summary py-4">
     <div class="row g-3 align-items-stretch mb-4">
         <div class="col-12 col-lg-5">
@@ -46,6 +58,19 @@
         <button type="submit" class="btn btn-primary text-uppercase">
             <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
         </button>
+
+        @* FASE A - ITEM 3: exporta exatamente o dia que o filtro mostra
+           (dataTela, lido da querystring acima - e nao "hoje"). O parametro vai
+           em asp-route-data porque este nao e o form de busca: e um link de
+           download, e mandar o input name="data" junto faria o Exportar
+           disparar uma NOVA busca em vez de baixar o arquivo. *@
+        <a asp-controller="Caixa"
+           asp-action="ExportarHistoricoCsv"
+           asp-route-data="@dataTela.ToString("yyyy-MM-dd")"
+           class="btn-exportar"
+           title="Baixar as vendas do dia filtrado em CSV">
+            <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>Exportar CSV
+        </a>
     </form>
 </div>
 

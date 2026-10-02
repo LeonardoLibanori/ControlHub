@@ -447,6 +447,81 @@ namespace ControleEstoqueLoja.Controllers
         }
         // Local: CaixaController.cs
 
+        /// <summary>
+        /// FASE A - ITEM 3: exporta o historico de vendas em CSV.
+        ///
+        /// REGRA DE OURO: respeita o MESMO filtro de dia da Historico. Se o campo
+        /// de data esta em 10/02/2026, o CSV tem SÓ esse dia - exportar "tudo"
+        /// enquanto a tela mostra um dia so seria o tipo de erro que faz o dono
+        /// fechar o mes com o numero errado.
+        ///
+        /// NAO e dado novo: nao grava, nao recalcula total, nao mexe no caixa.
+        /// Por isso nao cria migration.
+        ///
+        /// O TotalVenda vai como esta gravado (vindo do ConversorCentavos, em
+        /// centavos), sem recalcular a partir dos itens: se someday algum dia o
+        /// total da tela for ajustado a mao, o CSV continua mostrando o que o
+        /// caixa realmente fechou.
+        ///
+        /// Same policy da Historico (PodeVerFinanceiro) e pelo mesmo motivo:
+        /// exportacao de venda e dado financeiro tanto quanto a tela.
+        /// </summary>
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
+        public async Task<IActionResult> ExportarHistoricoCsv(DateTime? data)
+        {
+            // Mesmo filtro da Historico, para export e tela nunca divergirem.
+            var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
+
+            if (data.HasValue)
+            {
+                query = query.Where(v => v.DataVenda.Date == data.Value.Date);
+            }
+
+            var vendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();
+
+            var cabecalhos = new[]
+            {
+                "Venda", "Data", "Itens", "Quantidade Total", "Metodo Pagamento",
+                "Vendedor (Cupom)", "Valor Recebido", "Troco", "Total (R$)"
+            };
+
+            var linhas = vendas
+                .Select(v => (IReadOnlyList<string>)new[]
+                {
+                    v.Id.ToString(CultureInfo.InvariantCulture),
+                    ExportacaoCsv.DataHora(v.DataVenda),
+
+                    // Quantos itens a venda levou e o total de quantidade,
+                    // como NUMEROS (e nao como lista de nomes): sao as duas
+                    // colunas que o dono usa para conferir a venda. O detalhe
+                    // item a item fica com o nome em outro relatorio - aqui ele
+                    // viraria um texto dentro da celula, que o Excel nao
+                    // consegue somar nem filtrar.
+                    v.Itens.Count.ToString(CultureInfo.InvariantCulture),
+                    ExportacaoCsv.Quantidade(v.Itens.Sum(i => i.Quantidade)),
+
+                    // Texto do PDV (metodo e cupom) vem de campo livre do
+                    // usuario: passa pelo escudo de CSV injection.
+                    ExportacaoCsv.EscaparTexto(v.MetodoPagamento),
+                    ExportacaoCsv.EscaparTexto(v.CodigoVendedor),
+
+                    ExportacaoCsv.Dinheiro(v.ValorRecebido),
+                    ExportacaoCsv.Dinheiro(v.ValorTroco),
+                    ExportacaoCsv.Dinheiro(v.TotalVenda)
+                })
+                .ToList();
+
+            // No nome do arquivo o dia vai junto: quem baixa cinco exportacoes
+            // nao precisa abrir cada uma para saber de que dia era.
+            var sufixo = data.HasValue ? data.Value.ToString("yyyy-MM-dd") : "completo";
+            var nomeArquivo = $"vendas-{sufixo}.csv";
+
+            // Content-Disposition e o que faz o navegador BAIXAR em vez de
+            // tentar abrir o csv na propria aba.
+            var arquivo = ExportacaoCsv.Montar(cabecalhos, linhas);
+            return File(arquivo, "text/csv; charset=utf-8", nomeArquivo);
+        }
+
         [HttpGet]
         [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> RelatorioDados()

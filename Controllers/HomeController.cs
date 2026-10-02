@@ -36,6 +36,74 @@ namespace ControleEstoqueLoja.Controllers
             return View(lista);
         }
 
+        /// <summary>
+        /// FASE A - ITEM 3: exporta o estoque em CSV para o dono abrir no Excel.
+        ///
+        /// REGRA DE OURO: a exportacao respeita o MESMO filtro de busca da Index.
+        /// Se a tela mostra 3 produtos, o CSV tem exatamente esses 3 - o usuario
+        /// nunca recebe uma planilha inteira pensando que exportou o que viu.
+        ///
+        /// NAO e dado novo, so uma visao: nao grava nada, nao calcula nada e nao
+        /// mexe no caixa. Por isso nao cria migration.
+        ///
+        /// O EstoqueMinimo entra junto (a coluna que avisa de reposicao, do item
+        /// 1) e o sinal de estoque baixo vai como SIM/NAO para o dono conseguir
+        /// filtrar no Excel sem recalcular nada.
+        /// </summary>
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
+        public IActionResult ExportarEstoqueCsv(string? busca)
+        {
+            // Mesma consulta da Index, com o mesmo filtro: um unico lugar onde
+            // nasce a lista evita o "a tela mudou mas o CSV nao" de hoje.
+            var lista = _context.Produtos.Where(p => p.Ativo).ToList();
+
+            if (!string.IsNullOrWhiteSpace(busca))
+            {
+                var termo = busca.ToLower();
+                lista = lista.Where(p => p.Nome.ToLower().Contains(termo)).ToList();
+            }
+
+            var cabecalhos = new[]
+            {
+                "Produto", "Tipo", "Preco (R$)", "Estoque", "Estoque Minimo", "Estoque Baixo"
+            };
+
+            var linhas = lista
+                // Ordem alfabetica e estavel: dois exports da mesma tela saem
+                // iguais, o que ajuda quando o dono compara dois arquivos.
+                .OrderBy(p => p.Nome)
+                .Select(p => (IReadOnlyList<string>)new[]
+                {
+                    // Texto do cadastro passa pelo escudo de CSV injection.
+                    ExportacaoCsv.EscaparTexto(p.Nome),
+                    p.Tipo.ToString(),
+                    ExportacaoCsv.Dinheiro(p.Preco),
+                    ExportacaoCsv.Quantidade(p.Quantidade),
+                    p.EstoqueMinimo.HasValue
+                        ? ExportacaoCsv.Quantidade(p.EstoqueMinimo.Value)
+                        : string.Empty,
+                    p.EstoqueAbaixoDoMinimo ? "SIM" : "NAO"
+                })
+                .ToList();
+
+            return ArquivoCsv(ExportacaoCsv.Montar(cabecalhos, linhas), $"estoque-{DateTime.Today:yyyy-MM-dd}.csv");
+        }
+
+        /// <summary>
+        /// Entrega os bytes como download com o nome de arquivo pedido.
+        ///
+        /// Centralizado aqui porque as duas exportacoes (estoque e historico)
+        /// precisam do mesmo content-type e do mesmo Content-Disposition; e
+        /// Content-Disposition e o que faz o navegador BAIXAR em vez de
+        /// TENTAR ABRIR o csv na tela.
+        /// </summary>
+        private FileContentResult ArquivoCsv(byte[] conteudo, string nomeArquivo)
+        {
+            // "; charset=utf-8" vai junto do content-type: sem isso, o Excel
+            // pode assumir latin-1 por cima do BOM.
+            return File(conteudo, "text/csv; charset=utf-8", nomeArquivo);
+        }
+
         [AllowAnonymous]
         public IActionResult Privacy()
         {

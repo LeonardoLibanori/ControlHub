@@ -58,7 +58,8 @@ public sealed class QaContext : IDisposable
 
     public Produto SeedProduto(string nome = "PRODUTO TESTE", decimal preco = 10m,
                                decimal quantidade = 100m, TipoProduto tipo = TipoProduto.Prateleira,
-                               string? codigoBarras = "7891000000001")
+                               string? codigoBarras = "7891000000001",
+                               decimal? estoqueMinimo = null)
     {
         var p = new Produto
         {
@@ -66,7 +67,8 @@ public sealed class QaContext : IDisposable
             Preco = preco,
             Quantidade = quantidade,
             Tipo = tipo,
-            CodigoBarras = codigoBarras
+            CodigoBarras = codigoBarras,
+            EstoqueMinimo = estoqueMinimo
         };
         Context.Produtos.Add(p);
         Context.SaveChanges();

@@ -14,6 +14,12 @@
     // mesma IAuthorizationService das rotas: a view nao conhece nenhuma role,
     // entao ela nunca mostra um botao que so poderia terminar em 403.
     var podeGerenciarEstoque = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarEstoque)).Succeeded;
+
+    // FASE A - ITEM 3: o termo de busca vive na querystring (o form e GET).
+    // A tela precisa dele para o botao "Exportar CSV" montar o link com o MESMO
+    // filtro - sem isso, quem busca "leite" e exporta receberia a planilha
+    // inteira, e a tela mentiria sobre o conteudo do arquivo.
+    var buscaAtual = Context.Request.Query["busca"].ToString();
 }
 
 @if (!string.IsNullOrWhiteSpace(mensagemErro))
@@ -28,15 +34,27 @@
 
     <div class="busca-container">
         <form method="get" asp-controller="Home" asp-action="Index" class="busca-form">
-            <input type="text" name="busca" placeholder="Procurar produto..." />
+            <input type="text" name="busca" placeholder="Procurar produto..." value="@buscaAtual" />
             <button type="submit"><i class="bi bi-search me-2" aria-hidden="true"></i>Buscar</button>
         </form>
     </div>
 
     @if (podeGerenciarEstoque)
     {
-        <div class="mb-4 text-start">
+        <div class="mb-4 d-flex flex-wrap gap-2">
             <a asp-controller="Home" asp-action="Novo" class="btn-novo"><i class="bi bi-plus-lg" aria-hidden="true"></i>Novo produto</a>
+
+            @* Exportar (item 3): leva o mesmo `buscaAtual` da tela, para o
+               arquivo ter exatamente os produtos que estao na tabela. Sem o
+               parametro, o link baixaria o estoque inteiro. download= faz o
+               navegador salvar em vez de abrir o csv na aba. *@
+            <a asp-controller="Home"
+               asp-action="ExportarEstoqueCsv"
+               asp-route-busca="@buscaAtual"
+               class="btn-exportar"
+               title="Baixar o que está na tela (respeita a busca) em CSV">
+                <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>Exportar CSV
+            </a>
         </div>
     }
 
