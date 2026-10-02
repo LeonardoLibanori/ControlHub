@@ -86,7 +86,12 @@
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
-                    <th>Qtd. Itens</th>
+                    @* O cabecalho dizia "Qtd. Itens" e a coluna mostra a DATA da
+                       venda (@venda.DataVenda). Pior do que o rotulo errado: o
+                       dono fechava o dia pelo arquivo e conferia a coluna
+                       achando que era a quantidade - dois numeros que nunca
+                       batem. Agora o rotulo diz o que a coluna mostra. *@
+                    <th>Data</th>
                     <th>Total</th>
                     <th>Pagamento</th>
                     <th class="text-center">Ações</th>
