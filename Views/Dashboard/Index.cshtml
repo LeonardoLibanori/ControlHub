@@ -11,16 +11,52 @@
     // Quantidade: 3 casas no maximo (0,125 kg), sem zeros a direita.
     string Qtd(decimal valor) => valor.ToString("0.###", br);
 
-    // Altura da barra em %: no maximo da serie. Divisao por MAIOR deve tratar
-    // o zero - senao um dia sem venda estoura a tela com NaN%.
-    var maiorDia = Model.SerieUltimos7Dias.Count > 0
-        ? Model.SerieUltimos7Dias.Max(d => d.Total)
-        : 0m;
+    // A ALTURA da barra ja vem pronta do view-model (PercentualAltura): maior
+    // dia = 100, dia com venda nunca abaixo de 4%, zero = 0. Calcular no
+    // controller e nao aqui garante o mesmo numero para a view e para o teste.
+    var janelaLonga = Model.Dias >= 30;
+    string DataBarra(DateTime dia) => dia.ToString("yyyy-MM-dd", br);
+    string DataCurta(DateTime dia) => dia.ToString("dd/MM", br);
+    string SoDia(DateTime dia) => dia.ToString("dd", br);
+
+    // aria-label de cada barra: "dd/MM/yyyy: R$ x". Vai no title tambem, entao
+    // o valor continua legivel em 30 dias mesmo sem hover.
+    string RotuloDia(ControleEstoqueLoja.Controllers.DashboardDiaSerie d)
+        => $"{d.Dia.ToString("dd/MM/yyyy", br)}: {Dinheiro(d.Total)}";
 }
 
 <div class="main-container dash-container">
-    <h1 class="dash-titulo">Início</h1>
-    <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
+    <div class="dash-cabecalho">
+        <div>
+            <h1 class="dash-titulo">Início</h1>
+            <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
+        </div>
+
+        @* Seletor de JANELA por link GET: sem JS, sem formulario, e a URL
+           (?dias=30) continua compartilhavel — quem recebe o link ve a mesma
+           janela. O controller so aceita 7 e 30 (regra do painel). *@
+        <nav class="dash-periodo" aria-label="Período do gráfico">
+            <a class="dash-periodo-opcao @((!janelaLonga) ? "is-ativo" : null)"
+               href="@Url.Action("Index", "Dashboard", new { dias = 7 })"
+               aria-current="@((!janelaLonga) ? "page" : null)">7 dias</a>
+            <a class="dash-periodo-opcao @(janelaLonga ? "is-ativo" : null)"
+               href="@Url.Action("Index", "Dashboard", new { dias = 30 })"
+               aria-current="@(janelaLonga ? "page" : null)">30 dias</a>
+        </nav>
+    </div>
+
+    @* ------------------------------------------------------------------
+       TOTAL DA JANELA, acima do grafico: e o que a barra de 7/30 dias
+       representa. "Vendas de hoje" (cartao) e o dia; este e o PERIODO.
+    *@
+    <div class="dash-periodo-total">
+        <span class="dash-rotulo">@(Model.Dias == 30 ? "Últimos 30 dias" : "Últimos 7 dias")</span>
+        <strong class="dash-valor">@Dinheiro(Model.TotalVendasPeriodo)</strong>
+        <span class="dash-observacao">
+            @(Model.NumeroVendasPeriodo == 1 ? "1 venda" : $"{Model.NumeroVendasPeriodo} vendas")
+            · clique numa barra para ver o dia
+        </span>
+    </div>
 
     @* ------------------------------------------------------------------
        TRÊS CARTÕES. Rótulos deliberadamente DIFERENTES:
@@ -100,25 +136,45 @@
     </div>
 
     @* ------------------------------------------------------------------
-       ÚLTIMOS 7 DIAS em barras de HTML/CSS PURO: sem canvas, sem biblioteca,
-       sem script. Cada barra é uma <div> com altura em %, e o valor vai
-       também em texto - se o CSS não carregar, o número continua legível.
+       ÚLTIMOS 7 OU 30 DIAS em barras de HTML/CSS PURO: sem canvas, sem
+       biblioteca, sem script. Cada barra é uma <div> com altura em % e um
+       <a> em volta - clicar leva ao detalhe do dia.
+
+       A ALTURA vem de PercentualAltura (calculada no view-model). O PISO de 4%
+       existe porque 9,98 contra um maximo de 1.000 daria ~1%: sem o piso a
+       barra arredondava para 0px e o dia sumia do grafico. Isso era o bug do
+       dia de R$ 9,98 que nao aparecia.
+
+       EM 30 DIAS o rotulo fica so com o dia ("04") e o valor so no title e
+       no aria-label: 30 valores em texto nao cabem. A primeira barra e todo
+       dia 1 ganham dd/MM, que e o que o dono precisa para se localizar.
     *@
     <div class="dash-secao">
-        <h2 class="dash-titulo-secao">Vendas dos últimos 7 dias</h2>
+        <h2 class="dash-titulo-secao">Vendas dos últimos @Model.Dias dias</h2>
 
-        <div class="dash-grafico" role="img" aria-label="Vendas por dia nos últimos 7 dias">
-            @foreach (var d in Model.SerieUltimos7Dias)
-            {
-                var percentual = maiorDia > 0m ? (double)(d.Total / maiorDia * 100m) : 0d;
-                <div class="dash-coluna">
-                    <span class="dash-coluna-valor">@Dinheiro(d.Total)</span>
-                    <div class="dash-coluna-trilho">
-                        <div class="dash-coluna-barra" style="height: @(percentual.ToString("0.##", br))%"></div>
-                    </div>
-                    <span class="dash-coluna-dia">@d.Dia.ToString("dd/MM", br)</span>
-                </div>
-            }
+        <div class="dash-rolagem @(janelaLonga ? "dash-rolagem-larga" : null)">
+            <div class="dash-grafico @(janelaLonga ? "dash-grafico-longo" : null)"
+                 role="group" aria-label="Vendas por dia nos últimos @Model.Dias dias">
+                @foreach (var d in Model.SerieUltimos7Dias)
+                {
+                    var mostrarDataCompleta = !janelaLonga || d.Dia.Day == 1 || d.Dia == Model.SerieUltimos7Dias[0].Dia;
+                    <a class="dash-coluna @(d.Total <= 0m ? "dash-coluna-vazia" : null)"
+                       href="@Url.Action("Dia", "Dashboard", new { data = DataBarra(d.Dia), dias = Model.Dias })"
+                       title="@RotuloDia(d)"
+                       aria-label="@RotuloDia(d)">
+                        @if (!janelaLonga)
+                        {
+                            <span class="dash-coluna-valor">@Dinheiro(d.Total)</span>
+                        }
+                        <span class="dash-coluna-trilho">
+                            <span class="dash-coluna-barra" style="height: @(d.PercentualAltura.ToString("0.##", br))%"></span>
+                        </span>
+                        <span class="dash-coluna-dia">
+                            @(mostrarDataCompleta ? DataCurta(d.Dia) : SoDia(d.Dia))
+                        </span>
+                    </a>
+                }
+            </div>
         </div>
     </div>
 

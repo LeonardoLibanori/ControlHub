@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **222/222** + 1 ignorado (BUG-28) (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
+| Testes | **247/247** + 1 ignorado (BUG-28) (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -52,7 +52,7 @@ ControleEstoqueLoja/
 │   ├── HomeController.cs       CRUD produtos + busca + ajuste + CSV + Excel
 │   ├── CaixaController.cs      PDV, vendas, caixa, sangria, relatórios, CSV + Excel
 │   ├── AccountController.cs    Login / Logout / Setup / AcessoNegado
-│   ├── DashboardController.cs   painel inicial (só Dono): leitura pura, regra 25
+│   ├── DashboardController.cs   painel inicial + gráfico 7/30 + detalhe do dia (só Dono)
 │   └── UsuariosController.cs   criar e listar contas (só Dono)
 ├── Security/
 │   ├── Policies.cs             11 policies nomeadas (fonte única de verdade)
@@ -65,7 +65,7 @@ ControleEstoqueLoja/
 ├── Migrations/                 8 migrations (seção 5)
 ├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
 ├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
-├── tests.QA/                   222 testes xUnit de caracterização
+├── tests.QA/                   247 testes xUnit de caracterização
 ├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
 ├── setup.ps1                   prepara máquina NOVA (uma vez)
 ├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
@@ -110,6 +110,9 @@ controllers (não há testes de UI automatizados, exceto o script PowerShell
 | 23 | **"Hoje" é um INTERVALO local**, `[DateTime.Today, DateTime.Today + 1 dia)` — nunca `.Date == hoje` (viraria `DATE()` no SQLite e passaria a depender de fuso). Hora **local do servidor**, como o resto do sistema (`DataVenda` é gravada com `DateTime.Now`) | `DashboardController`, `CaixaController` |
 | 24 | A **gaveta do dashboard é a mesma que limita a sangria** (regra 7): só vendas em `Dinheiro` **não fechadas** de hoje + suprimentos − sangrias do dia não fechadas, passando por `CaixaController.CalcularSaldoEmGaveta`. A fórmula **não é duplicada** em lugar nenhum — quem tem o número é o caixa | `DashboardController.CalcularSaldoEmGaveta` |
 | 25 | O **dashboard é leitura pura**: sem POST/PUT/DELETE, sem `try/catch` (quem trata é o handler global, que não vaza `ex.Message`), e todas as somas são em `decimal` **em C#** sobre listas já materializadas (`AsNoTracking` + `ToListAsync`). `TotalVenda` **gravado**, nunca recalculado pelos itens | `DashboardController`, `Views/Dashboard/Index.cshtml` |
+| 26 | O **período do gráfico aceita SÓ 7 e 30** (`?dias=`). Vazio, 0, -1, 15, 31, 999 e qualquer outro valor caem em **7**. A janela é sempre `[Today-(N-1), Today+1)` com **N pontos**, dia sem venda zerado, em ordem cronológica | `DashboardController.Index`, `NormalizarDias` |
+| 27 | A **altura da barra é calculada no view-model** (`PercentualAltura`), não na view: maior dia = 100, **dia com venda nunca fica abaixo de 4%**, zero continua 0, e com todos os dias zerados o divisor é 1. O piso existe porque 9,98 contra um máximo de 1.000 dá ~1% e arredondava para `0px` — o dia sumia do gráfico | `DashboardDiaSerie.PercentualAltura` |
+| 28 | A tela **Dia** soma o `TotalVenda` **gravado** (igual ao Histórico e ao Início) e as **quantidades somadas em C#** em `decimal`, nunca em SQL: `Quantidade` é `TEXT` no SQLite e a collation BINARY ordenaria "10" antes de "9" (regra 2). Produto desativado hoje **aparece** — ele vendeu no dia | `DashboardController.Dia`, `MontarProdutosDoDiaAsync` |
 
 ---
 
@@ -187,7 +190,8 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | Tema corporativo escuro | `f2940c4` | `corporate-theme.css` (substituiu `site.css`) |
 | Autenticação + policies | `ae12be8`…`702ae85` | 2 papéis, 11 policies |
 | Sincronização entre máquinas | `a49c399` | `sincronizar.ps1` |
-| **Dashboard inicial (Início)** | `b3414bf` | item de menu só para o Dono: vendas do dia, dinheiro na gaveta, quebra por forma de pagamento, estoque baixo, últimos 7 dias e últimas vendas |
+| **Dashboard inicial (Início)** | `d654570` | item de menu só para o Dono: vendas do dia, dinheiro na gaveta, quebra por forma de pagamento, estoque baixo, últimos 7 dias e últimas vendas |
+| **Dashboard: gráfico 7/30 dias + detalhe do dia** | *pendente* | seletor de período por link (`?dias=30`); cada barra é um link para `/Dashboard/Dia`, que mostra o total do dia, o que foi vendido e as vendas do dia |
 
 ---
 
@@ -346,7 +350,7 @@ dotnet run                # http://localhost:5236
 ### Testar
 ```powershell
 dotnet build                              # deve terminar com 0 aviso, 0 erro
-dotnet test tests.QA\tests.QA.csproj     # deve dar 222/222 + 1 ignorado
+dotnet test tests.QA\tests.QA.csproj     # deve dar 247/247 + 1 ignorado
 ```
 
 > O `.slnx` da raiz lista **só** o projeto web. `dotnet test` sem caminho
@@ -386,7 +390,7 @@ dotnet run
 1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
-4. Rodar a suíte completa antes de commitar (222 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
+4. Rodar a suíte completa antes de commitar (247 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
 6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
    versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
@@ -408,7 +412,6 @@ dotnet run
 - **Sem** controle de fornecedor, compras ou nota fiscal
 - **Sem** controle de lote/validade (relevante para perecíveis)
 - **Sem** relatórios de margem de lucro / custo
-- **Sem** dashboard
 - Tabela `FluxoCaixa` é **órfã** (criada, nunca usada pelo código)
 - **`Produto.Quantidade` continua em TEXT** (limitação consciente: comparação numérica em SQL seria errada)
 - Gestão de usuários **não permite editar/desativar** conta existente (só criar e listar) — desativar Operador exigiria alteração direta no banco
@@ -426,6 +429,8 @@ dotnet run
 - **Cinco recursos externos no `_Layout`** quebram a operação offline: fontes do Google (L100-102), Bootstrap Icons via jsdelivr (L104) e SweetAlert2 via jsdelivr (L363). Sem internet os ícones `bi-*` do menu somem e os alertas do PDV não abrem. O texto dos itens de menu **não** depende de ícone — o item "Início" foi criado assim de propósito
 
 ### Técnico
+- **Detalhe do dia do Dashboard não tem paginação**: `DashboardController.Dia` lista todas as vendas e todos os produtos do dia de uma vez. Para o volume de um dia de loja cabe; um dia com milhares de vendas (promoção grande) carregaria tudo
+- **O gráfico aceita só 7 e 30 dias**: 14, 60 ou "o mês inteiro" não são janelas válidas (caem em 7). Ampliar a lista de períodos é linha de controller + CSS, sem migration
 - **Concorrência**: a leitura de estoque não tem lock pessimista nem `ConcurrencyCheck`; a proteção atual vem da revalidação de estoque no servidor
 - **Sem testes de UI/integração** automatizados (só unitários de controller + um script PowerShell de HTTP)
 - **Sem ILogger** — erros vão para `Console.Error`
@@ -475,7 +480,7 @@ histórico de preço, CSV).
 dotnet build                              # 0 erros, 0 avisos
 
 # suíte completa
-dotnet test tests.QA\tests.QA.csproj     # 222/222 + 1 ignorado
+dotnet test tests.QA\tests.QA.csproj     # 247/247 + 1 ignorado
 
 # migrations aplicadas
 dotnet ef migrations list

@@ -1199,3 +1199,129 @@ footer .container {
         font-size: .62rem;
     }
 }
+
+
+/* =====================================================================
+   ETAPA C - GRAFICO 7/30 DIAS E DETALHE POR DIA (.dash-*)
+   Continuacao do bloco acima, tambem no FIM do arquivo. Nenhuma regra
+   anterior foi alterada.
+
+   A BARRA É UM LINK (<a>): o detalhe do dia abre sem nenhum JavaScript.
+   Por isso a coluna virou <a> com display:flex em vez de <div> - e o foco
+   de teclado precisa ficar visivel, senao o teclado nao enxerga o link.
+
+   30 DIAS: as barras ficam mais finas e o conjunto tem largura minima,
+   entao o CONTêINER (.dash-rolagem) rola. A pagina nunca ganha barra
+   horizontal - e o limite do scroll fica no bloco, nao no body.
+   ===================================================================== */
+
+.dash-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.dash-cabecalho .dash-titulo,
+.dash-cabecalho .dash-subtitulo {
+    margin-bottom: .15rem;
+}
+
+/* --- seletor 7 dias | 30 dias -------------------------------------- */
+.dash-periodo {
+    display: inline-flex;
+    gap: .25rem;
+    padding: .25rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.dash-periodo-opcao {
+    padding: .35rem .9rem;
+    border-radius: 999px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: .85rem;
+    white-space: nowrap;
+}
+
+.dash-periodo-opcao:hover {
+    color: var(--text);
+}
+
+.dash-periodo-opcao.is-ativo {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+/* --- total da janela, acima do grafico ------------------------------ */
+.dash-periodo-total {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: .75rem;
+}
+
+/* --- colunas que sao links ----------------------------------------- */
+a.dash-coluna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+    min-width: 0;
+    text-decoration: none;
+    /* Focus visivel: a coluna virou link navegavel pelo teclado. */
+    border-radius: .35rem;
+}
+
+a.dash-coluna:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+a.dash-coluna:hover .dash-coluna-trilho {
+    border-color: var(--border-strong);
+}
+
+a.dash-coluna:hover .dash-coluna-barra {
+    background: var(--accent-hover);
+}
+
+.dash-coluna-vazia .dash-coluna-trilho {
+    opacity: .6;
+}
+
+/* --- 30 dias: barras finas e rolagem no CONTAINER -------------------- */
+.dash-rolagem-larga {
+    /* Padding interno: a barra nao encosta na borda do container. */
+    padding: .5rem 0;
+}
+
+.dash-grafico-longo {
+    /* 30 colunas: largura minima para cada uma continuar legivel. */
+    grid-template-columns: repeat(30, minmax(2.5rem, 1fr));
+    min-width: 52rem;
+    gap: .25rem;
+}
+
+.dash-grafico-longo .dash-coluna-trilho {
+    height: 7rem;
+}
+
+.dash-grafico-longo .dash-coluna-dia {
+    font-size: .6rem;
+}
+
+.dash-grafico-longo .dash-coluna-barra {
+    /* Fina de proposito: 30 barras lado a lado. */
+    min-width: 100%;
+    border-radius: 2px;
+}

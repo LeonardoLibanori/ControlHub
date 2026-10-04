@@ -1,0 +1,133 @@
+@model ControleEstoqueLoja.Controllers.DashboardDiaViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Detalhe do dia";
+
+    var br = CultureInfo.GetCultureInfo("pt-BR");
+    string Dinheiro(decimal valor) => valor.ToString("C", br);
+    string Qtd(decimal valor) => valor.ToString("0.###", br);
+
+    // "terça-feira, 07 de outubro de 2026": dia por extenso, sem lib externa.
+    var diaExtenso = Model.Dia.ToString("D", br);
+
+    // Link de volta preservando a janela que o dono estava olhando.
+    var voltar = Url.Action("Index", "Dashboard", new { dias = Model.Dias });
+}
+
+<div class="main-container dash-container">
+    <div class="dash-cabecalho">
+        <div>
+            <h1 class="dash-titulo">@diaExtenso</h1>
+            <p class="dash-subtitulo">
+                Vendas de @Model.Dia.ToString("dd/MM/yyyy", br)
+                · janela de @Model.Dias @(Model.Dias == 1 ? "dia" : "dias")
+            </p>
+        </div>
+        <a class="dash-periodo-opcao" href="@voltar">Voltar ao painel</a>
+    </div>
+
+    @* ------------------------------------------------------------------
+       Os mesmos 3 numeros do painel, agora do DIA. "Total do dia" e o
+       TotalVenda GRAVADO, identico ao que o Historico do caixa mostra para
+       a mesma data - se um dia os dois discordassem, um deles estaria errado.
+    *@
+    <div class="dash-grade">
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Total do dia</span>
+            <strong class="dash-valor">@Dinheiro(Model.Total)</strong>
+            <span class="dash-observacao">Soma do valor gravado de cada venda</span>
+        </div>
+
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Vendas</span>
+            <strong class="dash-valor">@(Model.NumeroVendas == 1 ? "1 venda" : $"{Model.NumeroVendas} vendas")</strong>
+            <span class="dash-observacao">Ticket médio @Dinheiro(Model.TicketMedio)</span>
+        </div>
+
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Itens vendidos</span>
+            <strong class="dash-valor">@(Model.Produtos.Count == 1 ? "1 produto" : $"{Model.Produtos.Count} produtos")</strong>
+            <span class="dash-observacao">Agrupado por produto</span>
+        </div>
+    </div>
+
+    @* ------------------------------------------------------------------
+       O QUE FOI VENDIDO. Quantidade somada EM C# (regra 2), valor = soma de
+       preco x quantidade, arredondado SO no fim. Sem total nesta tabela: a
+       soma dos itens pode nao bater com o total do dia quando houve desconto
+       no balcao, e mostrar os dois juntos so criaria duvida.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">O que foi vendido</h2>
+
+        @if (Model.Produtos.Count == 0)
+        {
+            <p class="dash-vazio">Nenhum produto vendido neste dia.</p>
+        }
+        else
+        {
+            <div class="dash-rolagem">
+                <table class="dash-tabela">
+                    <thead>
+                        <tr>
+                            <th scope="col">Produto</th>
+                            <th scope="col" class="dash-num">Quantidade</th>
+                            <th scope="col" class="dash-num">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Produtos)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Home" asp-action="Produto" asp-route-id="@p.ProdutoId">@p.Nome</a>
+                                </td>
+                                <td class="dash-num">@Qtd(p.Quantidade) @p.Unidade</td>
+                                <td class="dash-num">@Dinheiro(p.Valor)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @* ------------------------------------------------------------------
+       VENDAS DO DIA, mais recentes primeiro. Sem CPF e sem paginacao: o
+       volume de um dia e conhecido e cabe na tela.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">Vendas do dia</h2>
+
+        @if (Model.Vendas.Count == 0)
+        {
+            <p class="dash-vazio">Nenhuma venda registrada neste dia.</p>
+        }
+        else
+        {
+            <div class="dash-rolagem">
+                <table class="dash-tabela">
+                    <thead>
+                        <tr>
+                            <th scope="col">Venda</th>
+                            <th scope="col">Hora</th>
+                            <th scope="col">Forma</th>
+                            <th scope="col" class="dash-num">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in Model.Vendas)
+                        {
+                            <tr>
+                                <td>#@v.Id</td>
+                                <td>@v.DataVenda.ToString("HH:mm", br)</td>
+                                <td>@v.MetodoPagamento</td>
+                                <td class="dash-num">@Dinheiro(v.Total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

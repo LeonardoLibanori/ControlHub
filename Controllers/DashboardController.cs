@@ -39,8 +39,9 @@ namespace ControleEstoqueLoja.Controllers
         /// <summary>Quantas vendas recentes a lista mostra.</summary>
         private const int TopVendasRecentes = 5;
 
-        /// <summary>Janela da serie de vendas (7 dias, hoje incluido).</summary>
-        private const int DiasNaSerie = 7;
+        /// <summary>Janelas aceitas no grafico. Qualquer outro valor cai em 7.</summary>
+        private const int DiasPadrao = 7;
+        private const int DiasLongo = 30;
 
         public DashboardController(ApplicationDbContext context)
         {
@@ -48,8 +49,11 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? dias = null)
         {
+            // So 7 e 30 valem. Tudo mais (vazio, 0, -1, 15, 999) volta para 7.
+            var janela = NormalizarDias(dias);
+
             var inicioHoje = DateTime.Today;
             var fimHoje = inicioHoje.AddDays(1);
 
@@ -66,6 +70,18 @@ namespace ControleEstoqueLoja.Controllers
                 : Math.Round(totalHoje / numeroVendas, 2, MidpointRounding.AwayFromZero);
 
             var porMetodo = MontarPorMetodo(vendasHoje);
+
+            // ---- Total da JANELA (7 ou 30 dias), em TotalVenda gravado.
+            // Projecao: so (DataVenda, TotalVenda), nunca os itens da venda.
+            var inicioJanela = inicioHoje.AddDays(-(janela - 1));
+            var vendasDaJanela = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= inicioJanela && v.DataVenda < fimHoje)
+                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda })
+                .ToListAsync();
+
+            var totalPeriodo = vendasDaJanela.Sum(v => v.Total);
+            var numeroPeriodo = vendasDaJanela.Count;
 
             // ---- Gaveta (regra 7) ----
             var movimentosHoje = await _context.CaixaMovimentacoes
@@ -100,7 +116,7 @@ namespace ControleEstoqueLoja.Controllers
                 })
                 .ToListAsync();
 
-            var serie = await MontarSerieAsync(inicioHoje);
+            var serie = MontarSerie(vendasDaJanela, inicioHoje, janela);
 
             return View(new DashboardViewModel
             {
@@ -113,6 +129,9 @@ namespace ControleEstoqueLoja.Controllers
                 EstoqueBaixo = estoqueBaixo,
                 TotalEstoqueBaixo = totalEstoqueBaixo,
                 UltimasVendas = ultimasVendas,
+                TotalVendasPeriodo = totalPeriodo,
+                NumeroVendasPeriodo = numeroPeriodo,
+                Dias = janela,
             });
         }
 
@@ -168,28 +187,34 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         /// <summary>
-        /// Janela de 7 dias em ordem CRONOLOGICA, sempre com os 7 pontos: um dia
-        /// sem venda entra com 0, senao o grafico de barras fica torto.
-        ///
-        /// Consulta PROPRIA: a lista de vendas de hoje so tem o dia de hoje, e
-        /// reaproveitar dela deixaria 6 dos 7 pontos zerados.
+        /// So 7 e 30 sao janelas validas. Vazio, 0, negativo, 15, 999 ou
+        /// qualquer coisa fora disso volta para 7 - um parametro de URL nao
+        /// pode escolher uma janela qualquer e estourar a consulta.
         /// </summary>
-        private async Task<List<DashboardDiaSerie>> MontarSerieAsync(DateTime inicioHoje)
+        private static int NormalizarDias(int? dias)
+            => dias == DiasLongo ? DiasLongo : DiasPadrao;
+
+        /// <summary>
+        /// Monta a serie da janela em ordem CRONOLOGICA, sempre com N pontos
+        /// (dia sem venda entra com 0, senao o grafico fica torto) e calcula a
+        /// altura de cada barra em PORCENTAGEM.
+        ///
+        /// Altura: maior = 100; um dia com venda NUNCA abaixo de 4% - sem esse
+        /// piso, um dia de R$ 9,98 contra um maximo de R$ 1.000 daria ~1% e a
+        /// barra arredondaria para 0px, sumindo do grafico; zero continua 0;
+        /// com todos os dias zerados o divisor e 1 (nada de divisao por zero).
+        /// </summary>
+        private static List<DashboardDiaSerie> MontarSerie(
+            List<VendaPeriodo> vendas, DateTime inicioHoje, int janela)
         {
-            var inicioJanela = inicioHoje.AddDays(-(DiasNaSerie - 1));
-            var fimJanela = inicioHoje.AddDays(1);
+            var inicioJanela = inicioHoje.AddDays(-(janela - 1));
 
-            var vendasDaJanela = await _context.Vendas
-                .AsNoTracking()
-                .Where(v => v.DataVenda >= inicioJanela && v.DataVenda < fimJanela)
-                .ToListAsync();
+            var totalPorDia = vendas
+                .GroupBy(v => v.Data.Date)
+                .ToDictionary(g => g.Key, g => g.Sum(v => v.Total));
 
-            var totalPorDia = vendasDaJanela
-                .GroupBy(v => v.DataVenda.Date)
-                .ToDictionary(g => g.Key, g => g.Sum(v => v.TotalVenda));
-
-            var serie = new List<DashboardDiaSerie>(DiasNaSerie);
-            for (var i = 0; i < DiasNaSerie; i++)
+            var serie = new List<DashboardDiaSerie>(janela);
+            for (var i = 0; i < janela; i++)
             {
                 var dia = inicioJanela.AddDays(i);
                 serie.Add(new DashboardDiaSerie
@@ -199,8 +224,144 @@ namespace ControleEstoqueLoja.Controllers
                 });
             }
 
+            // Altura: maior primeiro. Divisor 1 quando tudo e zero evita NaN.
+            var maior = serie.Count == 0 ? 0m : serie.Max(d => d.Total);
+            var divisor = maior > 0m ? maior : 1m;
+
+            foreach (var dia in serie)
+            {
+                if (dia.Total <= 0m)
+                {
+                    dia.PercentualAltura = 0m;
+                    continue;
+                }
+
+                var percentual = dia.Total / divisor * 100m;
+                // Piso de 4%: com venda, a barra SEMPRE aparece.
+                dia.PercentualAltura = percentual < 4m ? 4m : Math.Round(percentual, 2);
+            }
+
             return serie;
         }
+
+        // =====================================================================
+        // DETALHE DE UM DIA
+        // =====================================================================
+
+        /// <summary>
+        /// Detalhe das vendas de UM dia. Leitura pura (regra 25), herda a
+        /// policy da classe.
+        ///
+        /// DATA NULA, INVALIDA OU POSTERIOR A HOJE volta para o painel: nao ha
+        /// venda no futuro. Datas passadas quaisquer sao aceitas - e o AddDays
+        /// para o fim do dia nunca roda sobre DateTime.MaxValue, porque a data
+        /// ja foi comparada com DateTime.Today antes.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Dia(DateTime? data)
+        {
+            var hoje = DateTime.Today;
+
+            if (!data.HasValue || data.Value.Date > hoje)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            var dia = data.Value.Date;
+            var fim = dia.AddDays(1);
+
+            // Projecao: so os 4 campos do cabecalho da lista de vendas.
+            var vendas = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= dia && v.DataVenda < fim)
+                .OrderByDescending(v => v.DataVenda)
+                .ThenByDescending(v => v.Id)
+                .Select(v => new DashboardVendaRecente
+                {
+                    Id = v.Id,
+                    DataVenda = v.DataVenda,
+                    MetodoPagamento = v.MetodoPagamento,
+                    Total = v.TotalVenda,
+                })
+                .ToListAsync();
+
+            var total = vendas.Sum(v => v.Total);
+            var numero = vendas.Count;
+            var ticket = numero == 0
+                ? 0m
+                : Math.Round(total / numero, 2, MidpointRounding.AwayFromZero);
+
+            var produtos = await MontarProdutosDoDiaAsync(dia, fim);
+
+            return View(new DashboardDiaViewModel
+            {
+                Dia = dia,
+                Total = total,
+                NumeroVendas = numero,
+                TicketMedio = ticket,
+                Produtos = produtos,
+                Vendas = vendas,
+            });
+        }
+
+        /// <summary>
+        /// "O que foi vendido": agrupa por produto e soma Quantidade EM C#.
+        ///
+        /// POR QUE EM C# E NAO EM SQL: Quantidade e decimal em TEXT no SQLite e
+        /// a collation BINARY ordenaria "10" antes de "9" (regra 2). Trazemos os
+        /// itens e somamos em decimal, onde 9 + 10 = 19 e 0,125 + 0,375 = 0,5.
+        ///
+        /// Produto desativado HOJE aparece: ele vendeu no dia, e esconder o que
+        /// foi vendido seria mentira.
+        /// </summary>
+        private async Task<List<DashboardDiaProduto>> MontarProdutosDoDiaAsync(DateTime dia, DateTime fim)
+        {
+            var itens = await _context.VendaItens
+                .AsNoTracking()
+                .Include(i => i.Produto)
+                .Where(i => i.Venda.DataVenda >= dia && i.Venda.DataVenda < fim)
+                .Select(i => new
+                {
+                    i.ProdutoId,
+                    Nome = i.Produto.Nome,
+                    Tipo = i.Produto.Tipo,
+                    i.Quantidade,
+                    i.PrecoUnitario,
+                })
+                .ToListAsync();
+
+            return itens
+                .GroupBy(i => i.ProdutoId)
+                .Select(g =>
+                {
+                    // Soma em decimal: o Arredondamento e SÓ no valor final.
+                    var quantidade = g.Sum(i => i.Quantidade);
+                    var valor = Math.Round(g.Sum(i => i.PrecoUnitario * i.Quantidade), 2);
+
+                    return new DashboardDiaProduto
+                    {
+                        ProdutoId = g.Key,
+                        Nome = g.First().Nome,
+                        Quantidade = quantidade,
+                        Valor = valor,
+                        PorPeso = g.First().Tipo == TipoProduto.PorPeso,
+                    };
+                })
+                .OrderByDescending(p => p.Valor)
+                .ThenBy(p => p.Nome, StringComparer.Ordinal)
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Projecao minima de uma venda dentro da janela: so a data e o total
+    /// gravado. Carregar a venda inteira arrastaria os itens, que nao servem
+    /// para nada no grafico.
+    /// </summary>
+    public class VendaPeriodo
+    {
+        public DateTime Data { get; set; }
+        public decimal Total { get; set; }
     }
 
     // =====================================================================
@@ -214,11 +375,95 @@ namespace ControleEstoqueLoja.Controllers
         public decimal Total { get; set; }
     }
 
-    /// <summary>Um dia da serie dos ultimos 7 dias (dia sem venda = 0).</summary>
+    /// <summary>O que a tela inteira precisa mostrar, num objeto so.</summary>
+    public class DashboardViewModel
+    {
+        /// <summary>Soma de TotalVenda GRAVADO das vendas de hoje (qualquer metodo, fechadas inclusive).</summary>
+        public decimal TotalVendasHoje { get; set; }
+
+        /// <summary>Quantas vendas ocorreram hoje (para o ticket medio).</summary>
+        public int NumeroVendasHoje { get; set; }
+
+        /// <summary>Total / numero, arredondado em 2 casas, AwayFromZero.</summary>
+        public decimal TicketMedio { get; set; }
+
+        /// <summary>Soma da JANELA INTEIRA (7 ou 30 dias), em TotalVenda gravado.</summary>
+        public decimal TotalVendasPeriodo { get; set; }
+
+        /// <summary>Numero de vendas da janela inteira.</summary>
+        public int NumeroVendasPeriodo { get; set; }
+
+        /// <summary>Janela escolhida: 7 ou 30. Qualquer entrada fora disso vira 7.</summary>
+        public int Dias { get; set; } = 7;
+
+        /// <summary>Soma por metodo, com as chaves normalizadas (caixa alta).</summary>
+        public List<DashboardTotalPorMetodo> TotalPorMetodo { get; set; } = new();
+
+        /// <summary>
+        /// Saldo fisico da gaveta: vendas em Dinheiro NAO fechadas de hoje +
+        /// suprimentos + sangrias. Sangria ja e negativa no banco e por isso
+        /// SOMA (fonte unica: CaixaController.CalcularSaldoEmGaveta).
+        /// </summary>
+        public decimal SaldoGaveta { get; set; }
+
+        /// <summary>A janela em ordem cronologica (7 ou 30 pontos).</summary>
+        public List<DashboardDiaSerie> SerieUltimos7Dias { get; set; } = new();
+
+        /// <summary>Produtos abaixo do minimo, os mais criticos primeiro (no maximo 5).</summary>
+        public List<DashboardEstoqueBaixo> EstoqueBaixo { get; set; } = new();
+
+        /// <summary>Quantos produtos estao abaixo do minimo NO TOTAL (a lista mostra so 5).</summary>
+        public int TotalEstoqueBaixo { get; set; }
+
+        /// <summary>As 5 vendas mais recentes, de qualquer dia.</summary>
+        public List<DashboardVendaRecente> UltimasVendas { get; set; } = new();
+    }
+
+    /// <summary>Um dia da serie (7 ou 30 dias) da janela do painel.</summary>
     public class DashboardDiaSerie
     {
         public DateTime Dia { get; set; }
         public decimal Total { get; set; }
+
+        /// <summary>
+        /// Altura da barra em PORCENTAGEM, calculada no view-model (regra do
+        /// grafico): o maior dia da janela = 100, um dia com venda nunca fica
+        /// abaixo de 4% (senao arredonda para 0px e some do grafico) e zero
+        /// continua 0. Com todos os dias zerados, o divisor e 1 para nao
+        /// dividir por zero.
+        /// </summary>
+        public decimal PercentualAltura { get; set; }
+    }
+
+    /// <summary>Detalhe de UM dia: total, ticket medio, produtos e vendas.</summary>
+    public class DashboardDiaViewModel
+    {
+        public DateTime Dia { get; set; }
+
+        /// <summary>Soma do TotalVenda GRAVADO do dia (nunca recalculada).</summary>
+        public decimal Total { get; set; }
+
+        public int NumeroVendas { get; set; }
+        public decimal TicketMedio { get; set; }
+
+        /// <summary>Janela que veio do painel (7 ou 30), para o link de voltar.</summary>
+        public int Dias { get; set; } = 7;
+
+        public List<DashboardDiaProduto> Produtos { get; set; } = new();
+        public List<DashboardVendaRecente> Vendas { get; set; } = new();
+    }
+
+    /// <summary>Um produto vendido no dia, com quantidade somada EM C#.</summary>
+    public class DashboardDiaProduto
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public decimal Quantidade { get; set; }
+        public decimal Valor { get; set; }
+
+        /// <summary>Derivacao existente (regras 19 e 20): kg para PorPeso, un no resto.</summary>
+        public bool PorPeso { get; set; }
+        public string Unidade => PorPeso ? "kg" : "un";
     }
 
     /// <summary>
@@ -255,40 +500,5 @@ namespace ControleEstoqueLoja.Controllers
         public DateTime DataVenda { get; set; }
         public string MetodoPagamento { get; set; } = string.Empty;
         public decimal Total { get; set; }
-    }
-
-    /// <summary>Tudo que a tela do Dashboard precisa, em um objeto so.</summary>
-    public class DashboardViewModel
-    {
-        /// <summary>Soma de TotalVenda GRAVADO das vendas de hoje (qualquer metodo, fechadas inclusive).</summary>
-        public decimal TotalVendasHoje { get; set; }
-
-        /// <summary>Quantas vendas occurred hoje (para o ticket medio).</summary>
-        public int NumeroVendasHoje { get; set; }
-
-        /// <summary>Total / numero, arredondado em 2 casas, AwayFromZero.</summary>
-        public decimal TicketMedio { get; set; }
-
-        /// <summary>Soma por metodo, com as chaves normalizadas (caixa alta).</summary>
-        public List<DashboardTotalPorMetodo> TotalPorMetodo { get; set; } = new();
-
-        /// <summary>
-        /// Saldo fisico da gaveta: vendas em Dinheiro NAO fechadas de hoje +
-        /// suprimentos + sangrias. Sangria ja e negativa no banco e por isso
-        /// SOMA (fonte unica: CaixaController.CalcularSaldoEmGaveta).
-        /// </summary>
-        public decimal SaldoGaveta { get; set; }
-
-        /// <summary>7 dias em ordem cronologica (hoje por ultimo).</summary>
-        public List<DashboardDiaSerie> SerieUltimos7Dias { get; set; } = new();
-
-        /// <summary>Produtos abaixo do minimo, os mais criticos primeiro (no maximo 5).</summary>
-        public List<DashboardEstoqueBaixo> EstoqueBaixo { get; set; } = new();
-
-        /// <summary>Quantos produtos estao abaixo do minimo NO TOTAL (a lista mostra so 5).</summary>
-        public int TotalEstoqueBaixo { get; set; }
-
-        /// <summary>As 5 vendas mais recentes, de qualquer dia.</summary>
-        public List<DashboardVendaRecente> UltimasVendas { get; set; } = new();
     }
 }

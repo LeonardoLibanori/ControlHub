@@ -234,6 +234,7 @@ Ok302Login 'GET /Usuarios/Criar' (Chama $anon 'GET' '/Usuarios/Criar' $null $nul
 Ok302Login 'GET /Home/Novo' (Chama $anon 'GET' '/Home/Novo' $null $null $false)
 Ok302Login 'GET /Home/Produto/1' (Chama $anon 'GET' '/Home/Produto/1' $null $null $false)
 Ok302Login 'GET /Dashboard' (Chama $anon 'GET' '/Dashboard' $null $null $false)
+Ok302Login 'GET /Dashboard/Dia' (Chama $anon 'GET' '/Dashboard/Dia' $null $null $false)
 Nao2xx 'POST /Caixa/RegistrarSangria (anonimo)' (Chama $anon 'POST' '/Caixa/RegistrarSangria' 'valor=10.00&obs=anon' $null $true)
 Nao2xx 'POST /Usuarios/Criar (anonimo)' (Chama $anon 'POST' '/Usuarios/Criar' 'Nome=X&Email=x%40x.com&Senha=Abc%40123&ConfirmarSenha=Abc%40123&Papel=Dono' $null $true)
 Say ''
@@ -283,6 +284,16 @@ Ok 'GET /Dashboard (Dono)' 200 $dash
 TemTexto '  mostra o cartao de vendas de hoje' $dash.Body 'Vendas de hoje'
 TemTexto '  mostra o cartao do dinheiro na gaveta' $dash.Body 'Dinheiro na gaveta'
 TemTexto '  mostra a serie de 7 dias' $dash.Body 'ltimos 7 dias'
+TemTexto '  mostra o seletor de periodo' $dash.Body 'dias='
+$dj = Chama $dono 'GET' '/Dashboard/Dia' $null $null $false
+Ok 'GET /Dashboard/Dia sem data (redireciona)' 302 $dj
+$dj = Chama $dono 'GET' '/Dashboard/Dia?data=nao-e-data' $null $null $false
+Ok 'GET /Dashboard/Dia com data invalida (redireciona)' 302 $dj
+$dj = Chama $dono 'GET' '/Dashboard/Dia?data=2099-01-01' $null $null $false
+Ok 'GET /Dashboard/Dia com data futura (redireciona)' 302 $dj
+$dj = Chama $dono 'GET' ('/Dashboard/Dia?data=' + (Get-Date).AddDays(-1).ToString('yyyy-MM-dd')) $null $null $false
+Ok 'GET /Dashboard/Dia com data valida' 200 $dj
+TemTexto '  mostra o que foi vendido' $dj.Body 'O que foi vendido'
 Say ''
 Say ''
 Write-Titulo '5) OPERADOR: PDV e suprimento passam; o resto e 403'
@@ -338,6 +349,8 @@ Say '  -- dashboard (ETAPA B, PodeVerFinanceiro) --'
 # O painel mostra faturamento e saldo da gaveta: nao e do Operador.
 Ok 'GET /Dashboard' 403 (Chama $jar 'GET' '/Dashboard' $null $null $true)
 Ok302Negado 'GET /Dashboard (navegacao do Operador)' (Chama $jar 'GET' '/Dashboard' $null $null $false)
+Ok 'GET /Dashboard/Dia' 403 (Chama $jar 'GET' '/Dashboard/Dia' $null $null $true)
+Ok302Negado 'GET /Dashboard/Dia (navegacao do Operador)' (Chama $jar 'GET' '/Dashboard/Dia' $null $null $false)
 Say ''
 
 # =============================================================================
