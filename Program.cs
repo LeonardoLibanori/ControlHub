@@ -172,6 +172,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// BUG-27 (visual): o CSS chegava VAZIO no browser e a pagina inteira ficava
+// sem estilo - botao cru, campo cru e o modal de Operacao (Valor/Observacao/
+// Confirmar) aparecendo solto no meio da tela de login.
+//
+// A causa nao era o layout: era o app.MapStaticAssets(). Ele serve as variantes
+// FINGERPRINTADAS e pre-comprimidas (br/gz) do manifesto de build, e esse
+// manifesto so existe em `dotnet publish`. Rodando com `dotnet run`, o browser
+// pede com "Accept-Encoding: gzip, br" (sempre), o middleware escolhe a
+// variante comprimida que nao esta no disco e devolve 200 com Content-Length 0
+// e sem Content-Type. O browser aceita a folha de estilo vazia e descarta
+// tudo. Sem o cabecalho Accept-Encoding a resposta vinha correta, por isso o
+// defeito "aparecia e sumia" conforme o cliente.
+//
+// UseStaticFiles() serve o wwwroot do content root, com Content-Type e
+// Content-Length corretos, tanto em `dotnet run` quanto em publish.
+app.UseStaticFiles();
+
 app.UseRouting();
 
 // BUG-13: UseAuthentication ANTES de UseAuthorization - sem o cookie populado,
@@ -179,7 +197,6 @@ app.UseRouting();
 // proprio login.
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapStaticAssets();
 
 // --- GARANTE QUE O BANCO E AS TABELAS EXISTAM ---
 // BUG-19: a criação direta do schema a partir do MODELO ATUAL ignorava as
@@ -207,7 +224,6 @@ SeedPapel.GarantirAsync(app.Services).GetAwaiter().GetResult();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
