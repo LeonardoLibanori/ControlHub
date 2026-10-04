@@ -55,10 +55,14 @@ public static class ExportacaoExcel
     /// Cabecalho da aba Estoque - a MESMA ordem do CSV atual, com duas
     /// diferencas: "Unidade" (kg para PorPeso, un para o resto) e "Valor em
     /// estoque (R$)", que no CSV nao existia porque la o numero nao somaria.
+    ///
+    /// A coluna "Tipo" (o nome cru do enum: Prateleira/Geladeira/Freezer) SAIU:
+    /// a tela so oferece "Unidade" ou "Peso (kg)" e a coluna Unidade ja diz isso
+    /// de forma legivel.
     /// </summary>
     public static readonly string[] CabecalhoEstoque =
     {
-        "Produto", "Tipo", "Unidade", "Preço (R$)", "Estoque",
+        "Produto", "Unidade", "Preço (R$)", "Estoque",
         "Estoque mínimo", "Estoque baixo", "Valor em estoque (R$)"
     };
 
@@ -181,30 +185,31 @@ public static class ExportacaoExcel
             // Coluna A - nome, texto de usuario (escudo de formula).
             EscreverTexto(aba.Cell(linha, 1), produto.Nome);
 
-            // Coluna B - tipo; Coluna C - unidade (kg so para PorPeso).
-            EscreverTexto(aba.Cell(linha, 2), produto.Tipo.ToString());
-            EscreverTexto(aba.Cell(linha, 3), Unidade(produto.Tipo));
+            // Coluna B - unidade (kg so para PorPeso, un para o resto). A coluna
+            // "Tipo" saiu do layout: o nome do enum nao dizia nada ao dono, e a
+            // coluna Unidade ja responde "isso e vendido por peso?".
+            EscreverTexto(aba.Cell(linha, 2), Unidade(produto.Tipo));
 
-            // Coluna D - preco como NUMERO (Preco ja e decimal em reais).
-            EscreverNumero(aba.Cell(linha, 4), produto.Preco, FormatoDinheiro);
+            // Coluna C - preco como NUMERO (Preco ja e decimal em reais).
+            EscreverNumero(aba.Cell(linha, 3), produto.Preco, FormatoDinheiro);
 
-            // Coluna E - estoque como numero (inteiro ou fracionario pelo valor).
-            EscreverNumero(aba.Cell(linha, 5), produto.Quantidade, FormatoQuantidade(produto.Quantidade));
+            // Coluna D - estoque como numero (inteiro ou fracionario pelo valor).
+            EscreverNumero(aba.Cell(linha, 4), produto.Quantidade, FormatoQuantidade(produto.Quantidade));
 
-            // Coluna F - estoque minimo, so quando configurado (null = celula vazia).
+            // Coluna E - estoque minimo, so quando configurado (null = celula vazia).
             if (produto.EstoqueMinimo.HasValue)
             {
-                EscreverNumero(aba.Cell(linha, 6), produto.EstoqueMinimo.Value,
+                EscreverNumero(aba.Cell(linha, 5), produto.EstoqueMinimo.Value,
                     FormatoQuantidade(produto.EstoqueMinimo.Value));
             }
 
-            // Coluna G - o alerta como texto, para o dono filtrar no Excel.
-            EscreverTexto(aba.Cell(linha, 7), produto.EstoqueAbaixoDoMinimo ? "SIM" : "NAO");
+            // Coluna F - o alerta como texto, para o dono filtrar no Excel.
+            EscreverTexto(aba.Cell(linha, 6), produto.EstoqueAbaixoDoMinimo ? "SIM" : "NAO");
 
-            // Coluna H - VALOR EM ESTOQUE como FORMULA (Preco x Quantidade):
+            // Coluna G - VALOR EM ESTOQUE como FORMULA (Preco x Quantidade):
             // o dono corrige o estoque e o total acompanha.
-            var valor = aba.Cell(linha, 8);
-            valor.FormulaA1 = $"D{linha}*E{linha}";
+            var valor = aba.Cell(linha, 7);
+            valor.FormulaA1 = $"C{linha}*D{linha}";
             valor.Style.NumberFormat.Format = FormatoDinheiro;
 
             linha++;
@@ -455,7 +460,7 @@ public static class ExportacaoExcel
 
     /// <summary>
     /// Ultima linha da aba Estoque: rotulo "Total" em A e formula REAL de SUM
-    /// sobre "Valor em estoque" (coluna H) - o dono confere o valor do estoque
+    /// sobre "Valor em estoque" (coluna G) - o dono confere o valor do estoque
     /// de uma vez so, e a formula continua acompanhando se ele corrigir a tela.
     /// </summary>
     private static void EscreverTotaisEstoque(IXLWorksheet aba, int primeira, int ultima)
@@ -465,8 +470,8 @@ public static class ExportacaoExcel
 
         aba.Cell(linha, 1).Value = "Total";
 
-        var total = aba.Cell(linha, 8);
-        total.FormulaA1 = $"SUM(H{primeira}:H{ultima})";
+        var total = aba.Cell(linha, 7);
+        total.FormulaA1 = $"SUM(G{primeira}:G{ultima})";
         total.Style.NumberFormat.Format = FormatoDinheiro;
     }
 

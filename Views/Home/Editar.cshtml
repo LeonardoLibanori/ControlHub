@@ -12,19 +12,14 @@
         <label style="font-weight: bold;">Nome do produto:</label><br />
         <input type="text" name="nome" value="@Model.Nome" class="form-control mb-3" required />
 
-        <label style="font-weight: bold;">Tipo do produto:</label><br />
+        <label style="font-weight: bold;">Vendido por:</label><br />
+        @* So dois valores na tela. Os `value` continuam os nomes do enum (o JS
+           atualizarRotuloPreco e o servidor dependem deles). "Peso (kg)" fica
+           selecionado so quando o Tipo ATUAL e PorPeso; qualquer outro (Prateleira,
+           Geladeira, Freezer) cai em "Unidade" - igual ao fallback do servidor. *@
         <select name="tipo" id="tipoProduto" onchange="atualizarRotuloPreco()" class="form-select mb-3" required>
-            @if (Model.Tipo == TipoProduto.PorPeso) { <option value="PorPeso" selected>Por peso</option> }
-            else { <option value="PorPeso">Por peso</option> }
-
-            @if (Model.Tipo == TipoProduto.Prateleira) { <option value="Prateleira" selected>Prateleira</option> } 
-            else { <option value="Prateleira">Prateleira</option> }
-
-            @if (Model.Tipo == TipoProduto.Geladeira) { <option value="Geladeira" selected>Geladeira</option> } 
-            else { <option value="Geladeira">Geladeira</option> }
-
-            @if (Model.Tipo == TipoProduto.Freezer) { <option value="Freezer" selected>Freezer</option> } 
-            else { <option value="Freezer">Freezer</option> }
+            @if (Model.Tipo == TipoProduto.PorPeso) { <option value="Prateleira">Unidade</option> <option value="PorPeso" selected>Peso (kg)</option> }
+            else { <option value="Prateleira" selected>Unidade</option> <option value="PorPeso">Peso (kg)</option> }
         </select>
 
         <label id="labelPreco" style="font-weight: bold;">Preço por kg (R$/kg):</label><br />

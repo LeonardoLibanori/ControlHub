@@ -37,7 +37,7 @@ public class ExportacaoExcelVisualQaTests
     private const string FormatoFracionaria = "#,##0.000";
     private const string FormatoDataHora = "dd/MM/yyyy HH:mm";
 
-    private const int QtdColunasEstoque = 8;
+    private const int QtdColunasEstoque = 7;
     private const int QtdColunasVendas = 9;
 
     // =====================================================================
@@ -317,7 +317,7 @@ public class ExportacaoExcelVisualQaTests
     // =====================================================================
 
     [Fact]
-    public void Estoque_FormatosNumericos_DevemSeguirOTipo()
+    public void Estoque_FormatosNumericos_DevemSeguirOValor()
     {
         using var qa = new QaContext();
         // ARROZ: inteiro (prateleira). BANANA: por peso, fracionario.
@@ -331,15 +331,15 @@ public class ExportacaoExcelVisualQaTests
         var arroz = LinhaDe(aba, "ARROZ");
         var banana = LinhaDe(aba, "BANANA");
 
-        // Dinheiro: Preco (D) e Valor em estoque (H).
-        Assert.Equal(FormatoDinheiro, aba.Cell(arroz, 4).Style.NumberFormat.Format);
-        Assert.Equal(FormatoDinheiro, aba.Cell(arroz, 8).Style.NumberFormat.Format);
+        // Dinheiro: Preco (C) e Valor em estoque (G) - a coluna Tipo saiu do layout.
+        Assert.Equal(FormatoDinheiro, aba.Cell(arroz, 3).Style.NumberFormat.Format);
+        Assert.Equal(FormatoDinheiro, aba.Cell(arroz, 7).Style.NumberFormat.Format);
 
         // Quantidade inteira -> #,##0; fracionaria -> #,##0.000.
+        Assert.Equal(FormatoInteira, aba.Cell(arroz, 4).Style.NumberFormat.Format);
         Assert.Equal(FormatoInteira, aba.Cell(arroz, 5).Style.NumberFormat.Format);
-        Assert.Equal(FormatoInteira, aba.Cell(arroz, 6).Style.NumberFormat.Format);
+        Assert.Equal(FormatoFracionaria, aba.Cell(banana, 4).Style.NumberFormat.Format);
         Assert.Equal(FormatoFracionaria, aba.Cell(banana, 5).Style.NumberFormat.Format);
-        Assert.Equal(FormatoFracionaria, aba.Cell(banana, 6).Style.NumberFormat.Format);
     }
 
     [Fact]

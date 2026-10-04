@@ -43,7 +43,7 @@ public class ExportacaoExcelQaTests
 
     private static readonly string[] CabecalhoEstoque =
     {
-        "Produto", "Tipo", "Unidade", "Preço (R$)", "Estoque",
+        "Produto", "Unidade", "Preço (R$)", "Estoque",
         "Estoque mínimo", "Estoque baixo", "Valor em estoque (R$)"
     };
 
@@ -256,7 +256,7 @@ public class ExportacaoExcelQaTests
 
         using var planilha = new Planilha((FileContentResult)new HomeController(qa.Context).ExportarEstoqueExcel(null));
         var aba = planilha.Aba("Estoque");
-        var preco = aba.Cell(LinhaDoProduto(aba, "LEITE INTEGRAL"), 4);
+        var preco = aba.Cell(LinhaDoProduto(aba, "LEITE INTEGRAL"), 3);
 
         Assert.Equal(XLDataType.Number, preco.DataType);
         Assert.Equal(5.99d, preco.GetDouble(), 2);
@@ -276,11 +276,11 @@ public class ExportacaoExcelQaTests
         using var planilha = new Planilha((FileContentResult)new HomeController(qa.Context).ExportarEstoqueExcel(null));
         var aba = planilha.Aba("Estoque");
 
-        var inteira = aba.Cell(LinhaDoProduto(aba, "ARROZ"), 5);
+        var inteira = aba.Cell(LinhaDoProduto(aba, "ARROZ"), 4);
         Assert.Equal(XLDataType.Number, inteira.DataType);
         Assert.Equal(40d, inteira.GetDouble(), 3);
 
-        var fracionada = aba.Cell(LinhaDoProduto(aba, "BANANA"), 5);
+        var fracionada = aba.Cell(LinhaDoProduto(aba, "BANANA"), 4);
         Assert.Equal(XLDataType.Number, fracionada.DataType);
         Assert.Equal(0.125d, fracionada.GetDouble(), 3);
     }
@@ -296,11 +296,13 @@ public class ExportacaoExcelQaTests
         using var planilha = new Planilha((FileContentResult)new HomeController(qa.Context).ExportarEstoqueExcel(null));
         var aba = planilha.Aba("Estoque");
         var linha = LinhaDoProduto(aba, "LEITE INTEGRAL");
-        var valor = aba.Cell(linha, 8);
+        var valor = aba.Cell(linha, 7);
 
         Assert.True(valor.HasFormula, "Valor em estoque deve ser FORMULA, nao numero congelado.");
-        Assert.Contains($"D{linha}", valor.FormulaA1);
-        Assert.Contains($"E{linha}", valor.FormulaA1);
+        // Formula COMPLETA, nao substrings soltas: com a coluna Tipo fora do
+        // layout, o valor virou C (Preco) x D (Estoque). Comparar a formula
+        // inteira mata o falso verde de duas assercoes que se sobreporiam.
+        Assert.Equal($"C{linha}*D{linha}", valor.FormulaA1);
         Assert.Equal(20d, valor.Value.GetNumber(), 2);
     }
 
@@ -404,7 +406,7 @@ public class ExportacaoExcelQaTests
         using var planilha = new Planilha((FileContentResult)new HomeController(qa.Context).ExportarEstoqueExcel(null));
         var aba = planilha.Aba("Estoque");
 
-        var total = AcharFormula(aba, 8, "SUM(");
+        var total = AcharFormula(aba, 7, "SUM(");
         Assert.NotNull(total);
         Assert.Equal(22d, total!.Value.GetNumber(), 2);
     }

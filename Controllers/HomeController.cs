@@ -393,7 +393,14 @@ namespace ControleEstoqueLoja.Controllers
             var p = new Produto
             {
                 Nome = nomeLimpo?.ToUpper() ?? string.Empty,
-                Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : TipoProduto.Prateleira,
+                // Enum.TryParse sozinho aceita "99" e "-5": sao numeros, e o Parse
+                // devolve um valor que NAO existe em TipoProduto. O produto ficava
+                // gravado com Tipo invalido e o PDV (que compara com PorPeso) e a
+                // migration que filtra Tipo = 0 deixavam de enxergar a linha.
+                // IsDefined fecha isso: fora do enum, cai no fallback.
+                Tipo = Enum.TryParse(tipo, out TipoProduto t) && Enum.IsDefined(typeof(TipoProduto), t)
+                    ? t
+                    : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
                 CodigoBarras = codigoBarras,
@@ -448,7 +455,12 @@ namespace ControleEstoqueLoja.Controllers
             var precoAnterior = produto.Preco;
 
             produto.Preco = precoFinal;
-            produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) ? t : produto.Tipo;
+            // Mesmo buraco do Novo: "99"/"-5" passavam pelo TryParse. Aqui o
+            // fallback e MANTER o tipo atual - uma edicao nunca pode rebaixar um
+            // produto por peso para prateleira so porque a tela mandou lixo.
+            produto.Tipo = Enum.TryParse(tipo, out TipoProduto t) && Enum.IsDefined(typeof(TipoProduto), t)
+                ? t
+                : produto.Tipo;
             // BUG-07: Views/Home/Editar.cshtml NÃO tem o campo "quantidade". A action
             // fazia TryParse sem checar o retorno, então qtd virava 0 e a linha
             // `produto.Quantidade = qtd` ZERAVA todo o estoque a cada edição.

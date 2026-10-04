@@ -64,7 +64,7 @@
             <thead>
                 <tr>
                     <th>Produto</th>
-                    <th>Tipo</th>
+                    <th>Vendido por</th>
                     <th>Estoque</th>
                     @if (podeGerenciarEstoque)
                     {
@@ -79,7 +79,7 @@
                         <td>
                             <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.Id" class="produto-link">@item.Nome</a>
                         </td>
-                        <td>@(item.Tipo == TipoProduto.PorPeso ? "Por peso" : item.Tipo.ToString())</td>
+                        <td>@(item.Tipo == TipoProduto.PorPeso ? "Peso (kg)" : "Unidade")</td>
                         <td>
                             @if (item.Tipo == TipoProduto.PorPeso)
                             {

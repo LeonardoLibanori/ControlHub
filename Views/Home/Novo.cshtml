@@ -30,12 +30,14 @@
             </div>
 
             <div class="mb-3">
-                <label class="fw-bold">Tipo do produto:</label>
+                <label class="fw-bold">Vendido por:</label>
+                @* A tela so oferece dois valores. Os `value` continuam sendo os nomes
+                   do enum (o JS atualizarQuantidade e o servidor dependem deles).
+                   Geladeira e Freezer seguem no enum para os produtos legados, e um
+                   produto assim aparece aqui como "Unidade". *@
                 <select name="tipo" id="tipoProduto" class="form-select" required onchange="atualizarQuantidade()">
-                    <option value="PorPeso">Por peso</option>
-                    <option value="Prateleira">Prateleira</option>
-                    <option value="Geladeira">Geladeira</option>
-                    <option value="Freezer">Freezer</option>
+                    <option value="Prateleira">Unidade</option>
+                    <option value="PorPeso">Peso (kg)</option>
                 </select>
             </div>
 

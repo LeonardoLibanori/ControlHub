@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **186/186** (`tests.QA`, xUnit) |
+| Testes | **202/202** (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -37,8 +37,9 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 ControleEstoqueLoja/
 ├── Program.cs                  config, Identity, policies, Migrate() no boot
 ├── Models/
-│   ├── Produto.cs              nome, Tipo, Preco(centavos), Quantidade, Unidade,
+│   ├── Produto.cs              nome, Tipo, Preco(centavos), Quantidade,
 │   │                           EstoqueMinimo, Ativo, CodigoBarras, VendaItems
+│   │                           (kg/un é DERIVADO de Tipo, não é propriedade)
 │   ├── Venda.cs                TotalVenda, ValorRecebido, ValorTroco, MetodoPagamento,
 │   │                           CpfCliente, DataVenda, Itens
 │   ├── VendaItem.cs            ProdutoId, Quantidade, PrecoUnitario
@@ -63,7 +64,7 @@ ControleEstoqueLoja/
 ├── Migrations/                 8 migrations (seção 5)
 ├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
 ├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
-├── tests.QA/                   186 testes xUnit de caracterização
+├── tests.QA/                   202 testes xUnit de caracterização
 ├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
 ├── setup.ps1                   prepara máquina NOVA (uma vez)
 ├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
@@ -85,7 +86,7 @@ controllers (não há testes de UI automatizados, exceto o script PowerShell
 |---|---|---|
 | 1 | **Preço é gravado em centavos (`INTEGER`)**, nunca decimal. `Preco = 499` = R$ 4,99 | `Data/ConversorCentavos.cs` |
 | 2 | **Quantidade NÃO é dinheiro**: continua em `TEXT` decimal. Comparações de estoque são feitas **em C#**, nunca em SQL (em TEXT a collation ordenaria "10" antes de "9") | `Produto.Quantidade` |
-| 3 | Produto **"Por peso"** tem preço **direto em R$/kg** (não há mais ×10 escondido) | `Models/Produto.cs` |
+| 3 | Produto **"Por peso"** tem preço **direto em R$/kg** (não há mais ×10 escondido). A unidade (`kg`/`un`) **NÃO é uma propriedade**: é derivada de `Tipo == PorPeso` (regras 19 e 20) | `Models/Produto.cs` |
 | 4 | Granel legado = centavos **×10** na migration, uma vez, com guard anti-overflow | `Migrations/20261001120000` |
 | 5 | **Todo cálculo financeiro é do servidor.** Preço e troco enviados pelo navegador são ignorados | `CaixaController.FinalizarVenda` |
 | 6 | **Venda em dinheiro** exige `ValorRecebido >= Total`; troco recalculado no servidor | idem |
@@ -101,6 +102,10 @@ controllers (não há testes de UI automatizados, exceto o script PowerShell
 | 16 | Dinheiro e quantidade entram como **número** (nunca texto); a exibição é do `NumberFormat` (`R$ #,##0.00`, `#,##0`, `#,##0.000`) — é isso que faz o `SUM` existir | `ExportacaoExcel.EscreverNumero` |
 | 17 | **Total da venda nunca é recalculado**: `TotalVenda`/`ValorRecebido`/`ValorTroco` saem como gravados; a linha de totais só agrega com `SUM`/`COUNT` | `ExportacaoExcel.Historico` |
 | 18 | Na planilha, estoque abaixo do mínimo usa `Produto.EstoqueAbaixoDoMinimo` (regra 11) e **vence a zebra** de cores | `ExportacaoExcel.AplicarFundo` |
+| 19 | **O enum `TipoProduto` mantém 4 valores** (`PorPeso`, `Prateleira`, `Geladeira`, `Freezer`), mas a tela do cadastro só oferece **2**: "Unidade" (`Prateleira`) e "Peso (kg)" (`PorPeso`). `Geladeira`/`Freezer` são **legados** de dados já gravados — continuam válidos no banco e aparecem como "Unidade" | `Models/Produto.cs`, `Views/Home/Novo.cshtml` |
+| 20 | **Só `PorPeso` aceita quantidade fracionária**; qualquer outro tipo é inteiro (passo `1` no input). Um produto legado (`Geladeira`/`Freezer`) é tratado como unidade | `Views/Home/Novo.cshtml`, `CaixaController` |
+| 21 | **Tipo fora do enum é rejeitado no servidor.** `Enum.TryParse` sozinho aceita `"99"`/`"-5"` (números que não existem no enum) e gravava um tipo inválido; agora exige `TryParse` **e** `IsDefined`. No cadastro o fallback é `Prateleira`; na edição, **mantém o tipo atual** | `HomeController.Novo`, `HomeController.Editar` |
+| 22 | A aba **Estoque do Excel tem 7 colunas** — `Produto, Unidade, Preço, Estoque, Estoque mínimo, Estoque baixo, Valor em estoque`. A coluna "Tipo" (nome cru do enum) foi **removida**: a coluna "Unidade" (`kg`/`un`) já diz o que a tela mostra | `ExportacaoExcel.CabecalhoEstoque` |
 
 ---
 
@@ -336,8 +341,12 @@ dotnet run                # http://localhost:5236
 ### Testar
 ```powershell
 dotnet build                              # deve terminar com 0 aviso, 0 erro
-dotnet test tests.QA\tests.QA.csproj     # deve dar 186/186
+dotnet test tests.QA\tests.QA.csproj     # deve dar 202/202
 ```
+
+> O `.slnx` da raiz lista **só** o projeto web. `dotnet test` sem caminho
+> roda zero testes e sai com código 0 — parece verde, mas não testou nada.
+> Sempre aponte o `.csproj` de `tests.QA`.
 
 ### Trocar de máquina
 
@@ -372,7 +381,7 @@ dotnet run
 1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
-4. Rodar a suíte completa antes de commitar (186 testes)
+4. Rodar a suíte completa antes de commitar (202 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
 6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
    versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
@@ -410,6 +419,7 @@ dotnet run
 - **Sem CI/CD** (o `.github/workflows` chegou a ser criado, mas está vazio)
 
 ### Produto
+- **Unidade de medida real (campo próprio)**: "Peso (kg)" cobre **só o quilo**. Vender a **litro**, **metro** ou **par** não cabe no enum atual (`PorPeso` significa kg) — exige um campo `UnidadeMedida` de verdade na tabela `Produtos`, com **migration** (novo enum/tabela, backfill e ajuste na venda, no Excel e no cupom). É feature futura, não uma linha de tela
 - **Sem** conversão de caixa por hora/dia útil
 - **Sem** perfis além de Dono/Operador (ex.: gerente)
 - **Sem** recuperação de senha nem 2FA
@@ -451,7 +461,7 @@ histórico de preço, CSV).
 dotnet build                              # 0 erros, 0 avisos
 
 # suíte completa
-dotnet test tests.QA\tests.QA.csproj     # 186/186
+dotnet test tests.QA\tests.QA.csproj     # 202/202
 
 # migrations aplicadas
 dotnet ef migrations list
