@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **202/202** (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
+| Testes | **222/222** + 1 ignorado (BUG-28) (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -52,6 +52,7 @@ ControleEstoqueLoja/
 │   ├── HomeController.cs       CRUD produtos + busca + ajuste + CSV + Excel
 │   ├── CaixaController.cs      PDV, vendas, caixa, sangria, relatórios, CSV + Excel
 │   ├── AccountController.cs    Login / Logout / Setup / AcessoNegado
+│   ├── DashboardController.cs   painel inicial (só Dono): leitura pura, regra 25
 │   └── UsuariosController.cs   criar e listar contas (só Dono)
 ├── Security/
 │   ├── Policies.cs             11 policies nomeadas (fonte única de verdade)
@@ -64,7 +65,7 @@ ControleEstoqueLoja/
 ├── Migrations/                 8 migrations (seção 5)
 ├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
 ├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
-├── tests.QA/                   202 testes xUnit de caracterização
+├── tests.QA/                   222 testes xUnit de caracterização
 ├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
 ├── setup.ps1                   prepara máquina NOVA (uma vez)
 ├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
@@ -106,6 +107,9 @@ controllers (não há testes de UI automatizados, exceto o script PowerShell
 | 20 | **Só `PorPeso` aceita quantidade fracionária**; qualquer outro tipo é inteiro (passo `1` no input). Um produto legado (`Geladeira`/`Freezer`) é tratado como unidade | `Views/Home/Novo.cshtml`, `CaixaController` |
 | 21 | **Tipo fora do enum é rejeitado no servidor.** `Enum.TryParse` sozinho aceita `"99"`/`"-5"` (números que não existem no enum) e gravava um tipo inválido; agora exige `TryParse` **e** `IsDefined`. No cadastro o fallback é `Prateleira`; na edição, **mantém o tipo atual** | `HomeController.Novo`, `HomeController.Editar` |
 | 22 | A aba **Estoque do Excel tem 7 colunas** — `Produto, Unidade, Preço, Estoque, Estoque mínimo, Estoque baixo, Valor em estoque`. A coluna "Tipo" (nome cru do enum) foi **removida**: a coluna "Unidade" (`kg`/`un`) já diz o que a tela mostra | `ExportacaoExcel.CabecalhoEstoque` |
+| 23 | **"Hoje" é um INTERVALO local**, `[DateTime.Today, DateTime.Today + 1 dia)` — nunca `.Date == hoje` (viraria `DATE()` no SQLite e passaria a depender de fuso). Hora **local do servidor**, como o resto do sistema (`DataVenda` é gravada com `DateTime.Now`) | `DashboardController`, `CaixaController` |
+| 24 | A **gaveta do dashboard é a mesma que limita a sangria** (regra 7): só vendas em `Dinheiro` **não fechadas** de hoje + suprimentos − sangrias do dia não fechadas, passando por `CaixaController.CalcularSaldoEmGaveta`. A fórmula **não é duplicada** em lugar nenhum — quem tem o número é o caixa | `DashboardController.CalcularSaldoEmGaveta` |
+| 25 | O **dashboard é leitura pura**: sem POST/PUT/DELETE, sem `try/catch` (quem trata é o handler global, que não vaza `ex.Message`), e todas as somas são em `decimal` **em C#** sobre listas já materializadas (`AsNoTracking` + `ToListAsync`). `TotalVenda` **gravado**, nunca recalculado pelos itens | `DashboardController`, `Views/Dashboard/Index.cshtml` |
 
 ---
 
@@ -183,6 +187,7 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | Tema corporativo escuro | `f2940c4` | `corporate-theme.css` (substituiu `site.css`) |
 | Autenticação + policies | `ae12be8`…`702ae85` | 2 papéis, 11 policies |
 | Sincronização entre máquinas | `a49c399` | `sincronizar.ps1` |
+| **Dashboard inicial (Início)** | `b3414bf` | item de menu só para o Dono: vendas do dia, dinheiro na gaveta, quebra por forma de pagamento, estoque baixo, últimos 7 dias e últimas vendas |
 
 ---
 
@@ -341,7 +346,7 @@ dotnet run                # http://localhost:5236
 ### Testar
 ```powershell
 dotnet build                              # deve terminar com 0 aviso, 0 erro
-dotnet test tests.QA\tests.QA.csproj     # deve dar 202/202
+dotnet test tests.QA\tests.QA.csproj     # deve dar 222/222 + 1 ignorado
 ```
 
 > O `.slnx` da raiz lista **só** o projeto web. `dotnet test` sem caminho
@@ -381,7 +386,7 @@ dotnet run
 1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
-4. Rodar a suíte completa antes de commitar (202 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
+4. Rodar a suíte completa antes de commitar (222 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
 6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
    versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
@@ -410,6 +415,15 @@ dotnet run
 - **Backup do banco só acontece na troca de máquina** (o `sincronizar.ps1` grava
   uma cópia em `backups-banco/` quando roda). **Não há** backup automático
   diário com rotação — se ninguém sincronizar, o GitHub é a única cópia
+
+### Funcional
+- **BUG-28** — `CaixaController.ObterStatusAtual` (L315-345) **não filtra `IsFechado`** nas três somas (L321, L325, L331), enquanto a regra 7 em `RegistrarMovimentacaoInterno` filtra (L263, L268, L273). Efeito prático: depois do fechamento do dia, a **"CONFERÊNCIA DE CAIXA"** do PDV (`admin-caixa.js` L113, disparada pelo botão CAIXA em `_Layout` L236) mostra **"SALDO EM GAVETA"** somando vendas já fechadas, e esse número é **maior** que o do dashboard. A sangria, todavia, respeita o saldo correto. Teste que registra o comportamento esperado: `DashboardQaTests.Dashboard_Gaveta_IgualAoStatusAposVendaFechada_ComportamentoEsperado` (ignorado). Corrigir exige mexer em `CaixaController`, fora do escopo deste commit
+- **`FaturamentoMes` e `FaturamentoAno` do Histórico comparam só mês/ano** (`CaixaController.L462`, `L466`): `DataVenda.Month == Today.Month` soma também o mesmo mês de **todos os anos anteriores**. "Faturamento do ano" inclui janeiro do ano passado
+- **O fechamento só vira flag e não guarda valor declarado**: `ZerarCaixaParaProximoDia` (L847) apenas marca `IsFechado = true` em vendas e movimentações. Não existe entidade de sessão de caixa nem total declarado — o dinheiro que o dono contou na gaveta **não é gravado em lugar nenhum**
+- **Vendas e movimentações não fechadas de dias anteriores ficam fora do saldo**: o filtro é sempre `Data.Date == hoje`, então um dia que o dono esqueceu de fechar "verte" para o dia seguinte (as linhas somem do saldo, mas continuam no histórico)
+- **`Controllers/FluxoCaixaController.cs` é arquivo morto fora do build**: excluído por `<Compile Remove>` no `.csproj` L17 (e não compilaria mesmo — usa `_context.OperacoesCaixa`, que não existe). Sem `[Authorize]`, mas **inalcançável** (a rota responde 404). Candidato a remoção; se alguém tirar o `Compile Remove`, ele volta ao build sem proteção
+- **`Views/Caixa/Index1.cshtml`, `Index2.cshtml` e `Index3.cshtml` são views órfãs**: nenhuma está no menu nem em rota. `Index1` ainda duplica o CDN do SweetAlert2 (L95). Candidatas a remoção
+- **Cinco recursos externos no `_Layout`** quebram a operação offline: fontes do Google (L100-102), Bootstrap Icons via jsdelivr (L104) e SweetAlert2 via jsdelivr (L363). Sem internet os ícones `bi-*` do menu somem e os alertas do PDV não abrem. O texto dos itens de menu **não** depende de ícone — o item "Início" foi criado assim de propósito
 
 ### Técnico
 - **Concorrência**: a leitura de estoque não tem lock pessimista nem `ConcurrencyCheck`; a proteção atual vem da revalidação de estoque no servidor
@@ -461,7 +475,7 @@ histórico de preço, CSV).
 dotnet build                              # 0 erros, 0 avisos
 
 # suíte completa
-dotnet test tests.QA\tests.QA.csproj     # 202/202
+dotnet test tests.QA\tests.QA.csproj     # 222/222 + 1 ignorado
 
 # migrations aplicadas
 dotnet ef migrations list

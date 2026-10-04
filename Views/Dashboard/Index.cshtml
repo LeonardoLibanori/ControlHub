@@ -1,0 +1,217 @@
+@model ControleEstoqueLoja.Controllers.DashboardViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Início";
+
+    // pt-BR explicito: a maquina de desenvolvimento roda em outra cultura e o
+    // "R$ 1.234,56" viraria "1,234.56" sem isto.
+    var br = CultureInfo.GetCultureInfo("pt-BR");
+    string Dinheiro(decimal valor) => valor.ToString("C", br);
+
+    // Quantidade: 3 casas no maximo (0,125 kg), sem zeros a direita.
+    string Qtd(decimal valor) => valor.ToString("0.###", br);
+
+    // Altura da barra em %: no maximo da serie. Divisao por MAIOR deve tratar
+    // o zero - senao um dia sem venda estoura a tela com NaN%.
+    var maiorDia = Model.SerieUltimos7Dias.Count > 0
+        ? Model.SerieUltimos7Dias.Max(d => d.Total)
+        : 0m;
+}
+
+<div class="main-container dash-container">
+    <h1 class="dash-titulo">Início</h1>
+    <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
+
+    @* ------------------------------------------------------------------
+       TRÊS CARTÕES. Rótulos deliberadamente DIFERENTES:
+       "Vendas de hoje" é o faturamento do dia (todas as formas de pagamento);
+       "Dinheiro na gaveta" é só o que está fisicamente no caixa (regra 7).
+       São números diferentes de propósito - o mesmo número com dois nomes
+       seria mentira na tela.
+    *@
+    <div class="dash-grade">
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Vendas de hoje</span>
+            <strong class="dash-valor">@Dinheiro(Model.TotalVendasHoje)</strong>
+            <span class="dash-observacao">
+                @Model.NumeroVendasHoje @(Model.NumeroVendasHoje == 1 ? "venda" : "vendas")
+                · ticket médio @Dinheiro(Model.TicketMedio)
+            </span>
+        </div>
+
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Dinheiro na gaveta</span>
+            <strong class="dash-valor @((Model.SaldoGaveta < 0m) ? "dash-negativo" : null)">
+                @Dinheiro(Model.SaldoGaveta)
+            </strong>
+            <span class="dash-observacao">
+                Só vendas em dinheiro de hoje. É este número que limita a sangria.
+            </span>
+        </div>
+
+        <div class="dash-cartao">
+            <span class="dash-rotulo">Estoque baixo</span>
+            <strong class="dash-valor @((Model.TotalEstoqueBaixo > 0) ? "dash-negativo" : null)">
+                @(Model.TotalEstoqueBaixo == 1 ? "1 produto" : $"{Model.TotalEstoqueBaixo} produtos")
+            </strong>
+            <span class="dash-observacao">Abaixo do mínimo configurado</span>
+        </div>
+    </div>
+
+    @* ------------------------------------------------------------------
+       FORMAS DE PAGAMENTO. "Vendas de hoje" NÃO é "Dinheiro na gaveta":
+       cartão e PIX entram no faturamento e NÃO deixam dinheiro no caixa.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">Vendas de hoje por forma de pagamento</h2>
+
+        @if (Model.TotalPorMetodo.Count == 0)
+        {
+            <p class="dash-vazio">Nenhuma venda registrada hoje.</p>
+        }
+        else
+        {
+            <div class="dash-rolagem">
+                <table class="dash-tabela">
+                    <thead>
+                        <tr>
+                            <th scope="col">Forma</th>
+                            <th scope="col" class="dash-num">Valor</th>
+                            <th scope="col" class="dash-num">Vai para a gaveta?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model.TotalPorMetodo)
+                        {
+                            <tr>
+                                <td>@m.Metodo</td>
+                                <td class="dash-num">@Dinheiro(m.Total)</td>
+                                <td class="dash-num">
+                                    @(string.Equals(m.Metodo, ControleEstoqueLoja.Controllers.CaixaController.MetodoPagamentoDinheiro, StringComparison.Ordinal)
+                                        ? "Sim"
+                                        : "Não")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @* ------------------------------------------------------------------
+       ÚLTIMOS 7 DIAS em barras de HTML/CSS PURO: sem canvas, sem biblioteca,
+       sem script. Cada barra é uma <div> com altura em %, e o valor vai
+       também em texto - se o CSS não carregar, o número continua legível.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">Vendas dos últimos 7 dias</h2>
+
+        <div class="dash-grafico" role="img" aria-label="Vendas por dia nos últimos 7 dias">
+            @foreach (var d in Model.SerieUltimos7Dias)
+            {
+                var percentual = maiorDia > 0m ? (double)(d.Total / maiorDia * 100m) : 0d;
+                <div class="dash-coluna">
+                    <span class="dash-coluna-valor">@Dinheiro(d.Total)</span>
+                    <div class="dash-coluna-trilho">
+                        <div class="dash-coluna-barra" style="height: @(percentual.ToString("0.##", br))%"></div>
+                    </div>
+                    <span class="dash-coluna-dia">@d.Dia.ToString("dd/MM", br)</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ------------------------------------------------------------------
+       ESTOQUE BAIXO: os 5 mais críticos. O total real vem no cartão acima -
+       a lista é top 5, o número do cartão é o todo.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">Estoque baixo</h2>
+
+        @if (Model.EstoqueBaixo.Count == 0)
+        {
+            <p class="dash-vazio">Nenhum produto abaixo do mínimo.</p>
+        }
+        else
+        {
+            <div class="dash-rolagem">
+                <table class="dash-tabela">
+                    <thead>
+                        <tr>
+                            <th scope="col">Produto</th>
+                            <th scope="col" class="dash-num">Em estoque</th>
+                            <th scope="col" class="dash-num">Mínimo</th>
+                            <th scope="col" class="dash-num">Falta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.EstoqueBaixo)
+                        {
+                            <tr class="@((p.Quantidade <= 0m) ? "dash-linha-zero" : null)">
+                                <td>
+                                    <a asp-controller="Home" asp-action="Produto" asp-route-id="@p.ProdutoId">@p.Nome</a>
+                                </td>
+                                <td class="dash-num">@Qtd(p.Quantidade) @p.Unidade</td>
+                                <td class="dash-num">@Qtd(p.EstoqueMinimo) @p.Unidade</td>
+                                <td class="dash-num">@Qtd(p.Faltam) @p.Unidade</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalEstoqueBaixo > Model.EstoqueBaixo.Count)
+            {
+                <p class="dash-observacao">
+                    Mostrando os @Model.EstoqueBaixo.Count mais críticos de
+                    @(Model.TotalEstoqueBaixo == 1 ? "1 produto" : $"{Model.TotalEstoqueBaixo} produtos").
+                    <a asp-controller="Home" asp-action="Index">Ver o estoque completo</a>
+                </p>
+            }
+        }
+    </div>
+
+    @* ------------------------------------------------------------------
+       ÚLTIMAS VENDAS: os 5 registros mais recentes, de qualquer dia. O link
+       abre o histórico, que é quem tem o detalhe.
+    *@
+    <div class="dash-secao">
+        <h2 class="dash-titulo-secao">Últimas vendas</h2>
+
+        @if (Model.UltimasVendas.Count == 0)
+        {
+            <p class="dash-vazio">Nenhuma venda registrada.</p>
+        }
+        else
+        {
+            <div class="dash-rolagem">
+                <table class="dash-tabela">
+                    <thead>
+                        <tr>
+                            <th scope="col">Venda</th>
+                            <th scope="col">Data</th>
+                            <th scope="col">Forma</th>
+                            <th scope="col" class="dash-num">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in Model.UltimasVendas)
+                        {
+                            <tr>
+                                <td>#@v.Id</td>
+                                <td>@v.DataVenda.ToString("dd/MM/yyyy HH:mm", br)</td>
+                                <td>@v.MetodoPagamento</td>
+                                <td class="dash-num">@Dinheiro(v.Total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="dash-observacao">
+                <a asp-controller="Caixa" asp-action="Historico">Ver o histórico completo</a>
+            </p>
+        }
+    </div>
+</div>

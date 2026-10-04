@@ -233,6 +233,7 @@ Ok302Login 'GET /Usuarios/Index' (Chama $anon 'GET' '/Usuarios/Index' $null $nul
 Ok302Login 'GET /Usuarios/Criar' (Chama $anon 'GET' '/Usuarios/Criar' $null $null $false)
 Ok302Login 'GET /Home/Novo' (Chama $anon 'GET' '/Home/Novo' $null $null $false)
 Ok302Login 'GET /Home/Produto/1' (Chama $anon 'GET' '/Home/Produto/1' $null $null $false)
+Ok302Login 'GET /Dashboard' (Chama $anon 'GET' '/Dashboard' $null $null $false)
 Nao2xx 'POST /Caixa/RegistrarSangria (anonimo)' (Chama $anon 'POST' '/Caixa/RegistrarSangria' 'valor=10.00&obs=anon' $null $true)
 Nao2xx 'POST /Usuarios/Criar (anonimo)' (Chama $anon 'POST' '/Usuarios/Criar' 'Nome=X&Email=x%40x.com&Senha=Abc%40123&ConfirmarSenha=Abc%40123&Papel=Dono' $null $true)
 Say ''
@@ -276,6 +277,13 @@ TemTexto '  vendedor criado' $cv.Body 'true'
 Ok 'GET /Caixa/ObterStatusAtual (Dono)' 200 (Chama $dono 'GET' '/Caixa/ObterStatusAtual' $null $null $true)
 Ok 'GET /Caixa/Historico (Dono)' 200 (Chama $dono 'GET' '/Caixa/Historico' $null $null $false)
 Ok 'GET /Usuarios/Criar (Dono) de novo' 200 (Chama $dono 'GET' '/Usuarios/Criar' $null $null $false)
+Say '  -- dashboard (ETAPA B, PodeVerFinanceiro) --'
+$dash = Chama $dono 'GET' '/Dashboard' $null $null $false
+Ok 'GET /Dashboard (Dono)' 200 $dash
+TemTexto '  mostra o cartao de vendas de hoje' $dash.Body 'Vendas de hoje'
+TemTexto '  mostra o cartao do dinheiro na gaveta' $dash.Body 'Dinheiro na gaveta'
+TemTexto '  mostra a serie de 7 dias' $dash.Body 'ltimos 7 dias'
+Say ''
 Say ''
 Write-Titulo '5) OPERADOR: PDV e suprimento passam; o resto e 403'
 $op = Login 'operador@teste.com' 'Operador@123'
@@ -326,6 +334,11 @@ Ok 'GET /Usuarios' 403 (Chama $jar 'GET' '/Usuarios' $null $null $true)
 Ok 'GET /Usuarios/Criar' 403 (Chama $jar 'GET' '/Usuarios/Criar' $null $null $true)
 Ok 'POST /Usuarios/Criar' 403 (Chama $jar 'POST' '/Usuarios/Criar' 'Nome=HACK&Email=hack%40teste.com&Senha=Hack%40123&ConfirmarSenha=Hack%40123&Papel=Dono' (Token $pg.Body) $true)
 Ok302Negado 'GET /Usuarios (navegacao do Operador)' (Chama $jar 'GET' '/Usuarios' $null $null $false)
+Say '  -- dashboard (ETAPA B, PodeVerFinanceiro) --'
+# O painel mostra faturamento e saldo da gaveta: nao e do Operador.
+Ok 'GET /Dashboard' 403 (Chama $jar 'GET' '/Dashboard' $null $null $true)
+Ok302Negado 'GET /Dashboard (navegacao do Operador)' (Chama $jar 'GET' '/Dashboard' $null $null $false)
+Say ''
 
 # =============================================================================
 # 6) MENU POR PAPEL (commit 4) - o que SAI no HTML de cada perfil.

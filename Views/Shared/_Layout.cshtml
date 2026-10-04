@@ -120,6 +120,18 @@
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @* Início (Dashboard): PodeVerFinanceiro (so Dono) - o painel mostra
+                           faturamento e saldo da gaveta, que nao sao negocio do
+                           Operador. Reaproveita a variavel ja resolvida no topo
+                           do _Layout, sem uma Authorize nova aqui. *@
+                        @if (podeVerFinanceiro)
+                        {
+                            <li class="nav-item">
+                                @* Sem <i class="bi ...">: o item nao depende de
+                                   icone (que vem de CDN) para fazer sentido. *@
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Dashboard" asp-action="Index">Início</a>
+                            </li>
+                        }
                         @* Estoque e Caixa: PodeOperarPDV (Dono e Operador). *@
                         @if (podeOperarPdv)
                         {

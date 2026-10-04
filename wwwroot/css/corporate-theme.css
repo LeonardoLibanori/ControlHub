@@ -999,3 +999,203 @@ footer .container {
     font-size: 0.75rem;
     color: var(--text-muted);
 }
+
+
+/* =====================================================================
+   ETAPA B - DASHBOARD (.dash-*)
+   Bloco NOVO, acrescentado no FIM do arquivo. Nenhuma regra acima foi
+   alterada: o prefixo .dash- isola tudo e nao colide com nada do PDV.
+
+  SEM BIBLIOTECA DE GRAFICO, SEM CANVAS, SEM ICONE. O grafico de 7 dias e
+   feito com <div> de altura em % - o valor tambem vai em texto, entao se o
+   CSS nao carregar o numero continua legivel.
+
+   MOBILE: a grade e auto-fit (cartao larga no desktop, cartao inteiro no
+   celular) e toda tabela fica dentro de .dash-rolagem, que sobe a tabela
+   e NAO a pagina - sem barra horizontal no celular.
+   ===================================================================== */
+
+.dash-container {
+    padding-bottom: 3rem;
+}
+
+.dash-titulo {
+    margin-bottom: .25rem;
+}
+
+.dash-subtitulo {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+/* --- grade dos cartoes --------------------------------------------- */
+.dash-grade {
+    display: grid;
+    /* minmax(15rem, 1fr): 1 coluna no celular, 3+ no desktop, sem media
+       query - quem decide o numero de colunas e a largura disponivel. */
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dash-cartao {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: 1.25rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+}
+
+.dash-rotulo {
+    font-size: .75rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dash-valor {
+    font-size: 1.75rem;
+    line-height: 1.1;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.dash-observacao {
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+
+/* Numero que pede atencao: usa as cores que JA existem no tema. */
+.dash-negativo {
+    color: var(--danger);
+}
+
+/* --- secoes --------------------------------------------------------- */
+.dash-secao {
+    margin-bottom: 2rem;
+}
+
+.dash-titulo-secao {
+    font-size: 1.1rem;
+    margin-bottom: .75rem;
+    color: var(--text);
+}
+
+.dash-vazio {
+    color: var(--text-muted);
+    padding: 1rem 0;
+}
+
+/* --- tabelas -------------------------------------------------------- */
+/* overflow-x: auto no CONTAINER: a tabela rola dentro dela e a pagina
+   nunca ganha barra horizontal no celular. */
+.dash-rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+}
+
+.dash-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+}
+
+.dash-tabela th,
+.dash-tabela td {
+    padding: .6rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    /* min-width + whitespace: impede a coluna de espremer em telas estreitas
+       (a rolagem do container assume a partir dai). */
+    min-width: 6rem;
+    white-space: nowrap;
+}
+
+.dash-tabela th {
+    font-size: .75rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.dash-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.dash-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Produto zerado: a linha mais urgente da lista. */
+.dash-linha-zero {
+    background: rgba(207, 119, 121, .12);
+}
+
+/* --- grafico de barras em CSS puro ---------------------------------- */
+.dash-grafico {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .5rem;
+    align-items: end;
+    padding: 1rem .5rem 0;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+}
+
+.dash-coluna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+    min-width: 0;
+}
+
+.dash-coluna-valor {
+    font-size: .7rem;
+    color: var(--text-muted);
+    text-align: center;
+    word-break: break-all;
+}
+
+/* Trilho com altura FIXA: e a barra que cresce dentro dele, entao as 7
+   colunas ficam alinhadas pelo topo do graphicismo. */
+.dash-coluna-trilho {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    height: 8rem;
+    background: rgba(255, 255, 255, .04);
+    border-radius: .35rem;
+    overflow: hidden;
+}
+
+.dash-coluna-barra {
+    width: 100%;
+    background: var(--accent);
+    /* min-height garante que um dia com 0 ainda mostre a "base" da barra:
+       a coluna some inteira sem ela. */
+    min-height: 2px;
+}
+
+.dash-coluna-dia {
+    font-size: .7rem;
+    color: var(--text-muted);
+}
+
+/* No celular o grafico fica com rolagem lateral, em vez de espremer as 7
+   barras a ponto de virar um risco. */
+@media (max-width: 30rem) {
+    .dash-grafico {
+        min-width: 22rem;
+    }
+
+    .dash-coluna-valor {
+        font-size: .62rem;
+    }
+}
