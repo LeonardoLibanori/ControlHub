@@ -16,8 +16,8 @@
     var podeGerenciarEstoque = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarEstoque)).Succeeded;
 
     // FASE A - ITEM 3: o termo de busca vive na querystring (o form e GET).
-    // A tela precisa dele para o botao "Exportar CSV" montar o link com o MESMO
-    // filtro - sem isso, quem busca "leite" e exporta receberia a planilha
+    // A tela precisa dele para o botao "Exportar Excel" montar o link com o
+    // MESMO filtro - sem isso, quem busca "leite" e exporta receberia a planilha
     // inteira, e a tela mentiria sobre o conteudo do arquivo.
     var buscaAtual = Context.Request.Query["busca"].ToString();
 }
@@ -46,14 +46,14 @@
 
             @* Exportar (item 3): leva o mesmo `buscaAtual` da tela, para o
                arquivo ter exatamente os produtos que estao na tabela. Sem o
-               parametro, o link baixaria o estoque inteiro. download= faz o
-               navegador salvar em vez de abrir o csv na aba. *@
+               parametro, o link baixaria o estoque inteiro. O .xlsx respeita o
+               MESMO filtro do CSV - trocar de formato nao troca o conteudo. *@
             <a asp-controller="Home"
-               asp-action="ExportarEstoqueCsv"
+               asp-action="ExportarEstoqueExcel"
                asp-route-busca="@buscaAtual"
                class="btn-exportar"
-               title="Baixar o que está na tela (respeita a busca) em CSV">
-                <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>Exportar CSV
+               title="Baixar o que está na tela (respeita a busca) em Excel (.xlsx)">
+                <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>Exportar Excel
             </a>
         </div>
     }

@@ -51,6 +51,13 @@
          o bundle 2.1.12 referencia lib.e_sqlite3 3.53.3 (SQLite corrigido, >= 3.50.2)
          sem mudar de major - zero breaking change com o provider do EF Core 10. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+
+    <!-- ETAPA A (ControlHub): exportacao Excel (.xlsx) ao lado do CSV.
+         Por que 0.105.1 e nao 0.105.0: o 0.105.1 e o patch que limita o
+         transitivo SixLabors.Fonts a [1.0.0, 3.0.0) - a linha 3.x ficava de
+         fora. O pacote traz apenas os grupos netstandard2.0/2.1, entao roda
+         no net10.0 deste projeto sem precisar de build especifico. -->
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
   </ItemGroup>
 
   <ItemGroup>

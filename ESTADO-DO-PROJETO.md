@@ -21,12 +21,12 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 
 | Aspecto | Valor |
 |---|---|
-| Stack | ASP.NET Core MVC · .NET 10 · EF Core 10 · SQLite |
+| Stack | ASP.NET Core MVC · .NET 10 · EF Core 10 · SQLite · ClosedXML 0.105.1 |
 | Banco | arquivo único `controleestoque.db` (SQLite) |
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **133/133** (`tests.QA`, xUnit) |
+| Testes | **186/186** (`tests.QA`, xUnit) |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -48,8 +48,8 @@ ControleEstoqueLoja/
 │   ├── CaixaMovimentacao.cs    Suprimento / Sangria
 │   └── FluxoCaixa.cs           tabela ÓRFÃ (não usada pelo código)
 ├── Controllers/
-│   ├── HomeController.cs       CRUD produtos + busca + ajuste de estoque
-│   ├── CaixaController.cs      PDV, vendas, caixa, sangria, relatórios, CSV
+│   ├── HomeController.cs       CRUD produtos + busca + ajuste + CSV + Excel
+│   ├── CaixaController.cs      PDV, vendas, caixa, sangria, relatórios, CSV + Excel
 │   ├── AccountController.cs    Login / Logout / Setup / AcessoNegado
 │   └── UsuariosController.cs   criar e listar contas (só Dono)
 ├── Security/
@@ -58,11 +58,12 @@ ControleEstoqueLoja/
 ├── Data/
 │   ├── ApplicationDbContext.cs IdentityDbContext<Usuario> + 7 DbSets
 │   ├── ConversorCentavos.cs    decimal <-> long (centavos)
-│   └── ExportacaoCsv.cs        CSV (UTF-8 com BOM, anti CSV-injection)
+│   ├── ExportacaoCsv.cs        CSV (UTF-8 com BOM, anti CSV-injection)
+│   └── ExportacaoExcel.cs      .xlsx ClosedXML (fórmulas, cores, freeze, totais)
 ├── Migrations/                 8 migrations (seção 5)
 ├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
 ├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
-├── tests.QA/                   133 testes xUnit de caracterização
+├── tests.QA/                   186 testes xUnit de caracterização
 ├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
 ├── setup.ps1                   prepara máquina NOVA (uma vez)
 ├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
@@ -95,6 +96,11 @@ controllers (não há testes de UI automatizados, exceto o script PowerShell
 | 11 | **Estoque mínimo = 0 ou nulo ⇒ sem alerta** | `Produto.EstoqueAbaixoDoMinimo` |
 | 12 | **Histórico de preço só grava se o preço mudar de verdade** (após validações, antes do `SaveChanges`) | `HomeController.Editar` |
 | 13 | Sessão **12 h com SlidingExpiration**; antiforgery reemitido a cada ~30 min | `Program.cs` |
+| 14 | **Exportação Excel respeita o MESMO filtro da tela** (busca no estoque, dia no histórico) — trocar de formato não troca o conteúdo | `ExportacaoExcel`, actions `...Excel` |
+| 15 | Na planilha, texto do cadastro passa por `ExportacaoCsv.EscaparTexto` e vira **texto com `quotePrefix`**: `"=1+1"` abre como texto, nunca como fórmula | `ExportacaoExcel.EscreverTexto` |
+| 16 | Dinheiro e quantidade entram como **número** (nunca texto); a exibição é do `NumberFormat` (`R$ #,##0.00`, `#,##0`, `#,##0.000`) — é isso que faz o `SUM` existir | `ExportacaoExcel.EscreverNumero` |
+| 17 | **Total da venda nunca é recalculado**: `TotalVenda`/`ValorRecebido`/`ValorTroco` saem como gravados; a linha de totais só agrega com `SUM`/`COUNT` | `ExportacaoExcel.Historico` |
+| 18 | Na planilha, estoque abaixo do mínimo usa `Produto.EstoqueAbaixoDoMinimo` (regra 11) e **vence a zebra** de cores | `ExportacaoExcel.AplicarFundo` |
 
 ---
 
@@ -165,6 +171,7 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | Estoque mínimo + alerta visual | `989acca` | badge "⚠ ESTOQUE BAIXO" na listagem |
 | Histórico de preço por produto | `643fec4` | tela de histórico, mais recente primeiro |
 | Exportação CSV (Estoque e Histórico) | `0fde7a0` | botão "Exportar CSV", respeita o filtro da tela, UTF-8 com BOM |
+| Exportação **Excel .xlsx** (Estoque e Histórico) | *pendente* | botão "Exportar Excel": fórmulas de total, linha de totais, cores do tema, painel congelado, mesmo filtro da tela |
 | Cupom do vendedor **opcional** | `a193d0d` | botão na etapa do CPF (antes travava a venda) |
 | Menu de perfil (ícone + "Olá") | `45f22ea` | dropdown com Usuários e Sair |
 | Unidade por produto / preço por kg | `f2940c4` | fim do "granel" hardcoded |
@@ -302,9 +309,14 @@ encolher para uma linha de nota.
 | Banco na fila do Git — `sincronizar.ps1` |
 
 ### Visuais
-Modal de pagamento aparecia antes da hora; botão Buscar fora do padrão;
-Histórico estourando a página; overflow de 2px no mobile; tela de Usuários
-com aviso e botão redundantes.
+| Correção | Detalhe |
+|---|---|
+| **BUG-27 — CSS chegava vazio no browser** | Página inteira sem estilo (botão/campo crus) e o modal de Operação vazando no meio do login. Causa: `app.MapStaticAssets()` — em `dotnet run` não existem as variantes pré-comprimidas do manifesto de build, então com o `Accept-Encoding: gzip, br` (que todo browser envia) a resposta era `200` com `Content-Length: 0`. **Correção:** `app.UseStaticFiles()`, que serve o `wwwroot` com `Content-Type`/`Content-Length` corretos em `run` e em `publish`. |
+| Modal de pagamento aparecia antes da hora | SweetAlert2 subia sobre o modal do caixa |
+| Botão Buscar fora do padrão | padding/raio/peso herdados de `.btn-novo` |
+| Histórico estourando a página | tabela fluida com container certo |
+| Overflow de 2px no mobile | `width: 100vw` causava rolagem lateral |
+| Tela de Usuários com aviso e botão redundantes | mensagem duplicada removida |
 
 ### Rótulo enganoso
 | ID | Bug | Correção |
@@ -324,7 +336,7 @@ dotnet run                # http://localhost:5236
 ### Testar
 ```powershell
 dotnet build                              # deve terminar com 0 aviso, 0 erro
-dotnet test tests.QA\tests.QA.csproj     # deve dar 133/133
+dotnet test tests.QA\tests.QA.csproj     # deve dar 186/186
 ```
 
 ### Trocar de máquina
@@ -360,7 +372,7 @@ dotnet run
 1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
-4. Rodar a suíte completa antes de commitar (133 testes)
+4. Rodar a suíte completa antes de commitar (186 testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
 6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
    versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
@@ -439,7 +451,7 @@ histórico de preço, CSV).
 dotnet build                              # 0 erros, 0 avisos
 
 # suíte completa
-dotnet test tests.QA\tests.QA.csproj     # 133/133
+dotnet test tests.QA\tests.QA.csproj     # 186/186
 
 # migrations aplicadas
 dotnet ef migrations list

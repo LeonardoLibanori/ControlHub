@@ -59,17 +59,19 @@
             <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
         </button>
 
-        @* FASE A - ITEM 3: exporta exatamente o dia que o filtro mostra
+        @* ETAPA B (ControlHub): exporta exatamente o dia que o filtro mostra
            (dataTela, lido da querystring acima - e nao "hoje"). O parametro vai
            em asp-route-data porque este nao e o form de busca: e um link de
            download, e mandar o input name="data" junto faria o Exportar
-           disparar uma NOVA busca em vez de baixar o arquivo. *@
+           disparar uma NOVA busca em vez de baixar o arquivo. O .xlsx respeita
+           o MESMO filtro de dia do CSV - trocar de formato nao troca o
+           conteudo. *@
         <a asp-controller="Caixa"
-           asp-action="ExportarHistoricoCsv"
+           asp-action="ExportarHistoricoExcel"
            asp-route-data="@dataTela.ToString("yyyy-MM-dd")"
            class="btn-exportar"
-           title="Baixar as vendas do dia filtrado em CSV">
-            <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>Exportar CSV
+           title="Baixar as vendas do dia filtrado em Excel (.xlsx)">
+            <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>Exportar Excel
         </a>
     </form>
 </div>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using ControleEstoqueLoja;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -15,9 +16,61 @@ namespace ControleEstoqueLoja.Controllers
         // Inje��o do Banco de Dados
         private readonly ApplicationDbContext _context;
 
-        public HomeController(ApplicationDbContext context)
+        public HomeController(ApplicationDbContext context, IConfiguration? config = null)
         {
             _context = context;
+
+            // MARCA e LOJA sao apenas rotulo de apresentacao no topo do .xlsx.
+            // O parametro e OPCIONAL de proposito: a suite de QA constroi
+            // `new HomeController(qa.Context)` e continua compilando sem saber
+            // que a planilha tem cabecalho de marca. Quando a configuracao nao
+            // existe (teste ou ambiente sem appsettings), cai no padrao
+            // "ControlHub" + loja vazia em vez de estourar.
+            Marca = LerTextoDeConfig(config, "Marca:Nome", "ControlHub");
+            Loja = LerTextoDeConfig(config, "Loja:Nome", string.Empty);
+        }
+
+        /// <summary>Rotulo do topo da planilha (`Marca:Nome`). Padrao: ControlHub.</summary>
+        protected string Marca { get; }
+
+        /// <summary>
+        /// Rotulo da loja (`Loja:Nome`). Padrao: VAZIO - com a chave em branco a
+        /// planilha nao ganha um titulo vazio grudado no nome da marca.
+        /// </summary>
+        protected string Loja { get; }
+
+        /// <summary>
+        /// Le uma chave de configuracao e devolve o padrao quando ela nao existe
+        /// ou esta em branco. Centralizado porque as duas planilhas (estoque e
+        /// historico) precisam do mesmo fallback.
+        /// </summary>
+        private static string LerTextoDeConfig(IConfiguration? config, string chave, string padrao)
+        {
+            var valor = config?[chave]?.Trim();
+            return string.IsNullOrWhiteSpace(valor) ? padrao : valor;
+        }
+
+        // ------------------------------------------------------------------
+        // BUG-12/16/17: tratamento de erro sem vazamento de informacao.
+        //
+        // A excecao real vai para o log do servidor (Console.Error, ja que ainda
+        // nao ha ILogger configurado) e o operador recebe so uma mensagem
+        // generica. Expor ex.Message entregaria nome de tabela, caminho de
+        // arquivo e tipo de excecao - informacao de infraestrutura que nao
+        // pertence a quem opera o caixa.
+        // ------------------------------------------------------------------
+
+        /// <summary>Mensagem devolvida ao cliente quando o erro nao e previsto.</summary>
+        public const string MensagemErroGenerica = "Erro ao processar a solicitação.";
+
+        /// <summary>
+        /// Registra a excecao REAL no log do servidor. O operador ve apenas
+        /// <see cref="MensagemErroGenerica"/>.
+        /// </summary>
+        private static void LogarExcecao(string origem, Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[ERRO] {origem}: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex}");
         }
 
         // Listagem Principal (Estoque)
@@ -87,6 +140,51 @@ namespace ControleEstoqueLoja.Controllers
                 .ToList();
 
             return ArquivoCsv(ExportacaoCsv.Montar(cabecalhos, linhas), $"estoque-{DateTime.Today:yyyy-MM-dd}.csv");
+        }
+
+        /// <summary>
+        /// ETAPA A (ControlHub): a MESMA exportacao de estoque, agora em Excel
+        /// (.xlsx) - ao lado do CSV, sem substitui-lo.
+        ///
+        /// Mesma regra de ouro e MESMA policy do CSV (PodeGerenciarEstoque): e a
+        /// mesma tela, o mesmo filtro e o mesmo dado sensivel. Duas portas de
+        /// saida para o mesmo dado nao podem ter niveis de acesso diferentes.
+        ///
+        /// O trabalho pesado (formato, formulas, cores) fica em
+        /// <see cref="ExportacaoExcel"/>; aqui so mora a consulta, o filtro e o
+        /// nome do arquivo - exatamente como no CSV.
+        ///
+        /// BUG-12/16/17: se a geracao falhar (banco fora do ar, arquivo em disco,
+        /// limite de memoria), a excecao REAL vai para o log do servidor e o
+        /// operador ve so uma mensagem generica - nome de tabela e caminho de
+        /// arquivo nao pertencem a quem opera o caixa.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
+        public IActionResult ExportarEstoqueExcel(string? busca)
+        {
+            try
+            {
+                // Mesma consulta e mesmo filtro do CSV/Index.
+                var lista = _context.Produtos.Where(p => p.Ativo).ToList();
+
+                if (!string.IsNullOrWhiteSpace(busca))
+                {
+                    var termo = busca.ToLower();
+                    lista = lista.Where(p => p.Nome.ToLower().Contains(termo)).ToList();
+                }
+
+                // Ordem alfabetica estavel: dois exports da mesma tela saem iguais.
+                var ordenada = lista.OrderBy(p => p.Nome).ToList();
+
+                var conteudo = ExportacaoExcel.Estoque(ordenada, Marca, Loja, busca);
+                return File(conteudo, ExportacaoExcel.ContentType, $"estoque-{DateTime.Today:yyyy-MM-dd}.xlsx");
+            }
+            catch (Exception ex)
+            {
+                LogarExcecao(nameof(ExportarEstoqueExcel), ex);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
+            }
         }
 
         /// <summary>

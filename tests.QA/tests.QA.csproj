@@ -14,6 +14,15 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 
+  <!-- ETAPA B (ControlHub): a suite de Excel ABRE o .xlsx gerado
+       (ClosedXML) para conferir cor, formato, formula e congelamento - por
+       isso a referencia e direta aqui, e nao so herdada do projeto web.
+       Mesma versao 0.105.1 do ControleEstoqueLoja.csproj: uma so linha 3.x do
+       SixLabors.Fonts para as duas pontas. -->
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+  </ItemGroup>
+
   <!-- Suite de QA: referencia o projeto web e usa EF Core Sqlite em arquivo
        temporario (%TEMP%) por execucao. NUNCA toca no controleestoque.db versionado.
 

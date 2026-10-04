@@ -88,9 +88,11 @@ O `-Receber` vai recusar o pull e mostrar isto:
    .\sincronizar.ps1 -Enviar
    ```
 
-4. Se os dois bancos tiverem vendas que você quer manter, o caminho éExportar os dois
-   em CSV (botão **Exportar CSV** nas telas de Estoque e Histórico), unifying no Excel e
-   então começar de um banco limpo.
+4. Se os dois bancos tiverem vendas que você quer manter, o caminho é exportar os dois
+   em planilha (botão **Exportar Excel** nas telas de Estoque e Histórico — abre direto
+   no Excel, com a linha de totais), unifying num só e então começar de um banco limpo.
+   A rota antiga de CSV continua existindo (`/Home/ExportarEstoqueCsv` e
+   `/Caixa/ExportarHistoricoCsv`) caso o arquivo precise abrir em outro programa.
 
 ---
 

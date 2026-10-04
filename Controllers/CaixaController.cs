@@ -4,6 +4,7 @@ using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.Globalization;
 using System.Text.Json;
 
@@ -14,9 +15,31 @@ namespace ControleEstoqueLoja.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public CaixaController(ApplicationDbContext context)
+        public CaixaController(ApplicationDbContext context, IConfiguration? config = null)
         {
             _context = context;
+
+            // Mesmo contrato do HomeController: parametro OPCIONAL no fim, para
+            // `new CaixaController(qa.Context)` da suite de QA continuar valendo
+            // sem alteracao nenhuma nos testes existentes.
+            Marca = LerTextoDeConfig(config, "Marca:Nome", "ControlHub");
+            Loja = LerTextoDeConfig(config, "Loja:Nome", string.Empty);
+        }
+
+        /// <summary>Rotulo do topo da planilha (`Marca:Nome`). Padrao: ControlHub.</summary>
+        protected string Marca { get; }
+
+        /// <summary>Rotulo da loja (`Loja:Nome`). Padrao: vazio (nao aparece).</summary>
+        protected string Loja { get; }
+
+        /// <summary>
+        /// Le uma chave de configuracao e devolve o padrao quando ela nao existe
+        /// ou esta em branco (chave presente e valor "" conta como ausente).
+        /// </summary>
+        private static string LerTextoDeConfig(IConfiguration? config, string chave, string padrao)
+        {
+            var valor = config?[chave]?.Trim();
+            return string.IsNullOrWhiteSpace(valor) ? padrao : valor;
         }
 
         [Authorize(Policy = Policies.PodeOperarPDV)]
@@ -520,6 +543,51 @@ namespace ControleEstoqueLoja.Controllers
             // tentar abrir o csv na propria aba.
             var arquivo = ExportacaoCsv.Montar(cabecalhos, linhas);
             return File(arquivo, "text/csv; charset=utf-8", nomeArquivo);
+        }
+
+        /// <summary>
+        /// ETAPA A (ControlHub): o MESMO historico de vendas, agora em Excel
+        /// (.xlsx) - ao lado do CSV, sem substitui-lo.
+        ///
+        /// Mesma policy do CSV (PodeVerFinanceiro) e pelo mesmo motivo: exportacao
+        /// de venda e dado financeiro tanto quanto a tela e o CSV.
+        ///
+        /// Mesma regra de ouro: respeita o filtro de dia da Historico. E o
+        /// TotalVenda continua saindo como esta GRAVADO, sem recalcular a partir
+        /// dos itens.
+        ///
+        /// BUG-12/16/17: falha na geracao vai para o log do servidor (com a
+        /// excecao real); o operador recebe so <see cref="MensagemErroGenerica"/>,
+        /// sem nome de tabela nem caminho de arquivo.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Policy = Policies.PodeVerFinanceiro)]
+        public async Task<IActionResult> ExportarHistoricoExcel(DateTime? data)
+        {
+            try
+            {
+                // Mesmo filtro da Historico, para export e tela nunca divergirem.
+                var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
+
+                if (data.HasValue)
+                {
+                    query = query.Where(v => v.DataVenda.Date == data.Value.Date);
+                }
+
+                var vendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();
+
+                // No nome do arquivo o dia vai junto (ou "completo"): quem baixa cinco
+                // exportacoes nao precisa abrir cada uma para saber de que dia era.
+                var sufixo = data.HasValue ? data.Value.ToString("yyyy-MM-dd") : "completo";
+
+                var conteudo = ExportacaoExcel.Historico(vendas, Marca, Loja, data);
+                return File(conteudo, ExportacaoExcel.ContentType, $"vendas-{sufixo}.xlsx");
+            }
+            catch (Exception ex)
+            {
+                LogarExcecao(nameof(ExportarHistoricoExcel), ex);
+                return StatusCode(StatusCodes.Status500InternalServerError, MensagemErroGenerica);
+            }
         }
 
         [HttpGet]
