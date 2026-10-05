@@ -138,7 +138,8 @@
     @* ------------------------------------------------------------------
        ÚLTIMOS 7 OU 30 DIAS em barras de HTML/CSS PURO: sem canvas, sem
        biblioteca, sem script. Cada barra é uma <div> com altura em % e um
-       <a> em volta - clicar leva ao detalhe do dia.
+       <a> em volta - clicar SELECIONA o dia e as vendas dele aparecem
+       logo abaixo, no proprio painel (?data=). Clicar de novo limpa.
 
        A ALTURA vem de PercentualAltura (calculada no view-model). O PISO de 4%
        existe porque 9,98 contra um maximo de 1.000 daria ~1%: sem o piso a
@@ -158,8 +159,13 @@
                 @foreach (var d in Model.SerieUltimos7Dias)
                 {
                     var mostrarDataCompleta = !janelaLonga || d.Dia.Day == 1 || d.Dia == Model.SerieUltimos7Dias[0].Dia;
-                    <a class="dash-coluna @(d.Total <= 0m ? "dash-coluna-vazia" : null)"
-                       href="@Url.Action("Dia", "Dashboard", new { data = DataBarra(d.Dia), dias = Model.Dias })"
+                    @* Clique = ?data= no PROPRIO Index: as vendas do dia abrem
+                       embaixo, no mesmo painel. A barra ja aberta leva sem
+                       ?data= - o mesmo clique limpa a selecao. *@
+                    var diaAberto = Model.DiaSelecionado.HasValue && Model.DiaSelecionado.Value == d.Dia;
+                    <a class="dash-coluna @(d.Total <= 0m ? "dash-coluna-vazia" : null) @(diaAberto ? "is-dia" : null)"
+                       href="@(diaAberto ? Url.Action("Index", "Dashboard", new { dias = Model.Dias }) : Url.Action("Index", "Dashboard", new { dias = Model.Dias, data = DataBarra(d.Dia) }))"
+                       aria-current="@(diaAberto ? "true" : null)"
                        title="@RotuloDia(d)"
                        aria-label="@RotuloDia(d)">
                         @if (!janelaLonga)
@@ -179,8 +185,63 @@
     </div>
 
     @* ------------------------------------------------------------------
+       VENDAS DO DIA ESCOLHIDO: clicar numa barra do grafico la em cima
+       (?data=) traz o dia PARA AQUI - logo abaixo do grafico, no proprio
+       painel, sem abrir outra tela. A secao so aparece com um dia
+       selecionado (data futura chega nula e nao mostra nada). Por pedido
+       do dono ela substituiu a antiga secao "Ultimas vendas" do painel.
+    *@
+    @if (Model.DiaSelecionado.HasValue)
+    {
+        var diaSel = Model.DiaSelecionado.Value;
+
+        <div class="dash-secao">
+            <h2 class="dash-titulo-secao">Vendas de @diaSel.ToString("dd/MM/yyyy", br)</h2>
+
+            @if (Model.VendasDoDia.Count == 0)
+            {
+                <p class="dash-vazio">Nenhuma venda registrada neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela">
+                        <thead>
+                            <tr>
+                                <th scope="col">Venda</th>
+                                <th scope="col">Hora</th>
+                                <th scope="col">Forma</th>
+                                <th scope="col" class="dash-num">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in Model.VendasDoDia)
+                            {
+                                <tr>
+                                    <td>#@v.Id</td>
+                                    <td>@v.DataVenda.ToString("HH:mm", br)</td>
+                                    <td>@v.MetodoPagamento</td>
+                                    <td class="dash-num">@Dinheiro(v.Total)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <p class="dash-observacao">
+                @Dinheiro(Model.TotalDiaSelecionado)
+                · @(Model.NumeroVendasDia == 1 ? "1 venda" : $"{Model.NumeroVendasDia} vendas")
+                · <a asp-controller="Caixa" asp-action="Historico" asp-route-data="@DataBarra(diaSel)">Ver este dia no histórico</a>
+                · <a href="@Url.Action("Index", "Dashboard", new { dias = Model.Dias })">Limpar seleção</a>
+            </p>
+        </div>
+    }
+
+    @* ------------------------------------------------------------------
        ESTOQUE BAIXO: os 5 mais críticos. O total real vem no cartão acima -
-       a lista é top 5, o número do cartão é o todo.
+       a lista é top 5, o número do cartão é o todo. Por pedido do dono é a
+       ÚLTIMA fileira do painel: nada vem depois dela.
     *@
     <div class="dash-secao">
         <h2 class="dash-titulo-secao">Estoque baixo</h2>
@@ -228,46 +289,7 @@
         }
     </div>
 
-    @* ------------------------------------------------------------------
-       ÚLTIMAS VENDAS: os 5 registros mais recentes, de qualquer dia. O link
-       abre o histórico, que é quem tem o detalhe.
-    *@
-    <div class="dash-secao">
-        <h2 class="dash-titulo-secao">Últimas vendas</h2>
-
-        @if (Model.UltimasVendas.Count == 0)
-        {
-            <p class="dash-vazio">Nenhuma venda registrada.</p>
-        }
-        else
-        {
-            <div class="dash-rolagem">
-                <table class="dash-tabela">
-                    <thead>
-                        <tr>
-                            <th scope="col">Venda</th>
-                            <th scope="col">Data</th>
-                            <th scope="col">Forma</th>
-                            <th scope="col" class="dash-num">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var v in Model.UltimasVendas)
-                        {
-                            <tr>
-                                <td>#@v.Id</td>
-                                <td>@v.DataVenda.ToString("dd/MM/yyyy HH:mm", br)</td>
-                                <td>@v.MetodoPagamento</td>
-                                <td class="dash-num">@Dinheiro(v.Total)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <p class="dash-observacao">
-                <a asp-controller="Caixa" asp-action="Historico">Ver o histórico completo</a>
-            </p>
-        }
-    </div>
+    @* A antiga seção "Últimas vendas" saiu do painel (pedido do dono): quem
+       quer movimentação recente usa o histórico do caixa. O campo
+       UltimasVendas continua no view-model - os testes ETAPA A protegem. *@
 </div>

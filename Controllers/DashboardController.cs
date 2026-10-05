@@ -49,7 +49,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? dias = null)
+        public async Task<IActionResult> Index(int? dias = null, DateTime? data = null)
         {
             // So 7 e 30 valem. Tudo mais (vazio, 0, -1, 15, 999) volta para 7.
             var janela = NormalizarDias(dias);
@@ -118,6 +118,39 @@ namespace ControleEstoqueLoja.Controllers
 
             var serie = MontarSerie(vendasDaJanela, inicioHoje, janela);
 
+            // ---- VENDAS DE UM DIA (?data= = clique numa barra do grafico) ----
+            // O clique leva para o PROPRIO painel: a lista do dia aparece logo
+            // abaixo do grafico, sem abrir a tela Dia. data nula, invalida ou
+            // posterior a HOJE nao seleciona nada - nao ha venda no futuro
+            // (mesma regra da tela Dia). A comparacao com inicioHoje vem ANTES
+            // do AddDays, entao o passo nunca passa de DateTime.MaxValue.
+            DateTime? diaSelecionado = null;
+            var vendasDoDia = new List<DashboardVendaRecente>();
+            var totalDiaSelecionado = 0m;
+
+            if (data.HasValue && data.Value.Date <= inicioHoje)
+            {
+                var dia = data.Value.Date;
+                var fimDia = dia.AddDays(1);
+
+                vendasDoDia = await _context.Vendas
+                    .AsNoTracking()
+                    .Where(v => v.DataVenda >= dia && v.DataVenda < fimDia)
+                    .OrderByDescending(v => v.DataVenda)
+                    .ThenByDescending(v => v.Id)
+                    .Select(v => new DashboardVendaRecente
+                    {
+                        Id = v.Id,
+                        DataVenda = v.DataVenda,
+                        MetodoPagamento = v.MetodoPagamento,
+                        Total = v.TotalVenda,
+                    })
+                    .ToListAsync();
+
+                totalDiaSelecionado = vendasDoDia.Sum(v => v.Total);
+                diaSelecionado = dia;
+            }
+
             return View(new DashboardViewModel
             {
                 TotalVendasHoje = totalHoje,
@@ -131,6 +164,11 @@ namespace ControleEstoqueLoja.Controllers
                 UltimasVendas = ultimasVendas,
                 TotalVendasPeriodo = totalPeriodo,
                 NumeroVendasPeriodo = numeroPeriodo,
+                DiaSelecionado = diaSelecionado,
+                VendasDoDia = vendasDoDia,
+                TotalDiaSelecionado = totalDiaSelecionado,
+                NumeroVendasDia = vendasDoDia.Count,
+
                 Dias = janela,
             });
         }
@@ -417,6 +455,22 @@ namespace ControleEstoqueLoja.Controllers
 
         /// <summary>As 5 vendas mais recentes, de qualquer dia.</summary>
         public List<DashboardVendaRecente> UltimasVendas { get; set; } = new();
+
+        /// <summary>
+        /// Dia escolhido clicando numa barra do grafico (?data= no proprio
+        /// Index). Nulo = nenhuma secao de vendas do dia no painel; data
+        /// futura tambem chega nula - nao ha venda no futuro.
+        /// </summary>
+        public DateTime? DiaSelecionado { get; set; }
+
+        /// <summary>Vendas do dia escolhido, mais recente primeiro.</summary>
+        public List<DashboardVendaRecente> VendasDoDia { get; set; } = new();
+
+        /// <summary>Soma do TotalVenda GRAVADO do dia escolhido.</summary>
+        public decimal TotalDiaSelecionado { get; set; }
+
+        /// <summary>Quantas vendas o dia escolhido teve (0 = dia sem venda).</summary>
+        public int NumeroVendasDia { get; set; }
     }
 
     /// <summary>Um dia da serie (7 ou 30 dias) da janela do painel.</summary>
