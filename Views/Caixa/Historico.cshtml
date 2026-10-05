@@ -34,6 +34,12 @@
     // lista/export, mas nao trava mais o <input type="date">. Escolher outro
     // dia e clicar Buscar limpa o periodo (o form nao envia ?periodo=), que e
     // o caminho oficial de voltar ao filtro de dia.
+    //
+    // PEDIDO DO DONO (05/10/2026, depois): "tire as opcoes de dias futuros
+    // do calendario". max = HOJE, fixo e independente do periodo (nao faz
+    // sentido escolher um dia que ainda nao aconteceu); o min continua livre
+    // para voltar a qualquer dia passado. Como o max mora no proprio input,
+    // o navegador recusa na hora tambem uma data futura digitada na mao.
 
     // BUG-34: os valores que vao nos LINKS, formatados AQUI e nao dentro do
     // asp-route-data. As aspas de "yyyy-MM-dd" dentro do atributo do Tag Helper
@@ -131,7 +137,8 @@
                        id="historico-data"
                        name="data"
                        class="form-control fw-bold"
-                       value="@dataTela.ToString("yyyy-MM-dd")" />
+                       value="@dataTela.ToString("yyyy-MM-dd")"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
             <button type="submit" class="btn btn-primary text-uppercase">
                 <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
