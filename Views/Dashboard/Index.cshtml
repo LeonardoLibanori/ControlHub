@@ -1,7 +1,7 @@
 @model ControleEstoqueLoja.Controllers.DashboardViewModel
 @using System.Globalization
 @{
-    ViewData["Title"] = "Início";
+    ViewData["Title"] = "Dashboard";
 
     // pt-BR explicito: a maquina de desenvolvimento roda em outra cultura e o
     // "R$ 1.234,56" viraria "1,234.56" sem isto.
@@ -28,7 +28,7 @@
 <div class="main-container dash-container">
     <div class="dash-cabecalho">
         <div>
-            <h1 class="dash-titulo">Início</h1>
+            <h1 class="dash-titulo">Dashboard</h1>
             <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
         </div>
 

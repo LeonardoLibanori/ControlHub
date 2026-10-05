@@ -452,6 +452,22 @@ function abrirModalPagamento() {
         return;
     }
 
+    // BUG-30: este abrirModalPagamento() e o do .cshtml e SOBREPOE o do
+    // admin-caixa.js (o layout carrega o JS antes da secao de scripts da view,
+    // entao a ultima definicao vence). Por isso o reset do modal - metodo,
+    // valor recebido, troco e aviso - precisa ser chamado AQUI tambem; sem isso
+    // o valor da venda anterior ficaria no campo ao reabrir o modal.
+    resetarEtapaPagamento();
+
+    // Modal em modo "flex" e sections com display:none: quando o modal abre,
+    // a secaoCPF precisa ficar NAO-PAGAMENTO, senao os dois blocos aparecem
+    // empilhados e o botao FINALIZAR fica coberto pelo da secao de pagamento
+    // (o clique nao chega nele e nada acontece).
+    const secaoPagamento = document.getElementById("secaoPagamento");
+    const secaoCPF = document.getElementById("secaoCPF");
+    if (secaoPagamento) secaoPagamento.style.display = "block";
+    if (secaoCPF) secaoCPF.style.display = "none";
+
     document.getElementById("modalPagamento").style.display = "flex";
     voltarParaPagamento();
 }
@@ -500,9 +516,11 @@ async function enviarVendaDeVez() {
         const response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
-            headers: {
+            // BUG-30: o token anti-forgere tambem e exigido aqui (o
+            // admin-caixa.js ja enviava; esta copia do POST nao enviava).
+            headers: csrfHeaders({
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            })
         });
 
         const res = await response.json();
@@ -520,8 +538,12 @@ async function enviarVendaDeVez() {
             });
         } else {
             Swal.fire({
-                title: 'Erro no Estoque',
-                html: res.message.replace(/\n/g, '<br>'),
+                // BUG-30: o titulo era fixo em "Erro no Estoque", mas a recusa
+                // pode ser de dinheiro insuficiente (BUG-29), de cupom, de
+                // quantidade ou de estoque. A mensagem do SERVIDOR e a
+                // autoridade e aparece abaixo.
+                title: 'Venda não concluída',
+                html: (res.message || 'Não foi possível concluir a venda.').replace(/\n/g, '<br>'),
                 icon: 'error',
                 confirmButtonColor: '#d33'
             });

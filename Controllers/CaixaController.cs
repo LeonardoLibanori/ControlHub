@@ -530,17 +530,43 @@ namespace ControleEstoqueLoja.Controllers
         // Local: CaixaController.cs
 
         [Authorize(Policy = Policies.PodeVerFinanceiro)]
-        public async Task<IActionResult> Historico(DateTime? data)
+        public async Task<IActionResult> Historico(DateTime? data, string? periodo = null)
         {
+            // BUG-34: os cartoes do topo (ESTA SEMANA / ESTE MES / ESTE ANO)
+            // viraram links: cada um abre o Historico ja filtrado pelo seu
+            // periodo, do mesmo jeito que o filtro de dia abre um dia. O filtro
+            // e resolvido por UM metodo so (ResolverFiltroHistorico) e
+            // reutilizado pelas DUAS exportacoes: se cada uma calculasse a
+            // janela por conta propria, o arquivo e a tela divergiriam - que e
+            // o tipo de erro que faz o dono fechar o mes pelo numero errado.
+            var (temFiltro, inicio, fim) = ResolverFiltroHistorico(data, periodo);
+
             // O Include(v => v.Itens) é essencial para o modal de detalhes funcionar!
             var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
 
-            if (data.HasValue)
+            if (temFiltro)
             {
-                query = query.Where(v => v.DataVenda.Date == data.Value.Date);
+                // Intervalo [inicio, fim): o fim exclusivo evita a duplicacao
+                // classica da venda da meia-noite do dia seguinte.
+                query = query.Where(v => v.DataVenda >= inicio && v.DataVenda < fim);
             }
 
             var listaVendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();
+
+            // BUG-34: a JANELA que filtrou a lista, exposta para a view. E ela
+            // que define o min/max do calendario e o filtro do export, para
+            // tela, calendario e arquivo falarem sempre do mesmo periodo.
+            ViewBag.DataExport = temFiltro && (fim - inicio) == TimeSpan.FromDays(1)
+                ? inicio
+                : (DateTime?)null;
+            ViewBag.DataExport = temFiltro && (fim - inicio) == TimeSpan.FromDays(1)
+                ? inicio
+                : (DateTime?)null;
+            ViewBag.Periodo = periodo;
+            ViewBag.InicioJanela = temFiltro ? inicio : DateTime.Today;
+            ViewBag.FimJanela = temFiltro ? fim : DateTime.Today.AddDays(1);
+            ViewBag.InicioJanela = temFiltro ? inicio : DateTime.Today;
+            ViewBag.FimJanela = temFiltro ? fim : DateTime.Today.AddDays(1);
 
             // Preenchendo as ViewBags com os nomes corretos das colunas
             ViewBag.FaturamentoSemana = await _context.Vendas
@@ -556,6 +582,49 @@ namespace ControleEstoqueLoja.Controllers
                 .SumAsync(v => v.TotalVenda);
 
             return View(listaVendas);
+        }
+
+        /// <summary>
+        /// BUG-34: fonte UNICA do filtro do historico. Devolve a janela
+        /// [inicio, fim) a aplicar nas vendas, ou (false, default, default)
+        /// quando nao ha filtro nenhum (a tela mostra tudo).
+        ///
+        /// As janelas usam o mesmo inicio dos cartoes do topo (a soma de 7 dias
+        /// atras), para o numero do cartao e a lista da tela concordarem:
+        ///   - dia: o dia inteiro, vindo do campo "Filtrar por dia";
+        ///   - semana: hoje mais os 6 dias anteriores (7 dias);
+        ///   - mes: do dia 1 do mes ate amanha;
+        ///   - ano: de 1 de janeiro ate amanha.
+        ///
+        /// "periodo" chega da querystring, entao e texto de usuario: so os tres
+        /// valores conhecidos sao aceitos e qualquer outro (ou nulo) cai no
+        /// comportamento anterior, que e o filtro de dia.
+        /// </summary>
+        private static (bool temFiltro, DateTime inicio, DateTime fim) ResolverFiltroHistorico(
+            DateTime? data, string? periodo)
+        {
+            var hoje = DateTime.Today;
+
+            switch ((periodo ?? "").Trim().ToLowerInvariant())
+            {
+                case "semana":
+                    return (true, hoje.AddDays(-6), hoje.AddDays(1));
+
+                case "mes":
+                    return (true, new DateTime(hoje.Year, hoje.Month, 1), hoje.AddDays(1));
+
+                case "ano":
+                    return (true, new DateTime(hoje.Year, 1, 1), hoje.AddDays(1));
+
+                default:
+                    if (data.HasValue)
+                    {
+                        var dia = data.Value.Date;
+                        return (true, dia, dia.AddDays(1));
+                    }
+
+                    return (false, default, default);
+            }
         }
         // Local: CaixaController.cs
 
@@ -579,14 +648,25 @@ namespace ControleEstoqueLoja.Controllers
         /// exportacao de venda e dado financeiro tanto quanto a tela.
         /// </summary>
         [Authorize(Policy = Policies.PodeVerFinanceiro)]
-        public async Task<IActionResult> ExportarHistoricoCsv(DateTime? data)
+        public async Task<IActionResult> ExportarHistoricoCsv(DateTime? data, string? periodo = null)
         {
-            // Mesmo filtro da Historico, para export e tela nunca divergirem.
+            // REGRA DE OURO (revisitada no BUG-34): o arquivo tem que sair do
+            // MESMO periodo que a tela esta mostrando. Antes, o export so
+            // aceitava `data` (um dia), entao a tela podia estar mostrando a
+            // semana e o arquivo sair com o dia - exatamente o erro que faz o
+            // dono fechar o mes pelo numero errado.
+            //
+            // Agora o export usa o MESMO ResolverFiltroHistorico da Historico:
+            // os dois leem os mesmos parametros e caem na mesma janela. Um dia
+            // continua sendo um dia; semana/mes/ano passam a ser exportaveis
+            // igual, sem formato novo de arquivo.
+            var (temFiltro, inicio, fim) = ResolverFiltroHistorico(data, periodo);
+
             var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
 
-            if (data.HasValue)
+            if (temFiltro)
             {
-                query = query.Where(v => v.DataVenda.Date == data.Value.Date);
+                query = query.Where(v => v.DataVenda >= inicio && v.DataVenda < fim);
             }
 
             var vendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();
@@ -651,16 +731,20 @@ namespace ControleEstoqueLoja.Controllers
         /// </summary>
         [HttpGet]
         [Authorize(Policy = Policies.PodeVerFinanceiro)]
-        public async Task<IActionResult> ExportarHistoricoExcel(DateTime? data)
+        public async Task<IActionResult> ExportarHistoricoExcel(DateTime? data, string? periodo = null)
         {
             try
             {
-                // Mesmo filtro da Historico, para export e tela nunca divergirem.
+                // REGRA DE OURO (BUG-34): o .xlsx usa o MESMO
+                // ResolverFiltroHistorico da Historico e do CSV, entao planilha,
+                // arquivo e tela sempre falam do mesmo periodo.
+                var (temFiltro, inicio, fim) = ResolverFiltroHistorico(data, periodo);
+
                 var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
 
-                if (data.HasValue)
+                if (temFiltro)
                 {
-                    query = query.Where(v => v.DataVenda.Date == data.Value.Date);
+                    query = query.Where(v => v.DataVenda >= inicio && v.DataVenda < fim);
                 }
 
                 var vendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();

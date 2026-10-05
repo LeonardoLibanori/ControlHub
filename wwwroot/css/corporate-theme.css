@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     color-scheme: dark;
     --app-bg: #111519;
     --surface-1: #181e23;
@@ -595,6 +595,22 @@ textarea.form-control {
     z-index: 12000 !important;
 }
 
+/* BUG-35 - o overlay dos ATALHOS cobria a tela inteira.
+   O .modal-overlay e position:fixed + inset:0 + z-index:9999. O botao que
+   fecha o modal usava style.display='none', mas o atalho ESC (no _Layout)
+   FAZIA o display alternar entre "" e "flex". Quando voltava para "" (vazio),
+   o estilo inline vazio anulava o `display: none` da regra .modal-overlay e o
+   overlay inteiro aparecia: a pagina ficava clicavel em nada, nem no menu de
+   perfil.
+   A correcao NAO foi "!important" aqui - isso quebraria o modal do PDV, que
+   abre por style.display='flex'. A correcao e NA FONTE: o ESC passou a
+   alternar a classe ".aberto" e o botao ENTENDI a remove. Assim o estado de
+   "escondido" nunca mais depende de style.display. */
+.modal-overlay.aberto {
+    display: flex;
+}
+
+
 .modal-box {
     width: min(92vw, 480px);
     padding: 1.35rem;
@@ -773,9 +789,9 @@ footer .container {
     border-radius: 8px;
 }
 
-/* Botão "Exportar CSV" (FASE A - item 3): irmão do .btn-novo, então herda o
-   mesmo formato para os dois botões ficarem iguais na mesma barra. Outlined de
-   propósito: é uma ação de leitura, não de escrita — não pode parecer tão
+/* BotÃ£o "Exportar CSV" (FASE A - item 3): irmÃ£o do .btn-novo, entÃ£o herda o
+   mesmo formato para os dois botÃµes ficarem iguais na mesma barra. Outlined de
+   propÃ³sito: Ã© uma aÃ§Ã£o de leitura, nÃ£o de escrita â€” nÃ£o pode parecer tÃ£o
    forte quanto "Novo produto" e competir com ela. */
 .btn-exportar {
     background-color: #fff;
@@ -967,7 +983,7 @@ footer .container {
 
 /* ===========================================================================
    FASE A - ITEM 1: ESTOQUE MINIMO / ALERTA DE ESTOQUE BAIXO
-   Só aparece quando o dono configurou um minimo > 0 E o estoque caiu abaixo.
+   SÃ³ aparece quando o dono configurou um minimo > 0 E o estoque caiu abaixo.
    Usa as mesmas variaveis do tema (--danger-like via vermelho do alerta).
    =========================================================================== */
 .linha-estoque-baixo {
@@ -1206,12 +1222,12 @@ footer .container {
    Continuacao do bloco acima, tambem no FIM do arquivo. Nenhuma regra
    anterior foi alterada.
 
-   A BARRA É UM LINK (<a>): o detalhe do dia abre sem nenhum JavaScript.
+   A BARRA Ã‰ UM LINK (<a>): o detalhe do dia abre sem nenhum JavaScript.
    Por isso a coluna virou <a> com display:flex em vez de <div> - e o foco
    de teclado precisa ficar visivel, senao o teclado nao enxerga o link.
 
    30 DIAS: as barras ficam mais finas e o conjunto tem largura minima,
-   entao o CONTêINER (.dash-rolagem) rola. A pagina nunca ganha barra
+   entao o CONTÃªINER (.dash-rolagem) rola. A pagina nunca ganha barra
    horizontal - e o limite do scroll fica no bloco, nao no body.
    ===================================================================== */
 
@@ -1337,7 +1353,7 @@ a.dash-coluna:hover .dash-coluna-barra {
    Problema visual original: o rotulo "Faltam R$ 17,00" vinha inteiro dentro
    do <h2> de 2rem, entao o texto quebrava no meio ("Faltam R$ 17," / "00"),
    ficava com duas cores diferentes (o "Faltam R$" herdava uma, o valor outra)
-   e a régua de 360px do celular nao comportava o numero.
+   e a rÃ©gua de 360px do celular nao comportava o numero.
    A solucao e a MESMA estrutura nos dois estados - rotulo pequeno em cima
    (TROCO ou FALTAM) e valor grande embaixo, em uma linha so.
    ===================================================================== */
@@ -1388,4 +1404,224 @@ a.dash-coluna:hover .dash-coluna-barra {
     filter: grayscale(1);
     cursor: not-allowed;
     box-shadow: none !important;
+}
+
+/* BUG-30 (complemento): as duas etapas do modal de pagamento - pagamento e CPF -
+   nunca podem aparecer EMPILHADAS. Sem isto, o botao FINALIZAR E IMPRIMIR fica
+   coberto pelo da etapa de pagamento e o clique nao chega nele: o operador
+   clica e "nada acontece".
+
+   Esta regra NAO controla a exibicao ( Quem controla e o JS, via style.display
+   inline, que tem precedencia sobre este arquivo). Ela so garante que a etapa
+   oculta nao ocupe espaco: sem display:none herdado de algum lugar, as duas
+   secoes ficariam uma embaixo da outra. */
+#modalPagamento #secaoPagamento:not([style*="display"]),
+#modalPagamento #secaoCPF:not([style*="display"]) {
+    display: none;
+}
+
+
+/* =====================================================================
+   BUG-31 - ALINHAMENTO DO AVISO DE ESTOQUE BAIXO NA COLUNA "ESTOQUE"
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Sintoma: o badge "ESTOQUE BAIXO" aparecia TORTO - alguns pixels ABAIXO
+   da linha do numero ("2 kg", "21 un"). A causa nao era o badge em si: o
+   numero e a unidade nao estavam dentro de um container, entao o badge
+   inline-flex ficava sozinho na linha seguinte da celula, e o margin-top
+   de .badge-estoque-baixo o empurrava ainda mais para baixo.
+
+   Aqui o numero, a unidade e o badge ficam NA MESMA linha de base, com
+   flex-wrap para o "minimo: ..." cair para a linha de baixo em telas
+   estreitas sem estourar a coluna.
+   ===================================================================== */
+
+.estoque-valor-linha {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+/* O numero e a unidade como um bloco so; o nowrap impede que "19,375"
+   quebre entre o numero e o "kg", e o tabular-nums alinha os digitos
+   entre as linhas da tabela. */
+.estoque-valor-linha .estoque-quantidade {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* O badge deixa de descer: sem margin-top, fica alinhado pelo centro da
+   linha (align-items:center do container acima). */
+.estoque-valor-linha .badge-estoque-baixo {
+    margin-top: 0;
+    vertical-align: middle;
+}
+
+/* O "minimo: ..." vira um item da MESMA flex, alinhado a esquerda - deixa
+   de ser um div de bloco que empurrava a celula para baixo. */
+.estoque-valor-linha .estoque-minimo-texto {
+    margin-top: 0;
+    flex-basis: 100%;
+    white-space: nowrap;
+}
+
+/* =====================================================================
+   BUG-34 - CARTOES DO HISTORICO VIRARAM LINK
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Os cartoes "ESTA SEMANA / ESTE MES / ESTE ANO" viraram <a>, nao <section>.
+   Isso quebrava o visual por DOIS motivos, ambos resolvidos aqui:
+
+   1. O <a> e inline por padrao. Com display:block ele passa a ocupar a
+      celula, mas a altura nao acompanhava mais a do cartao grande ao lado -
+      a linha ficava com um card alto (o de HOJE) e tres baixos e tortos.
+   2. O Bootstrap (.p-3) e o tema (.history-metric, padding 1.2rem) mandavam
+      no padding ao mesmo tempo, entao o card clicavel ficava com o
+      espacamento de um deles e o com o do outro.
+
+   Aqui o clicavel usa box-sizing para o padding entrar DENTRO da caixa
+   (senao a borda estourava a celula) e mantem a altura igual a do cardao
+   grande, alinhada pelo mesmo grid.
+   ===================================================================== */
+
+/* =====================================================================
+   BUG-34 - CARTAO DO HISTORICO CLICAVEL (stretched-link)
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Tentativa anterior trocou o <section> por <a> e o layout quebrou: <a> e
+   inline, entao nao aceita height:100% nem padding de bloco. Aqui o
+   cartao VOLTA a ser <section> (visual IGUAL ao de "VENDAS DE HOJE") e o
+   link e um <a> vazio absoluto por cima - o padrao "stretched-link" do
+   Bootstrap: ele cobre o card inteiro sem mexer em altura, padding ou borda.
+
+   O cartao selecionado usa a MESMA linguagem visual da aba ativa do menu
+   (dourado do --accent + risco na base), para a tela inteira falar um
+   unico "voce esta aqui".
+   ===================================================================== */
+
+.history-cartao-link {
+    position: relative;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+/* O link cobre o cartao todo, com z-index para ficar acima do texto. */
+.history-cartao-link .stretched-link::after {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    content: "";
+    border-radius: 8px;
+}
+
+.history-cartao-link .stretched-link:focus-visible {
+    outline: none;
+}
+
+/* O foco do teclado precisa aparecer no CARTAO (o link e vazio, entao o
+   outline do navegador sobre ele nao diria nada). */
+.history-cartao-link:has(.stretched-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Passar o mouse acende o cartao inteiro, e nao so o link. */
+.history-cartao-link:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+/* Cartao do filtro que esta em exibicao. */
+.history-cartao-link.is-ativo {
+    border-color: var(--accent);
+    background: var(--surface-2);
+    box-shadow: inset 0 -3px 0 0 var(--accent);
+}
+
+.history-cartao-link.is-ativo .section-eyebrow,
+.history-cartao-link.is-ativo h3 {
+    color: var(--accent-hover);
+}
+
+/* "Exibindo: <periodo>" - o texto que impede a confusao de a tela estar
+   mostrando o dia quando esta mostrando o ano. */
+.history-filtro-ativo {
+    margin: -.5rem 0 1rem;
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+
+.history-filtro-ativo strong {
+    color: var(--text);
+}
+
+.history-filtro-obs {
+    color: var(--accent-hover);
+}
+
+/* Botao "Voltar ao filtro por dia", que substitui o campo de data quando o
+   filtro e um periodo (BUG-34). Herda o formato dos botoes da barra. */
+.btn-historicovoltar {
+    display: inline-flex;
+    align-items: center;
+    padding: .5rem .9rem;
+    font-weight: 600;
+    color: var(--accent-hover);
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.btn-historicovoltar:hover {
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+    text-decoration: none;
+}
+
+
+/* =====================================================================
+   BUG-34 - ABA ATIVA DO MENU
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   A BARRA E CLARA (navbar-light) e o tema escuro troca a cor do texto da
+   nav para var(--text). O detalhe que fazia o destaque NAO aparecer: a regra
+   base .navbar .nav-link (L104) usa `color: ... !important`, entao uma
+   regra posterior SEM !important nunca vence - o item ativo ficava
+   exatamente igual aos outros, mesmo com aria-current="page" no HTML.
+   Por isso o !important aqui tambem: nao ha como destacar o item ativo sem
+   ele. O sinal visual e um conjunto, nao so a cor:
+     - cor dourada (--accent-hover);
+     - peso 700;
+     - fundo levemente claro;
+     - risco dourado na base.
+   ===================================================================== */
+
+.navbar .nav-link.active,
+.navbar .nav-link.active:hover,
+.navbar .nav-link.active:focus-visible {
+    color: var(--accent-hover) !important;
+    font-weight: 700;
+    background: rgba(194, 163, 109, .12) !important;
+    border-radius: 6px;
+    box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+/* O icone (quando houver) acompanha a cor do item ativo. */
+.navbar .nav-link.active .bi {
+    color: var(--accent-hover) !important;
+}
+
+/* No celular os itens ficam empilhados: o risco inferior vira um marcador a
+   esquerda, que continua legivel sem reservar espaco extra. */
+@media (max-width: 575.98px) {
+    .navbar .nav-link.active {
+        box-shadow: inset 2px 0 0 0 var(--accent);
+        padding-left: .75rem;
+    }
 }

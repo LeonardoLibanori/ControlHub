@@ -17,6 +17,22 @@
 @{
     var autenticado = User.Identity?.IsAuthenticated == true;
 
+    // BUG-34: aba ATIVA do menu. O operador precisa saber em qual tela esta
+    // sem clicar: por isso o item da rota atual recebe a classe "active" e o
+    // aria-current="page". Sao as MESMAS strings de rota usadas nos links
+    // abaixo, entao nao existe uma segunda lista de nomes para divergir.
+    var rotaAtual = ViewContext.RouteData.Values["controller"] as string ?? "";
+    var acaoAtual = ViewContext.RouteData.Values["action"] as string ?? "";
+
+    // Um item do menu esta ativo quando o controller bate. A acao so entra
+    // para separar as duas telas do MESMO controller: Caixa/Index (o PDV) e
+    // Caixa/Historico nao podem ficar os dois destacados ao mesmo tempo.
+    bool MenuAtivo(string controller, string? acao = null)
+    {
+        if (!string.Equals(rotaAtual, controller, StringComparison.OrdinalIgnoreCase)) return false;
+        return acao is null || string.Equals(acaoAtual, acao, StringComparison.OrdinalIgnoreCase);
+    }
+
     var podeOperarPdv = false;
     var podeReimprimirCupom = false;
     var podeRegistrarSuprimento = false;
@@ -108,10 +124,14 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom shadow-sm mb-0">
             <div class="container-fluid">
-                @* Tag Helpers mantidas para o link da Home *@
+                @* BUG-33: a marca agora e SO o nome "ControlHub" (era "ESTOQUE &
+                   CAIXA" com um icone de caixa). O nome vem do mesmo lugar que a
+                   marca das exportacoes (Marca:Nome, padrao "ControlHub"), entao
+                   a tela e o arquivo Excel passam a falar a mesma coisa.
+                   O icone foi removido de proposito: a marca fica com o nome
+                   sozinho, mais limpa e legivel. *@
                 <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-box-seam" aria-hidden="true"></i>
-                    <span>ESTOQUE &amp; CAIXA</span>
+                    <span>ControlHub</span>
                 </a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
@@ -120,28 +140,24 @@
 
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        @* Início (Dashboard): PodeVerFinanceiro (so Dono) - o painel mostra
-                           faturamento e saldo da gaveta, que nao sao negocio do
-                           Operador. Reaproveita a variavel ja resolvida no topo
-                           do _Layout, sem uma Authorize nova aqui. *@
-                        @if (podeVerFinanceiro)
-                        {
-                            <li class="nav-item">
-                                @* Sem <i class="bi ...">: o item nao depende de
-                                   icone (que vem de CDN) para fazer sentido. *@
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Dashboard" asp-action="Index">Início</a>
-                            </li>
-                        }
-                        @* Estoque e Caixa: PodeOperarPDV (Dono e Operador). *@
+                        @* Estoque e Caixa: PodeOperarPDV (Dono e Operador).
+                           BUG-33: os icones foram removidos (o nome sozinho ja
+                           diz tudo); os demais itens do menu mantem o icone. *@
                         @if (podeOperarPdv)
                         {
                             <li class="nav-item">
                                 @* asp-controller="Home" mantido *@
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index"><i class="bi bi-boxes" aria-hidden="true"></i>Estoque</a>
+                                <a class="nav-link text-dark @(MenuAtivo("Home") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Home") ? "page" : null)"
+                                   asp-area="" asp-controller="Home" asp-action="Index">Estoque</a>
                             </li>
                             <li class="nav-item">
-                                @* asp-controller="Caixa" mantido *@
-                                <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Index"><i class="bi bi-receipt" aria-hidden="true"></i>Caixa</a>
+                                @* asp-controller="Caixa" mantido; a acao separa o
+                                   PDV (Index) do Historico, que sao do mesmo
+                                   controller - sem isso os dois ficariam ativos. *@
+                                <a class="nav-link text-dark @(MenuAtivo("Caixa", "Index") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)"
+                                   asp-controller="Caixa" asp-action="Index">Caixa</a>
                             </li>
                         }
 
@@ -149,7 +165,28 @@
                         @if (podeVerFinanceiro)
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Caixa" asp-action="Historico"><i class="bi bi-clock-history" aria-hidden="true"></i>Histórico</a>
+                                <a class="nav-link text-dark @(MenuAtivo("Caixa", "Historico") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)"
+                                   asp-controller="Caixa" asp-action="Historico">Histórico</a>
+                            </li>
+                        }
+
+                        @* Dashboard: PodeVerFinanceiro (so Dono) - o painel mostra
+                           faturamento e saldo da gaveta, que nao sao negocio do
+                           Operador. Reaproveita a variavel ja resolvida no topo
+                           do _Layout, sem uma Authorize nova aqui.
+
+                           Mudancas (BUG-32): o item saiu do INICIO da barra para
+                           DEPOIS de Historico e passou a se chamar "Dashboard"
+                           (antes "Inicio"). A rota nao mudou - continua
+                           Dashboard/Index, que e o que os testes e os atalhos
+                           usam. BUG-33: sem icone - a barra usa so o nome. *@
+                        @if (podeVerFinanceiro)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark @(MenuAtivo("Dashboard") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Dashboard") ? "page" : null)"
+                                   asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
                             </li>
                         }
 
@@ -323,7 +360,7 @@
             </div>
         </div>
 
-        <div id="modalAjudaAtalhos" class="modal-overlay shortcut-help-overlay" style="display:none;">
+        <div id="modalAjudaAtalhos" class="modal-overlay shortcut-help-overlay">
             <div class="shortcut-help-panel">
                 <h3><i class="bi bi-keyboard me-2" aria-hidden="true"></i>ATALHOS DO SISTEMA</h3>
                 <hr>
@@ -357,7 +394,7 @@
                     </div>
                 </div>
                 <hr>
-                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').style.display='none'"><i class="bi bi-check2 me-2" aria-hidden="true"></i>ENTENDI (ESC)</button>
+                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')"><i class="bi bi-check2 me-2" aria-hidden="true"></i>ENTENDI (ESC)</button>
             </div>
         </div>
 
@@ -475,8 +512,13 @@
 
                 const modalAjuda = document.getElementById("modalAjudaAtalhos");
                 if (modalAjuda) {
-                    modalAjuda.style.display = (modalAjuda.style.display === "none" || modalAjuda.style.display === "")
-                        ? "flex" : "none";
+                    // BUG-35: o overlay dos atalhos e position:fixed/inset:0 e
+                    // hoje esconde por CSS com !important. Alternar
+                    // style.display entre "" e "flex" nao funciona mais (e o
+                    // "" era justamente o que deixava o overlay cobrindo a
+                    // tela inteira). A Classe "aberto" e o caminho unico para
+                    // mostrar, com o mesmo peso do !important.
+                    modalAjuda.classList.toggle("aberto");
                 }
             }
         });
@@ -713,5 +755,6 @@
 
 
     </script>
+
 </body>
 </html>

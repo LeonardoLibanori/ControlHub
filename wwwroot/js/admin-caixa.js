@@ -421,8 +421,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         console.log("Sistema pronto: Campo 'campoBusca' monitorado.");
     } else {
-        // Se cair aqui, é porque o ID no HTML ainda está diferente de 'campoBusca'
-        console.error("ERRO: O elemento 'campoBusca' não foi encontrado no HTML.");
+        // Sem 'campoBusca' NAO e erro: este arquivo (admin-caixa.js) e
+        // carregado pelo _Layout em TODAS as telas, e so o PDV tem o campo de
+        // busca por codigo de barras. Antes, qualquer tela fora do PDV
+        // (Historico, Dashboard, Estoque) imprimia um ERRO VERMELHO no
+        // console, dando a impressao de que a pagina estava quebrada.
+        console.debug("admin-caixa: sem 'campoBusca' nesta tela (normal fora do PDV).");
     }
 });
 
@@ -982,6 +986,7 @@ function definirAvisoTroco(estado, textoValor) {
         rotulo.textContent = estado === 'falta' ? 'Faltam' : 'Troco';
         rotulo.classList.toggle('pdv-valor-rotulo-falta', estado === 'falta');
     }
+}
 
 // Calcula o troco a partir do carrinho e do valor recebido pelo operador.
 // BUG-30: toda a comparacao passa a ser feita em CENTAVOS inteiros, e o
@@ -1049,5 +1054,4 @@ function resetarEtapaPagamento() {
 
     definirAvisoTroco('neutro', "R$ 0,00");
     definirConfirmarHabilitado(true);
-}
 }

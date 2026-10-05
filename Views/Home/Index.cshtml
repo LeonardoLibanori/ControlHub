@@ -81,26 +81,34 @@
                         </td>
                         <td>@(item.Tipo == TipoProduto.PorPeso ? "Peso (kg)" : "Unidade")</td>
                         <td>
-                            @if (item.Tipo == TipoProduto.PorPeso)
-                            {
-                                @item.Quantidade.ToString("0.###") <span>kg</span>
-                            }
-                            else
-                            {
-                                @item.Quantidade.ToString("0") <span>un</span>
-                            }
-                            @* Estoque mínimo (item 1): só aparece se o dono configurou
-                               um mínimo > 0 E o estoque atual caiu abaixo dele. *@
-                            @if (item.EstoqueAbaixoDoMinimo)
-                            {
-                                <span class="badge badge-estoque-baixo" title="Abaixo do estoque mínimo configurado">
-                                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>ESTOQUE BAIXO
+                            @* BUG-31: o numero, a unidade, o badge e o "minimo"
+                               ficam dentro de UM container flex. Sem ele o
+                               badge caia para a linha seguinte da celula e
+                               aparecia torto, abaixo do numero. *@
+                            <div class="estoque-valor-linha">
+                                <span class="estoque-quantidade">
+                                    @if (item.Tipo == TipoProduto.PorPeso)
+                                    {
+                                        @item.Quantidade.ToString("0.###") <span>kg</span>
+                                    }
+                                    else
+                                    {
+                                        @item.Quantidade.ToString("0") <span>un</span>
+                                    }
                                 </span>
-                                <div class="estoque-minimo-texto">
-                                    mínimo: @item.EstoqueMinimo!.Value.ToString(item.Tipo == TipoProduto.PorPeso ? "0.###" : "0")
-                                    <span>@(item.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
-                                </div>
-                            }
+                                @* Estoque mínimo (item 1): só aparece se o dono configurou
+                                   um mínimo > 0 E o estoque atual caiu abaixo dele. *@
+                                @if (item.EstoqueAbaixoDoMinimo)
+                                {
+                                    <span class="badge badge-estoque-baixo" title="Abaixo do estoque mínimo configurado">
+                                        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>ESTOQUE BAIXO
+                                    </span>
+                                    <div class="estoque-minimo-texto">
+                                        mínimo: @item.EstoqueMinimo!.Value.ToString(item.Tipo == TipoProduto.PorPeso ? "0.###" : "0")
+                                        <span>@(item.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+                                    </div>
+                                }
+                            </div>
                         </td>
                         @if (podeGerenciarEstoque)
                         {
