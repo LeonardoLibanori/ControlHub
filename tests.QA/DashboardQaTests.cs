@@ -323,9 +323,12 @@ public class DashboardQaTests
     /// fechamento do dia, o PDV continua somando as vendas ja fechadas no
     /// saldo e a gaveta do dashboard nao. Os dois numeros divergem.
     ///
-    /// Este teste declara o COMPORTAMENTO CORRETO e fica IGNORADO de proposito:
-    /// corrigir e trabalho de commit proprio, junto com a quebra visual que a
-    /// conferencia de caixa mostra (admin-caixa.js L113).
+    /// Este teste declarava o COMPORTAMENTO CORRETO e ficava IGNORADO de
+    /// proposito. Com o BUG-28 corrigido (ObterStatusAtual passou a usar os
+    /// MESMOS predicados de RegistrarMovimentacaoInterno), a correcao esta no
+    /// codigo e o teste passa a ser verificado de verdade - sem Skip.
+    /// A gaveta do PDV e a do dashboard passam a mostrar o mesmo numero depois
+    /// do fechamento.
     /// </summary>
     [Fact]
     public async Task Dashboard_Gaveta_IgualAoStatusAposVendaFechada_ComportamentoEsperado()

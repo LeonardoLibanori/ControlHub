@@ -308,7 +308,12 @@ $idProd = ([regex]::Match($bc.Body, '"id":(\d+)')).Groups[1].Value
 Say ('          produto encontrado: id=' + $idProd)
 Ok 'GET /Home/Produto (detalhe)' 200 (Chama $jar 'GET' "/Home/Produto/$idProd" $null $null $true)
 $pg = Chama $jar 'GET' '/Caixa/Index' $null $null $false
-$bv = "metodoPagamento=Dinheiro&cpfCliente=&codigoVendedor=CUPOM1&valorRecebido=10&valorTroco=0&itens%5B0%5D.ProdutoId=$idProd&itens%5B0%5D.Quantidade=1&itens%5B0%5D.Preco=10"
+# BUG-29: o produto TESTE001 foi criado com preco=1000, logo 1 un = total
+# R$ 1.000,00. O valor recebido tem de COBRIR o total em Dinheiro, senao a
+# venda e recusada. O POST mandava 10,00: so o dado de entrada muda (1000,00),
+# para que este teste continue medindo AUTORIZACAO (Operador pode vender) e
+# nao a validacao de dinheiro.
+$bv = "metodoPagamento=Dinheiro&cpfCliente=&codigoVendedor=CUPOM1&valorRecebido=1000&valorTroco=0&itens%5B0%5D.ProdutoId=$idProd&itens%5B0%5D.Quantidade=1&itens%5B0%5D.Preco=10"
 $fv = Chama $jar 'POST' '/Caixa/FinalizarVenda' $bv (Token $pg.Body) $true
 Ok 'POST /Caixa/FinalizarVenda (Operador VENDEU)' 200 $fv
 TemTexto '  resposta da venda = success' $fv.Body '"success":true'
