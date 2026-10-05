@@ -768,16 +768,21 @@ footer .container {
     box-shadow: none !important;
 }
 
+/* O destaque dourado MIGRA (pedido do dono em 05/10/2026): a barra dourada do
+   topo so aparece enquanto "VENDAS DE HOJE" e o filtro em exibicao. Quando um
+   periodo (semana/mes/ano) esta no ar, o dourado passa para o cartao clicado e
+   este cartao aqui fica NEUTRO - antes os dois ficavam dourados ao mesmo tempo
+   ("tudo em volta dourado"). O is-ativo vem de .history-cartao-link. */
 .history-hero {
     color: var(--text);
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-top: 3px solid var(--accent);
+    border-top: 3px solid var(--border);
     border-radius: 8px;
 }
 
 .history-hero h1 {
-    color: var(--accent-hover);
+    color: var(--text);
     font-variant-numeric: tabular-nums;
 }
 
@@ -920,8 +925,10 @@ footer .container {
     border-color: var(--border-strong);
 }
 
+/* Neutro por padrao: o dourado do valor so entra quando o cartao e o filtro
+   ativo (regra .history-cartao-link.is-ativo la embaixo). */
 .history-today-total {
-    color: var(--accent-hover);
+    color: var(--text);
     font-size: 2.15rem;
     font-variant-numeric: tabular-nums;
 }
@@ -1541,7 +1548,10 @@ a.dash-coluna:hover .dash-coluna-barra {
     box-shadow: inset 0 -3px 0 0 var(--accent);
 }
 
+/* Texto dourado do badge em exibicao - inclui o valor do "VENDAS DE HOJE"
+   (.history-today-total): o dourado pertence ao filtro ATIVO, nunca aos dois. */
 .history-cartao-link.is-ativo .section-eyebrow,
+.history-cartao-link.is-ativo .history-today-total,
 .history-cartao-link.is-ativo h3 {
     color: var(--accent-hover);
 }
@@ -1561,28 +1571,6 @@ a.dash-coluna:hover .dash-coluna-barra {
 .history-filtro-obs {
     color: var(--accent-hover);
 }
-
-/* Botao "Voltar ao filtro por dia", que substitui o campo de data quando o
-   filtro e um periodo (BUG-34). Herda o formato dos botoes da barra. */
-.btn-historicovoltar {
-    display: inline-flex;
-    align-items: center;
-    padding: .5rem .9rem;
-    font-weight: 600;
-    color: var(--accent-hover);
-    background: transparent;
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    text-decoration: none;
-}
-
-.btn-historicovoltar:hover {
-    color: var(--accent-ink);
-    background: var(--accent);
-    border-color: var(--accent);
-    text-decoration: none;
-}
-
 
 /* =====================================================================
    BUG-34 - ABA ATIVA DO MENU

@@ -28,38 +28,32 @@
         _ => dataTela.ToString("dd/MM/yyyy")
     };
 
-    // BUG-34: o campo de data so aparece quando o filtro E de dia. Com
-    // semana/mes/ano ele mentiria (mostraria uma data enquanto a lista mostra
-    // o mes inteiro), alem de deixar o dono pensar que Buscar volta para o dia.
-    var mostrarCampoData = !filtroEhPeriodo;
-
-    // BUG-34: o CALENDARIO passa a mostrar SO OS DIAS DO PERIODO ATIVO. Sem
-    // isto o <input type="date"> abria com o mes inteiro, e o dono podia
-    // escolher um dia de fora do filtro (ex.: escolher ontem na "semana") e
-    // receber uma lista vazia sem entender o motivo.
-    //
-    // A janela NAO e recalculada aqui: vem do ViewBag, que o controller
-    // montou com o mesmo ResolverFiltroHistorico que filtrou a lista. Se a
-    // view calculasse a janela por conta propria, o calendario e a lista
-    // poderiam divergir - que e o tipo de bug que so aparece em producao.
-    // O fim e exclusivo, entao o ultimo dia do calendario e (fim - 1 dia).
-    var inicioJanela = (ViewBag.InicioJanela as DateTime?) ?? DateTime.Today;
-    var fimJanela = (ViewBag.FimJanela as DateTime?) ?? DateTime.Today.AddDays(1);
-    var minCalendar = inicioJanela.ToString("yyyy-MM-dd");
-    var maxCalendar = fimJanela.AddDays(-1).ToString("yyyy-MM-dd");
+    // PEDIDO DO DONO (05/10/2026): "quero o calendario normal mesmo". O campo
+    // de data volta a ser SEMPRE visivel, SEMPRE habilitado e SEM min/max
+    // travado no periodo - a janela do controller continua existindo para a
+    // lista/export, mas nao trava mais o <input type="date">. Escolher outro
+    // dia e clicar Buscar limpa o periodo (o form nao envia ?periodo=), que e
+    // o caminho oficial de voltar ao filtro de dia.
 
     // BUG-34: os valores que vao nos LINKS, formatados AQUI e nao dentro do
     // asp-route-data. As aspas de "yyyy-MM-dd" dentro do atributo do Tag Helper
     // quebram o Razor e o href sai lixo (virava ?data=%3F.ToString(&periodo=..).
     var dataExport = (ViewBag.DataExport as DateTime?)?.ToString("yyyy-MM-dd");
     var periodoExport = filtroEhPeriodo ? periodoAtivo : null;
-    var dataExportDia = dataTela.ToString("yyyy-MM-dd");
 }
 
 <div class="container history-summary py-4">
     <div class="row g-3 align-items-stretch mb-4">
         <div class="col-12 col-lg-5">
-            <section class="history-hero h-100 p-4">
+            @* PEDIDO DO DONO (05/10/2026): o "VENDAS DE HOJE" virou badge
+               clicavel - antes so dava para voltar para ele saindo pelo menu
+               lateral. Mesmo padrao dos tres cartoes: <section> com <a>
+               esticado por cima (stretched-link).
+               Ele tambem e dono do destaque dourado: so existe UM badge
+               dourado por vez, e o dourado MIGRA para o cartao quando um
+               periodo esta ativo (antes os dois ficavam dourados juntos). *@
+            <section class="history-hero h-100 p-4 history-cartao-link
+                              @(filtroEhPeriodo ? null : "is-ativo")">
                 <div class="section-eyebrow"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>VENDAS DE HOJE</div>
                 <h1 class="history-today-total mb-0">
                     @{
@@ -67,6 +61,9 @@
                     }
                     @totalHoje.ToString("C")
                 </h1>
+                <a class="stretched-link" asp-controller="Caixa" asp-action="Historico"
+                   aria-current="@(filtroEhPeriodo ? null : "true")"
+                   title="Voltar para as vendas de hoje"></a>
             </section>
         </div>
         @* BUG-34: os tres cartoes viraram clicaveis. Cada um abre o Historico ja
@@ -117,49 +114,29 @@
     </div>
 
     <div class="history-filter d-flex flex-wrap gap-3 align-items-end mb-4">
-        @* BUG-34: a barra virou um div comum, e SO o filtro de dia tem form.
-           Os botoes de Exportar e "Voltar ao dia" NAO podem ficar dentro de
-           um <form method="get">: um link clicado dentro de um form segue o
-           form, e o navegador fazia uma BUSCA em vez de baixar o arquivo.
-           O comentario antigo chegou a prever isso, mas o link foi deixado
-           dentro do form mesmo assim. *@
-        @if (mostrarCampoData)
-        {
-            <form method="get" class="d-contents">
-                <div class="flex-grow-1">
-                    <label class="form-label fw-semibold" for="historico-data">Filtrar por dia</label>
-                    <input type="date"
-                           id="historico-data"
-                           name="data"
-                           class="form-control fw-bold"
-                           value="@dataTela.ToString("yyyy-MM-dd")"
-                           min="@minCalendar"
-                           max="@maxCalendar" />
-                </div>
-                <button type="submit" class="btn btn-primary text-uppercase">
-                    <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
-                </button>
-            </form>
-        }
-        else
-        {
-            @* Com um periodo ativo o campo fica SO DE LEITURA: ele mostra o
-               intervalo permitido, mas nao submete nada (nao ha form). Sem
-               isto o dono podia escolher um dia e o filtro de periodo
-               brigaria com a data. *@
+        @* PEDIDO DO DONO (05/10/2026): UM so campo de data, sempre visivel e
+           habilitado - o filtro "Periodo: ... / campo desabilitado" foi
+           removido. O form e flex DENTRO da barra: antes ele usava a classe
+           inexistente "d-contents", virava uma caixa normal e o botao Buscar
+           caia desalinhado, embaixo do input. O submit nao envia ?periodo=,
+           entao Buscar tambem limpa o filtro de periodo.
+
+           O Exportar continua FORA do form de proposito: um link dentro de um
+           <form method="get"> segue o form, e o navegador fazia uma BUSCA em
+           vez de baixar o arquivo. *@
+        <form method="get" class="d-flex flex-grow-1 flex-wrap gap-3 align-items-end">
             <div class="flex-grow-1">
-                <label class="form-label fw-semibold d-block" for="historico-data">
-                    Período: @tituloPeriodo
-                </label>
+                <label class="form-label fw-semibold" for="historico-data">Filtrar por dia</label>
                 <input type="date"
                        id="historico-data"
+                       name="data"
                        class="form-control fw-bold"
-                       value="@dataTela.ToString("yyyy-MM-dd")"
-                       min="@minCalendar"
-                       max="@maxCalendar"
-                       disabled />
+                       value="@dataTela.ToString("yyyy-MM-dd")" />
             </div>
-        }
+            <button type="submit" class="btn btn-primary text-uppercase">
+                <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
+            </button>
+        </form>
 
         @* BUG-34: o export respeita o MESMO periodo da tela - os dois valores
            ja vem prontos do bloco @{} acima. *@
@@ -170,17 +147,6 @@
            title="Baixar em Excel (.xlsx) exatamente o que a tela está mostrando">
             <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>Exportar Excel
         </a>
-        @* Com um periodo ativo, o "voltar" e o caminho de saida: sem ele o
-           dono ficaria preso no filtro, porque o Buscar so aparece no
-           filtro de dia. *@
-        @if (filtroEhPeriodo)
-        {
-            <a asp-controller="Caixa" asp-action="Historico"
-               asp-route-data="@dataExportDia"
-               class="btn-historicovoltar">
-                <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Voltar ao dia
-            </a>
-        }
     </div>
 
     @* BUG-34: qual filtro esta no ar. Antes o campo de data aparecia sempre
