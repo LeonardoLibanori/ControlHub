@@ -1,4 +1,4 @@
-using ControleEstoqueLoja.Controllers;
+﻿using ControleEstoqueLoja.Controllers;
 using ControleEstoqueLoja.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,7 +49,7 @@ public class VendedoresQaTests
             "ValidarCupom deveria aceitar o cupom em caixa diferente.");
 
         // 2) A venda usa exatamente o mesmo codigo validado.
-        var venda = await controller.FinalizarVenda("Dinheiro", null, "cupom1", 0m, 0m,
+        var venda = await controller.FinalizarVenda("Dinheiro", null, "cupom1", 10m, 0m,
             new List<CaixaController.ItemVendaSimples>
             {
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }
@@ -130,7 +130,7 @@ public class VendedoresQaTests
         var controller = new CaixaController(qa.Context);
         await controller.ExcluirVendedor("CUPOM1");
 
-        var venda = await controller.FinalizarVenda("Dinheiro", null, "CUPOM1", 0m, 0m,
+        var venda = await controller.FinalizarVenda("Dinheiro", null, "CUPOM1", 10m, 0m,
             new List<CaixaController.ItemVendaSimples>
             {
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }
@@ -152,7 +152,7 @@ public class VendedoresQaTests
         var produto = qa.SeedProduto(preco: 10m, quantidade: 10m);
         var controller = new CaixaController(qa.Context);
 
-        var venda = await controller.FinalizarVenda("Dinheiro", null, "", 0m, 0m,
+        var venda = await controller.FinalizarVenda("Dinheiro", null, "", 10m, 0m,
             new List<CaixaController.ItemVendaSimples>
             {
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }
@@ -175,7 +175,7 @@ public class VendedoresQaTests
         var produto = qa.SeedProduto(preco: 10m, quantidade: 10m);
         var controller = new CaixaController(qa.Context);
 
-        var venda = await controller.FinalizarVenda("Dinheiro", null, "NAOEXISTE", 0m, 0m,
+        var venda = await controller.FinalizarVenda("Dinheiro", null, "NAOEXISTE", 10m, 0m,
             new List<CaixaController.ItemVendaSimples>
             {
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }
@@ -195,7 +195,7 @@ public class VendedoresQaTests
         var produto = qa.SeedProduto(preco: 10m, quantidade: 10m);
         var controller = new CaixaController(qa.Context);
 
-        var venda = await controller.FinalizarVenda("Dinheiro", null, "  cupom1 ", 0m, 0m,
+        var venda = await controller.FinalizarVenda("Dinheiro", null, "  cupom1 ", 10m, 0m,
             new List<CaixaController.ItemVendaSimples>
             {
                 new() { ProdutoId = produto.Id.ToString(), Quantidade = "1", Preco = "0" }

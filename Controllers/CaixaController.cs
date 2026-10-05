@@ -186,9 +186,22 @@ namespace ControleEstoqueLoja.Controllers
 
             // FASE 1: servidor recalcula recebido/troco a partir do total (nunca confia no POST).
             // QA-V04 como especificação: mantém o recebido informado e recalcula troco = recebido - total.
-            // QA-V01 como especificação: mesmo com recebido < total a venda é gravada (sem 500 / sem rejeição).
+            // BUG-29: dinheiro insuficiente, 3 casas decimais ou valor fora da faixa
+            // armazenável são recusados AQUI, com o total já conhecido (regra 5: a fórmula
+            // do total fica no loop, não é duplicada aqui). Como o loop JÁ baixou o estoque,
+            // a rejeição precisa devolver o contexto ao estado anterior: sem isto os
+            // produtos percorridos ficariam baixados na instância do DbContext.
             if (metodoPagamento.Equals("Dinheiro", StringComparison.OrdinalIgnoreCase))
             {
+                var motivoDinheiro = ValidarValorRecebido(valorRecebido, novaVenda.TotalVenda);
+                if (motivoDinheiro != null)
+                {
+                    // Descarta as baixas de estoque pendentes (BUG-29): sem transação explícita,
+                    // o jeito de não deixar rastro é não salvar e soltar as entidades rastreadas.
+                    _context.ChangeTracker.Clear();
+                    return Json(new { success = false, message = motivoDinheiro });
+                }
+
                 novaVenda.ValorRecebido = valorRecebido;
                 novaVenda.ValorTroco = valorRecebido - novaVenda.TotalVenda;
             }
@@ -202,6 +215,44 @@ namespace ControleEstoqueLoja.Controllers
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, vendaId = novaVenda.Id });
+        }
+
+        /// <summary>
+        /// BUG-29: valida o valor recebido em uma venda em DINHEIRO. Devolve null quando
+        /// o valor pode ser gravado, ou a mensagem de recusa (mesmo formato da action:
+        /// HTTP 200 com success = false).
+        ///
+        /// Três recusas, todas ANTES de gravar, para que nenhum caso termine em 500:
+        ///  1. mais de 2 casas decimais - dinheiro não tem fração de centavo, e ARREDONDAR
+        ///     aqui mudaria um valor que o operador digitou (26,995 viraria 27,00 e a venda
+        ///     passaria a aceitar 26,995 como se fossem 27,00);
+        ///  2. acima da faixa que ConversorCentavos aceita - lá o estouro é um
+        ///     OverflowException dentro do SaveChanges, isto é, um 500;
+        ///  3. insuficiente - o troco sairia negativo, que é um registro que nenhum
+        ///     humano produziu (significa "o caixa deve ao cliente").
+        /// </summary>
+        private static string? ValidarValorRecebido(decimal valorRecebido, decimal totalVenda)
+        {
+            // (1) 3 casas ou mais: mesma regra de ConversorCentavos.ParaCentavos.
+            if (decimal.Round(valorRecebido, 2) != valorRecebido)
+            {
+                return "Valor recebido inválido: use no máximo 2 casas decimais (centavos).";
+            }
+
+            // (2) Faixa armazenável: o teto é o de ConversorCentavos (não inventado aqui).
+            if (Math.Abs(valorRecebido) > (decimal)ConversorCentavos.MaxCentavos / 100m)
+            {
+                return "Valor recebido fora da faixa aceita.";
+            }
+
+            // (3) Insuficiente: o troco é recalculado no servidor (regra 6).
+            if (valorRecebido < totalVenda)
+            {
+                var falta = (totalVenda - valorRecebido).ToString("N2", CultureInfo.GetCultureInfo("pt-BR"));
+                return $"Valor recebido insuficiente. Faltam R$ {falta}.";
+            }
+
+            return null;
         }
 
         // --- MÉTODOS DO MENU ADMINISTRATIVO ---

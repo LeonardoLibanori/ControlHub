@@ -229,9 +229,12 @@ if ($r.Ok -and $r.Dados.success) {
 
 Write-Titulo 'VENDAS - quantidade negativa deve ser rejeitada'
 
+# BUG-29: em Dinheiro o valor recebido tem de cobrir o total. Este cenario ja
+# espera RECUSA (quantidade negativa), entao so o dado de entrada muda: 20,00
+# (>= o total) para que a recusa venha da quantidade, e nao do dinheiro.
 $r = Get-FormVenda "$BaseUrl/Caixa/FinalizarVenda" @{
     metodoPagamento = 'Dinheiro'; cpfCliente = ''; codigoVendedor = 'QA123'
-    valorRecebido   = '0';       valorTroco  = '0'
+    valorRecebido   = '20';      valorTroco  = '0'
 } @(
     @{ ProdutoId = "$p1id"; Quantidade = '-2'; Preco = '0' }
 )

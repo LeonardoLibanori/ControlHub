@@ -26,7 +26,7 @@ public class VendasQaTests
         var controller = new CaixaController(qa.Context);
 
         // Vendedor tenta mandar preco = 0,01 no POST.
-        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(produto.Id.ToString(), "2", preco: "0,01"));
 
         var venda = qa.Context.Vendas.AsNoTracking()
@@ -49,7 +49,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 10m);
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(produto.Id.ToString(), qtd));
 
         Assert.False(result.IsSuccess());
@@ -66,7 +66,7 @@ public class VendasQaTests
         var porPeso = qa.SeedProduto(preco: 50m, quantidade: 50m, tipo: TipoProduto.PorPeso);
 
         var controller = new CaixaController(qa.Context);
-        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(porPeso.Id.ToString(), "2"));
 
         var venda = qa.Context.Vendas.AsNoTracking().Single();
@@ -82,7 +82,7 @@ public class VendasQaTests
         var porPeso = qa.SeedProduto(preco: 50m, quantidade: 10m, tipo: TipoProduto.PorPeso);
 
         var controller = new CaixaController(qa.Context);
-        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(porPeso.Id.ToString(), "0,125"));
 
         var venda = qa.Context.Vendas.AsNoTracking().Single();
@@ -97,7 +97,7 @@ public class VendasQaTests
         qa.SeedVendedor(codigo: "ABC123");
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item("999999", "1"));
 
         Assert.False(result.IsSuccess());
@@ -112,7 +112,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 10m);
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("Dinheiro", null, "NAOEXISTE", 0m, 0m,
+        var result = await controller.FinalizarVenda("Dinheiro", null, "NAOEXISTE", 100m, 0m,
             Item(produto.Id.ToString(), "1"));
 
         Assert.False(result.IsSuccess());
@@ -128,7 +128,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 3m);
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(produto.Id.ToString(), "5"));
 
         Assert.False(result.IsSuccess());
@@ -145,7 +145,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 10m);
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("", null, "ABC123", 0m, 0m,
+        var result = await controller.FinalizarVenda("", null, "ABC123", 100m, 0m,
             Item(produto.Id.ToString(), "1"));
 
         Assert.False(result.IsSuccess());
@@ -160,7 +160,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 10m, tipo: TipoProduto.Prateleira);
 
         var controller = new CaixaController(qa.Context);
-        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        var result = await controller.FinalizarVenda("Dinheiro", null, "ABC123", 100m, 0m,
             Item(produto.Id.ToString(), "1,5"));
 
         Assert.False(result.IsSuccess());
@@ -175,7 +175,7 @@ public class VendasQaTests
         var produto = qa.SeedProduto(quantidade: 10m);
 
         var controller = new CaixaController(qa.Context);
-        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 0m, 0m,
+        await controller.FinalizarVenda("Dinheiro", null, "ABC123", 30m, 0m,
             Item(produto.Id.ToString(), "3"));
 
         var salvo = qa.Context.Produtos.AsNoTracking().First(p => p.Id == produto.Id);
