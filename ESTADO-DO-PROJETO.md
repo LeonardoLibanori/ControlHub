@@ -193,6 +193,19 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | **Dashboard inicial (Início)** | `d654570` | item de menu só para o Dono: vendas do dia, dinheiro na gaveta, quebra por forma de pagamento, estoque baixo, últimos 7 dias e últimas vendas |
 | **Dashboard: gráfico 7/30 dias + detalhe do dia** | *pendente* | seletor de período por link (`?dias=30`); cada barra é um link para `/Dashboard/Dia`, que mostra o total do dia, o que foi vendido e as vendas do dia |
 
+### Visuais (bugs de interface corrigidos)
+
+| ID | Problema | Correção |
+|---|---|---|
+| BUG-27 | CSS e JS **não carregavam** (app sem `UseStaticFiles`); com `Accept-Encoding: gzip, br` o servidor devolvia 200 com corpo **vazio** — a página abria sem estilo | `UseStaticFiles` no `Program.cs` + `qa/http-assets.ps1` (6 assets × 2 requisições) |
+| **BUG-30** | Com **Dinheiro**, o `CONFIRMAR` ficava habilitado com o campo vazio/insuficiente: o operador só descobria a recusa **depois** de tentar (o servidor já recusava, o PDV apenas não ajudava) | `podeConfirmarPagamento()` + `definirConfirmarHabilitado()` em `admin-caixa.js`: `disabled` + `aria-disabled="true"` + visual apagado; **comparação em centavos inteiros** (`Math.round(x*100)`), nunca float; aceita vírgula e ponto; `irParaCPF()` reconfirma (defesa em profundidade) |
+| **BUG-30** | O aviso "Faltam R$ 17,00" vinha inteiro dentro do `<h2>` de 2rem: **quebrava no meio** ("Faltam R$ 17," / "00"), com **duas cores** e sem caber em 360 px | Estrutura única nos dois estados — rótulo pequeno em cima (**TROCO** / **FALTAM**, este em `var(--danger)`) e valor grande embaixo, `white-space: nowrap` + `font-size: clamp()`; região com `aria-live="polite"` |
+| **BUG-30** | Reabrir o modal mantinha o valor da venda anterior no campo, e o botão abria habilitado para o valor errado | `resetarEtapaPagamento()` em `abrirModalPagamento()`: zera método, valor, troco, aviso e CPF |
+| **BUG-30** | `Enter` no campo de valor podia disparar a confirmação | `onkeydown` captura o `Enter` e faz `preventDefault()` |
+| **BUG-30** | O erro do servidor aparecia sempre como **"Erro no Estoque"**, mesmo quando a recusa era de dinheiro insuficiente (BUG-29) | Título passou a "Venda não concluída"; a **mensagem do servidor** é exibida (`res.message`), com *fallback* |
+
+> **Ordem de responsabilidade:** o **servidor continua sendo a autoridade**. O bloqueio no PDV é conveniência de operador; `CaixaController.FinalizarVenda` segue validando e recusando (`BUG-29`). Nada do payload, do cálculo do total ou do troco foi alterado.
+
 ---
 
 ## 7. DECISÃO CRÍTICA RECENTE: banco versionado no Git

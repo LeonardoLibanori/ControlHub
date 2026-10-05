@@ -1325,3 +1325,67 @@ a.dash-coluna:hover .dash-coluna-barra {
     min-width: 100%;
     border-radius: 2px;
 }
+
+
+/* =====================================================================
+   BUG-30 - CONFIRMAR bloqueado com dinheiro insuficiente + aviso FALTAM
+   ---------------------------------------------------------------------
+   Bloco NOVO, no fim do arquivo de proposito: nao altera nenhuma regra
+   existente, so acrescenta. Sem recurso externo (nada de fonte remota):
+   o clamp() abaixo usa a fonte que o tema ja define.
+
+   Problema visual original: o rotulo "Faltam R$ 17,00" vinha inteiro dentro
+   do <h2> de 2rem, entao o texto quebrava no meio ("Faltam R$ 17," / "00"),
+   ficava com duas cores diferentes (o "Faltam R$" herdava uma, o valor outra)
+   e a régua de 360px do celular nao comportava o numero.
+   A solucao e a MESMA estrutura nos dois estados - rotulo pequeno em cima
+   (TROCO ou FALTAM) e valor grande embaixo, em uma linha so.
+   ===================================================================== */
+
+/* Rotulo pequeno acima do valor. dim/neutro = o estado "Troco". */
+.pdv-valor-regiao .pdv-valor-rotulo {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.2;
+    margin-bottom: .1rem;
+}
+
+/* Estado "Faltam": o rotulo usa a cor de perigo, para o operador ler o
+   aviso antes mesmo de olhar o numero. */
+.pdv-valor-regiao .pdv-valor-rotulo.pdv-valor-rotulo-falta {
+    color: var(--danger);
+}
+
+/* O valor grande. O clamp() e o que resolve a largura: quanto menor a
+   viewport, menor a fonte, e white-space impede a quebra da linha.
+   1.75rem no piso e o menor tamanho que continua legivel no caixa. */
+.pdv-valor-regiao .pdv-valor-grande {
+    font-size: clamp(1.15rem, 7vw, 1.75rem);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: keep-all;
+    max-width: 100%;
+}
+
+/* O valor quando falta dinheiro, em vermelho. Fica DEPOIS de .pdv-valor-grande
+   para vencer o .text-success que o JS alterna. */
+.pdv-valor-regiao .pdv-valor-grande.pdv-valor-falta,
+.pdv-valor-regiao .pdv-valor-grande.text-danger {
+    color: var(--danger);
+}
+
+/* O CONFIRMAR bloqueado: apagado, sem o brilho do primario, e sem a
+   sombra de "pressionado" que Bootstrap aplica em .btn:active. */
+.pdv-btn-bloqueado,
+.pdv-btn-bloqueado:hover,
+.pdv-btn-bloqueado:focus,
+.pdv-btn-bloqueado:active {
+    opacity: .45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    box-shadow: none !important;
+}

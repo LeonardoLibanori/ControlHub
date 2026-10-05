@@ -602,6 +602,11 @@ function abrirModalPagamento() {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
 
+    // BUG-30: reabrir o modal reinicia o estado - metodo, valor recebido, troco
+    // e aviso. Sem isto, o valor da venda anterior ficaria no campo e o
+    // CONFIRMAR abriria habilitado para um valor que nao e o desta venda.
+    resetarEtapaPagamento();
+
     // Mostra o modal custom com z-index alto para garantir interatividade
     const modal = document.getElementById("modalPagamento");
     if (modal) {
@@ -655,13 +660,16 @@ function marcarMetodo(btn, metodo) {
         } else {
             divTroco.style.display = "none";
             const valRec = document.getElementById("valorRecebidoInput");
-            const displayTroco = document.getElementById("displayTroco");
             if (valRec) valRec.value = "";
-            if (displayTroco) displayTroco.innerText = "R$ 0,00";
             const hiddenTroco = document.getElementById("valorTrocoInput");
             if (hiddenTroco) hiddenTroco.value = "0";
         }
     }
+
+    // BUG-30: trocar de metodo recalcula o CONFIRMAR. Sair de Dinheiro com um
+    // valor insuficiente volta a liberar o botao (Pix/Debito/Credito nao usam
+    // valor recebido); entrar em Dinheiro com o campo vazio o bloqueia.
+    calcularTroco();
 }
 
 // Abre a etapa do CPF. O cupom do vendedor NAO e mais obrigatorio: virou um
@@ -670,6 +678,21 @@ function marcarMetodo(btn, metodo) {
 function irParaCPF() {
     if (!metodoSelecionado || metodoSelecionado === "") {
         Swal.fire('Atenção', 'Escolha o método de pagamento!', 'warning');
+        return;
+    }
+
+    // BUG-30: defesa em profundidade. O botao ja vem desabilitado por
+    // podeConfirmarPagamento(), mas o onclick pode ser chamado por fora (Enter,
+    // automacao, devtools). Aqui reconferimos antes de avancar: se faltar
+    // dinheiro, o operador recebe o aviso e o modal NAO avanca.
+    if (!podeConfirmarPagamento()) {
+        const total = formatarCentavos(totalCarrinhoEmCentavos());
+        Swal.fire(
+            'Valor insuficiente',
+            `O valor recebido em dinheiro precisa cobrir o total de R$ ${total}.`,
+            'warning'
+        );
+        document.getElementById("valorRecebidoInput")?.focus();
         return;
     }
 
@@ -860,8 +883,12 @@ async function enviarVendaDeVez() {
             document.body.style.overflow = '';
 
             Swal.fire({
-                title: 'Erro no Estoque',
-                html: res.message.replace(/\n/g, '<br>'),
+                // BUG-30: o titulo era fixo em "Erro no Estoque", mas a recusa
+                // pode ser de dinheiro insuficiente (BUG-29), de cupom, de
+                // quantidade ou de estoque. O texto do SERVIDOR e a autoridade
+                // e aparece abaixo; o titulo agora so diz que a venda nao saiu.
+                title: 'Venda não concluída',
+                html: (res.message || 'Não foi possível concluir a venda.').replace(/\n/g, '<br>'),
                 icon: 'error',
                 confirmButtonColor: '#d33',
                 didOpen: () => {
@@ -880,7 +907,85 @@ async function enviarVendaDeVez() {
     }
 }
 
-// Calcula o troco a partir do carrinho e do valor recebido pelo operador
+// ---------------------------------------------------------------------------
+// BUG-30: helpers de dinheiro e do botao CONFIRMAR
+// ---------------------------------------------------------------------------
+
+// Converte um texto digitado em CENTAVOS inteiros (ou null se nao for numero).
+// Aceita virgula e ponto como separador. Math.round evita o 0.1+0.2 != 0.3 do
+// float: sem isso 27,00 viraria 2699.9999 e a comparacao com o total erraria.
+function textoParaCentavos(texto) {
+    if (texto === null || texto === undefined) return null;
+    const limpo = String(texto).trim().replace(',', '.');
+    if (limpo === "") return null;
+    const n = Number(limpo);
+    if (!isFinite(n)) return null;
+    return Math.round(n * 100);
+}
+
+// Total do carrinho EM CENTAVOS, arredondando item a item. Somar em reais e so
+// no fim daria erro acumulado (3x R$ 0,10 daria 0.30000000000000004).
+function totalCarrinhoEmCentavos() {
+    let totalCentavos = 0;
+    (carrinho || []).forEach(item => {
+        const precoCentavos = Math.round((parseFloat(String(item.preco ?? item.Preco ?? 0).replace(',', '.')) || 0) * 100);
+        const qtdCentavos = Math.round((parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0) * 100);
+        totalCentavos += Math.round(precoCentavos * qtdCentavos / 100);
+    });
+    return totalCentavos;
+}
+
+function formatarCentavos(centavos) {
+    return (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Liga/desliga o CONFIRMAR. Usamos disabled (o navegador impede o clique) e
+// aria-disabled (o leitor de tela anuncia) - o disabled sozinho nao e anunciado
+// por todos os leitores de tela.
+function definirConfirmarHabilitado(habilitado) {
+    const btn = document.getElementById("btnConfirmarPagamento");
+    if (!btn) return;
+    btn.disabled = !habilitado;
+    if (habilitado) {
+        btn.removeAttribute("aria-disabled");
+    } else {
+        btn.setAttribute("aria-disabled", "true");
+    }
+    btn.classList.toggle("pdv-btn-bloqueado", !habilitado);
+}
+
+// O CONFIRMAR so pode ficar habilitado se NAO for Dinheiro, OU se for Dinheiro
+// com valor recebido suficiente. O SERVIDOR continua sendo a autoridade: isto e
+// so para o operador nao descobrir a recusa so depois de tentar.
+function podeConfirmarPagamento() {
+    const metodo = String(metodoSelecionado || "").toLowerCase();
+    if (!metodo) return true;                      // sem metodo, quem recusa e o modal
+    if (!metodo.includes('dinheiro')) return true; // Pix/Debito/Credito: livre
+
+    const recebido = textoParaCentavos(document.getElementById("valorRecebidoInput")?.value);
+    if (recebido === null) return false;           // vazio ou nao numerico
+    if (recebido <= 0) return false;               // zero ou negativo
+    return recebido >= totalCarrinhoEmCentavos();
+}
+
+// Troca o rotulo pequeno (TROCO / FALTAM) e a cor do valor grande.
+function definirAvisoTroco(estado, textoValor) {
+    const rotulo = document.getElementById("displayTrocoRotulo");
+    const displayTroco = document.getElementById("displayTroco");
+    if (displayTroco) {
+        displayTroco.innerText = textoValor;
+        displayTroco.classList.toggle('text-danger', estado === 'falta');
+        displayTroco.classList.toggle('text-success', estado !== 'falta');
+        displayTroco.classList.toggle('pdv-valor-falta', estado === 'falta');
+    }
+    if (rotulo) {
+        rotulo.textContent = estado === 'falta' ? 'Faltam' : 'Troco';
+        rotulo.classList.toggle('pdv-valor-rotulo-falta', estado === 'falta');
+    }
+
+// Calcula o troco a partir do carrinho e do valor recebido pelo operador.
+// BUG-30: toda a comparacao passa a ser feita em CENTAVOS inteiros, e o
+// CONFIRMAR e reavaliado a cada digitacao (oninput) e a cada troca de metodo.
 function calcularTroco() {
     const valorRecebidoEl = document.getElementById("valorRecebidoInput");
     const displayTroco = document.getElementById("displayTroco");
@@ -888,38 +993,61 @@ function calcularTroco() {
 
     if (!displayTroco || !valorTrocoInput) return;
 
-    // Pega valor recebido (normaliza vírgula/point)
-    let valorRecebidoRaw = (valorRecebidoEl?.value ?? "0").toString().replace(',', '.').trim();
-    let valorRecebido = parseFloat(valorRecebidoRaw);
-    if (isNaN(valorRecebido)) valorRecebido = 0;
+    const recebidoCentavos = textoParaCentavos(valorRecebidoEl?.value);
+    const totalCentavos = totalCarrinhoEmCentavos();
 
-    // Calcula total do carrinho (seguro contra formatos mistos)
-    let total = 0;
-    (carrinho || []).forEach(item => {
-        const preco = parseFloat(String(item.preco ?? item.Preco ?? 0).replace(',', '.')) || 0;
-        const qtd = parseFloat(String(item.qtd ?? item.Quantidade ?? item.quantidade ?? 0).replace(',', '.')) || 0;
-        total += preco * qtd;
-    });
+    // BUG-30: o botao e recalculado sempre, mesmo fora de Dinheiro (nesse caso
+    // podeConfirmarPagamento devolve true e nada muda visualmente).
+    definirConfirmarHabilitado(podeConfirmarPagamento());
 
-    // Troco lógico
-    const diff = (valorRecebido - total);
-    if (diff >= 0.0005) {
+    // Campo vazio / nao numerico / carrinho vazio: nao ha "Faltam" a mostrar,
+    // porque ainda nao se sabe o que falta - o operador esta no comeco.
+    if (recebidoCentavos === null || totalCentavos === 0) {
+        definirAvisoTroco('neutro', "R$ 0,00");
+        valorTrocoInput.value = "0";
+        return;
+    }
+
+    const diffCentavos = recebidoCentavos - totalCentavos;
+
+    if (diffCentavos >= 0) {
         // Tem troco para devolver
-        const troco = diff;
-        displayTroco.innerText = "R$ " + troco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        displayTroco.classList.remove('text-danger');
-        displayTroco.classList.add('text-success');
-        valorTrocoInput.value = troco.toFixed(2).replace(',', '.');
+        definirAvisoTroco('troco', "R$ " + formatarCentavos(diffCentavos));
+        valorTrocoInput.value = (diffCentavos / 100).toFixed(2).replace(',', '.');
     } else {
-        // Valor insuficiente ou igual -> mostra quanto falta em vermelho
-        const falta = Math.abs(diff);
-        if (falta < 0.0005) {
-            displayTroco.innerText = "R$ 0,00";
-        } else {
-            displayTroco.innerText = "Faltam R$ " + falta.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        displayTroco.classList.remove('text-success');
-        displayTroco.classList.add('text-danger');
+        // Valor insuficiente -> mostra quanto falta, e o total ja esta conhecido
+        definirAvisoTroco('falta', "R$ " + formatarCentavos(Math.abs(diffCentavos)));
         valorTrocoInput.value = "0";
     }
+}
+
+// Reabre o modal de pagamento SEM estado residual: zera o metodo escolhido, o
+// valor digitado, o troco e o aviso. Sem isto, o valor da venda anterior
+// continuaria no campo e o CONFIRMAR abriria habilitado para o valor errado.
+function resetarEtapaPagamento() {
+    metodoSelecionado = "";
+    const inputMetodo = document.getElementById("inputMetodoPagamento");
+    if (inputMetodo) inputMetodo.value = "";
+    document.querySelectorAll('.btn-metodo-sel').forEach(b => b.classList.remove('is-selected'));
+
+    const valRec = document.getElementById("valorRecebidoInput");
+    if (valRec) valRec.value = "";
+
+    const hiddenTroco = document.getElementById("valorTrocoInput");
+    if (hiddenTroco) hiddenTroco.value = "0";
+
+    const secaoTroco = document.getElementById("secaoTroco");
+    if (secaoTroco) secaoTroco.style.display = "none";
+
+    const secaoPagamento = document.getElementById("secaoPagamento");
+    const secaoCPF = document.getElementById("secaoCPF");
+    if (secaoPagamento) secaoPagamento.style.display = "block";
+    if (secaoCPF) secaoCPF.style.display = "none";
+
+    const cpf = document.getElementById("cpfClienteInput");
+    if (cpf) cpf.value = "";
+
+    definirAvisoTroco('neutro', "R$ 0,00");
+    definirConfirmarHabilitado(true);
+}
 }

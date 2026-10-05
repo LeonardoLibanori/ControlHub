@@ -173,7 +173,11 @@
                 <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')"><i class="bi bi-cash-stack" aria-hidden="true"></i>Dinheiro</button>
             </div>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>CONFIRMAR</button>
+                @* BUG-30: o CONFIRMAR comeca habilitado porque, sem metodo escolhido,
+                   o valor recebido nem participa da decisao (so o servidor valida
+                   quando metodo = Dinheiro). calcularTroco() o reavalia a cada
+                   digitacao/troca de metodo e poe disabled + aria-disabled aqui. *@
+                <button type="button" id="btnConfirmarPagamento" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>CONFIRMAR</button>
                 <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="fecharModal()">CANCELAR</button>
             </div>
         </div>
@@ -187,13 +191,20 @@
                     <label class="form-label fw-bold mb-1">Valor Recebido</label>
                     <div class="input-group">
                         <span class="input-group-text">R$</span>
+                        @* BUG-30: o Enter no campo NAO confirma nem envia nada - a tecla
+                           fica capturada aqui para o operador nao disparar a venda sem
+                           querer. O unico caminho para confirmar e o botao CONFIRMAR. *@
                         <input type="number" id="valorRecebidoInput" class="form-control form-control-lg"
-                               placeholder="0,00" step="0.01" oninput="calcularTroco()">
+                               placeholder="0,00" step="0.01" oninput="calcularTroco()"
+                               onkeydown="if (event.key === 'Enter') { event.preventDefault(); }">
                     </div>
                 </div>
-                <div class="col-6 text-end">
-                    <label class="form-label fw-bold mb-1 d-block">Troco</label>
-                    <h2 id="displayTroco" class="text-success fw-bold m-0">R$ 0,00</h2>
+                @* BUG-30: a mesma estrutura (rotulo pequeno em cima, valor grande embaixo)
+                   nos dois estados - TROCO ou FALTAM. Quem alterna e o JS, que troca o
+                   rotulo e a cor; o aria-live faz o leitor de tela anunciar a troca. *@
+                <div class="col-6 text-end pdv-valor-regiao" aria-live="polite">
+                    <span id="displayTrocoRotulo" class="pdv-valor-rotulo d-block">Troco</span>
+                    <h2 id="displayTroco" class="pdv-valor-grande fw-bold m-0">R$ 0,00</h2>
                     <input type="hidden" id="valorTrocoInput" value="0">
                 </div>
             </div>
