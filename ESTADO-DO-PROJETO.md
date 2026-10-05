@@ -5,7 +5,7 @@
 > **sem ver o código**, e decida os próximos passos com base em fatos.
 >
 > **Repositório:** https://github.com/LeonardoLibanori/ControleEstoqueLoja
-> **Branch:** `main` · **HEAD:** `bfd9d43` (= `origin/main`, árvore limpa)
+> **Branch:** `main` · **HEAD:** `178babb` (= `origin/main`, árvore limpa na conferência de 05/10/2026)
 
 ---
 
@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **269/269**, 0 ignorado (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
+| Testes | **277/277**, 0 ignorado (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -65,7 +65,7 @@ ControleEstoqueLoja/
 ├── Migrations/                 8 migrations (seção 5)
 ├── Views/                      Razor (Home, Caixa, Account, Usuarios, Shared)
 ├── wwwroot/                    css/corporate-theme.css, js/admin-caixa.js
-├── tests.QA/                   247 testes xUnit de caracterização
+├── tests.QA/                   277 testes xUnit de caracterização
 ├── qa/                         RELATORIO-QA.md, falhas.csv, http-authz.ps1
 ├── setup.ps1                   prepara máquina NOVA (uma vez)
 ├── sincronizar.ps1             sincroniza entre máquinas (dia a dia)
@@ -191,7 +191,7 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | Autenticação + policies | `ae12be8`…`702ae85` | 2 papéis, 11 policies |
 | Sincronização entre máquinas | `a49c399` | `sincronizar.ps1` |
 | **Dashboard inicial (Início)** | `d654570` | item de menu só para o Dono: vendas do dia, dinheiro na gaveta, quebra por forma de pagamento, estoque baixo, últimos 7 dias e últimas vendas |
-| **Dashboard: gráfico 7/30 dias + detalhe do dia** | *pendente* | seletor de período por link (`?dias=30`); cada barra é um link para `/Dashboard/Dia`, que mostra o total do dia, o que foi vendido e as vendas do dia |
+| **Dashboard: gráfico 7/30 dias + detalhe do dia** | `bae0743`, `151fffe` | seletor de período por link (`?dias=7`/`30`); clicar numa barra abre o detalhe do dia **inline** (`?dias=N&data=aaaa-mm-dd`: total, o que foi vendido e as vendas do dia, com toggle) — a rota `/Dashboard/Dia` continua existindo, mas a barra não navega mais para ela; "Últimas vendas" saiu do painel e "Estoque baixo" é a última fileira |
 
 ### Visuais (bugs de interface corrigidos)
 
@@ -403,7 +403,7 @@ dotnet run
 1. **Fechar a aplicação** antes de `pull`/`push` — o `.db` fica travado com ela aberta
 2. **Não** rodar `dotnet ef database update` no banco real sem backup
 3. **Não** usar `--force` no git
-4. Rodar a suíte completa antes de commitar (247 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
+4. Rodar a suíte completa antes de commitar (277 testes — `dotnet test tests.QA/tests.QA.csproj`; note que o `.slnx` **não** inclui o projeto de testes)
 5. Mudança de segurança → atualizar `qa/falhas.csv`
 6. Nunca deixar um **`.db-wal`/`.db-shm`** órfão ao lado do `.db` quando for
    versionar o banco — é o vetor de banco corrompido que o `.gitignore` do
@@ -521,7 +521,7 @@ dotnet ef migrations list
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado a partir de `main@bfd9d43`.*
+*Fim do relatório. Gerado em 02/10/2026, atualizado em 05/10/2026 a partir de `main@178babb`.*
 
 
 
