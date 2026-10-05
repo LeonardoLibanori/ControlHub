@@ -327,7 +327,7 @@ public class DashboardQaTests
     /// corrigir e trabalho de commit proprio, junto com a quebra visual que a
     /// conferencia de caixa mostra (admin-caixa.js L113).
     /// </summary>
-    [Fact(Skip = "BUG-28: ObterStatusAtual nao filtra IsFechado (diverge da regra 7); corrigir em commit proprio")]
+    [Fact]
     public async Task Dashboard_Gaveta_IgualAoStatusAposVendaFechada_ComportamentoEsperado()
     {
         using var qa = new QaContext();

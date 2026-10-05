@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text.Json;
 
 namespace ControleEstoqueLoja.Controllers
@@ -311,17 +312,14 @@ namespace ControleEstoqueLoja.Controllers
                     DateTime hoje = DateTime.Today;
 
                     decimal vendasDinheiro = _context.Vendas
-                        .Where(v => v.DataVenda.Date == hoje && !v.IsFechado
-                                    && v.MetodoPagamento == MetodoPagamentoDinheiro)
+                        .Where(VendasDinheiroAbertasDoDia(hoje))
                         .Sum(v => (decimal?)v.TotalVenda) ?? 0m;
 
-                    var suprimentosHoje = _context.CaixaMovimentacoes
-                        .Where(m => m.Tipo == "Suprimento" && m.Data.Date == hoje && !m.IsFechado)
+                    var suprimentosHoje = MovimentacoesDoDiaAbertas(hoje, "Suprimento")
                         .ToList()
                         .Sum(m => m.Valor);
 
-                    var sangriasHoje = _context.CaixaMovimentacoes
-                        .Where(m => m.Tipo == "Sangria" && m.Data.Date == hoje && !m.IsFechado)
+                    var sangriasHoje = MovimentacoesDoDiaAbertas(hoje, "Sangria")
                         .ToList()
                         .Sum(m => m.Valor);
 
@@ -367,19 +365,22 @@ namespace ControleEstoqueLoja.Controllers
         {
             var hoje = DateTime.Today;
 
-            // LER DE CaixaMovimentacoes, NÃO DE FluxoCaixa
-            var suprimentos = await _context.CaixaMovimentacoes
-                .Where(f => f.Tipo == "Suprimento" && f.Data.Date == hoje)
+            // BUG-28: os tres filtros passam pelos MESMOS predicados de
+            // RegistrarMovimentacaoInterno (VendasDinheiroAbertasDoDia /
+            // MovimentacoesDoDiaAbertas). Antes, ObterStatusAtual somava venda,
+            // suprimento e sangria ja FECHADOS, e o saldo em gaveta do botao CAIXA
+            // nao zerava depois do fechamento enquanto o restante do sistema sim.
+            // Regra 7: o que ja foi fechado nao conta mais no saldo do dia.
+            var suprimentos = await MovimentacoesDoDiaAbertas(hoje, "Suprimento")
                 .SumAsync(f => (decimal?)f.Valor) ?? 0m;
 
-            var sangrias = await _context.CaixaMovimentacoes
-                .Where(f => f.Tipo == "Sangria" && f.Data.Date == hoje)
+            var sangrias = await MovimentacoesDoDiaAbertas(hoje, "Sangria")
                 .SumAsync(f => (decimal?)f.Valor) ?? 0m;
 
             // COMPLEMENTO A: a gaveta e fisica, entao so entram vendas em DINHEIRO.
             // Vendas em Credito/Debito/Pix nao deixam dinheiro no caixa.
             var vendasDinheiro = await _context.Vendas
-                .Where(v => v.DataVenda.Date == hoje && v.MetodoPagamento == MetodoPagamentoDinheiro)
+                .Where(VendasDinheiroAbertasDoDia(hoje))
                 .SumAsync(v => (decimal?)v.TotalVenda) ?? 0m;
 
             // Sangria ja e negativa no banco, entao entra por ADICAO (fonte unica CalcularSaldoEmGaveta).
@@ -428,6 +429,43 @@ namespace ControleEstoqueLoja.Controllers
         /// nao compoem o saldo da gaveta.
         /// </summary>
         public const string MetodoPagamentoDinheiro = "Dinheiro";
+
+        // ------------------------------------------------------------------
+        // BUG-28: o CRITERIO do "saldo de hoje" em UM lugar so.
+        //
+        // RegistrarMovimentacaoInterno (que limita a sangria) e ObterStatusAtual
+        // (que mostra o saldo da gaveta) compoem a MESMA conta e precisam do MESMO
+        // criterio: o que ja foi fechado nao conta mais no dia. Antes o criterio
+        // estava escrito duas vezes e as copias divergiram - o filtro !IsFechado
+        // existia em um lado e nao no outro, entao apos o fechamento do dia o botao
+        // CAIXA continuava mostrando o valor acumulado.
+        //
+        // Estes dois predicados sao a fonte unica: as duas actions os reutilizam
+        // sem reescrever a condicao. A forma do filtro (.Data == hoje, !IsFechado,
+        // igualdade exata com a constante) e' a de RegistrarMovimentacaoInterno,
+        // que ja era a referencia correta - nao foi "melhorada" aqui.
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Venda em dinheiro de hoje que ainda NAO foi fechada (entra na gaveta).
+        /// Comparacao exata com a constante, como em RegistrarMovimentacaoInterno.
+        ///
+        /// Devolve uma EXPRESSAO, nao um predicado aplicado direto: so um
+        /// Expression&lt;Func&lt;...&gt;&gt; e remontado em arvore para o provider
+        /// traduzir para SQL. Um `Where(v =&gt; Metodo(v, hoje))` com metodo estatico
+        /// cai em avaliacao no cliente e o EF derruba a consulta com
+        /// "The LINQ expression ... could not be translated".
+        /// </summary>
+        private static Expression<Func<Venda, bool>> VendasDinheiroAbertasDoDia(DateTime hoje)
+            => v => v.DataVenda.Date == hoje && !v.IsFechado
+                && v.MetodoPagamento == MetodoPagamentoDinheiro;
+
+        /// <summary>
+        /// Movimentacao (suprimento/sangria) de hoje que ainda NAO foi fechada.
+        /// </summary>
+        private IQueryable<CaixaMovimentacao> MovimentacoesDoDiaAbertas(DateTime hoje, string tipo)
+            => _context.CaixaMovimentacoes
+                .Where(m => m.Tipo == tipo && m.Data.Date == hoje && !m.IsFechado);
 
         // ------------------------------------------------------------------
         // BUG-12: tratamento de erro sem vazamento de informacao.

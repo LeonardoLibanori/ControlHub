@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **247/247** + 1 ignorado (BUG-28) (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
+| Testes | **269/269**, 0 ignorado (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -420,7 +420,7 @@ dotnet run
   diário com rotação — se ninguém sincronizar, o GitHub é a única cópia
 
 ### Funcional
-- **BUG-28** — `CaixaController.ObterStatusAtual` (L315-345) **não filtra `IsFechado`** nas três somas (L321, L325, L331), enquanto a regra 7 em `RegistrarMovimentacaoInterno` filtra (L263, L268, L273). Efeito prático: depois do fechamento do dia, a **"CONFERÊNCIA DE CAIXA"** do PDV (`admin-caixa.js` L113, disparada pelo botão CAIXA em `_Layout` L236) mostra **"SALDO EM GAVETA"** somando vendas já fechadas, e esse número é **maior** que o do dashboard. A sangria, todavia, respeita o saldo correto. Teste que registra o comportamento esperado: `DashboardQaTests.Dashboard_Gaveta_IgualAoStatusAposVendaFechada_ComportamentoEsperado` (ignorado). Corrigir exige mexer em `CaixaController`, fora do escopo deste commit
+- **PERGUNTA EM ABERTO — o relatório do dia (`RelatorioDados`, `ObterResumo`) inclui itens já fechados.** Depois do fechamento do dia, o botão CAIXA (`ObterStatusAtual`) zera o saldo, mas `RelatorioDados`/`ObterResumo` **somam vendas, suprimentos e sangrias de hoje sem `!IsFechado`** — logo o `saldoFinal` do relatório pode divergir do saldo em gaveta da conferência. **Não é bug classificado**: foi **decidido** não mexer nesses dois métodos agora, porque não está definido se o relatório do dia é "o que entrou no caixa hoje" (e então deveria excluir o fechado, como a regra 7) ou "tudo que aconteceu hoje" (e então está certo, e quem diverge é a conferência). A decisão é de produto, não de código. Enquanto não houver decisão, os dois comportamentos coexistem. Pergunta: **o relatório do dia deve incluir o que já foi fechado?**
 - **`FaturamentoMes` e `FaturamentoAno` do Histórico comparam só mês/ano** (`CaixaController.L462`, `L466`): `DataVenda.Month == Today.Month` soma também o mesmo mês de **todos os anos anteriores**. "Faturamento do ano" inclui janeiro do ano passado
 - **O fechamento só vira flag e não guarda valor declarado**: `ZerarCaixaParaProximoDia` (L847) apenas marca `IsFechado = true` em vendas e movimentações. Não existe entidade de sessão de caixa nem total declarado — o dinheiro que o dono contou na gaveta **não é gravado em lugar nenhum**
 - **Vendas e movimentações não fechadas de dias anteriores ficam fora do saldo**: o filtro é sempre `Data.Date == hoje`, então um dia que o dono esqueceu de fechar "verte" para o dia seguinte (as linhas somem do saldo, mas continuam no histórico)
