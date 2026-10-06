@@ -532,98 +532,160 @@ namespace ControleEstoqueLoja.Controllers
         [Authorize(Policy = Policies.PodeVerFinanceiro)]
         public async Task<IActionResult> Historico(DateTime? data, string? periodo = null)
         {
-            // BUG-34: os cartoes do topo (ESTA SEMANA / ESTE MES / ESTE ANO)
-            // viraram links: cada um abre o Historico ja filtrado pelo seu
-            // periodo, do mesmo jeito que o filtro de dia abre um dia. O filtro
-            // e resolvido por UM metodo so (ResolverFiltroHistorico) e
-            // reutilizado pelas DUAS exportacoes: se cada uma calculasse a
-            // janela por conta propria, o arquivo e a tela divergiriam - que e
-            // o tipo de erro que faz o dono fechar o mes pelo numero errado.
-            var (temFiltro, inicio, fim) = ResolverFiltroHistorico(data, periodo);
+            var hoje = DateTime.Today;
+            var amanha = hoje.AddDays(1);
+
+            // Resolução do filtro de histórico:
+            //   - Sem parâmetros = TODAS as vendas (título "Todas as vendas", sem cartão dourado, campo data vazio)
+            //   - Data prevalece sobre período
+            //   - periodo=hoje|7dias|mes|ano destaca cartão e lista usa a mesma janela
+            //   - Data futura, ModelState inválido ou período desconhecido caem em hoje
+            //   - Sem Request/HttpContext na action
+            var (temFiltro, inicio, fim, periodoResolvido, dataResolvida, titulo) =
+                ResolverFiltroHistoricoCompleto(data, periodo, ModelState.IsValid);
 
             // O Include(v => v.Itens) é essencial para o modal de detalhes funcionar!
-            var query = _context.Vendas.Include(v => v.Itens).AsQueryable();
+            var query = _context.Vendas.Include(v => v.Itens).AsNoTracking().AsQueryable();
 
             if (temFiltro)
             {
-                // Intervalo [inicio, fim): o fim exclusivo evita a duplicacao
-                // classica da venda da meia-noite do dia seguinte.
                 query = query.Where(v => v.DataVenda >= inicio && v.DataVenda < fim);
             }
 
-            var listaVendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync() ?? new List<Venda>();
+            var todasVendas = await query.OrderByDescending(v => v.DataVenda).ToListAsync();
 
-            // BUG-34: a JANELA que filtrou a lista, exposta para a view. E ela
-            // que define o min/max do calendario e o filtro do export, para
-            // tela, calendario e arquivo falarem sempre do mesmo periodo.
-            ViewBag.DataExport = temFiltro && (fim - inicio) == TimeSpan.FromDays(1)
-                ? inicio
-                : (DateTime?)null;
-            ViewBag.DataExport = temFiltro && (fim - inicio) == TimeSpan.FromDays(1)
-                ? inicio
-                : (DateTime?)null;
-            ViewBag.Periodo = periodo;
-            ViewBag.InicioJanela = temFiltro ? inicio : DateTime.Today;
-            ViewBag.FimJanela = temFiltro ? fim : DateTime.Today.AddDays(1);
-            ViewBag.InicioJanela = temFiltro ? inicio : DateTime.Today;
-            ViewBag.FimJanela = temFiltro ? fim : DateTime.Today.AddDays(1);
+            int quantidadeTotal = todasVendas.Count;
+            decimal valorTotal = todasVendas.Sum(v => v.TotalVenda);
+            bool limiteExcedido = quantidadeTotal > 200;
 
-            // Preenchendo as ViewBags com os nomes corretos das colunas
-            ViewBag.FaturamentoSemana = await _context.Vendas
-                .Where(v => v.DataVenda >= DateTime.Today.AddDays(-7))
-                .SumAsync(v => v.TotalVenda);
+            var listaExibida = limiteExcedido ? todasVendas.Take(200).ToList() : todasVendas;
 
-            ViewBag.FaturamentoMes = await _context.Vendas
-                .Where(v => v.DataVenda.Month == DateTime.Today.Month)
-                .SumAsync(v => v.TotalVenda);
+            // Totais dos 4 cartões em C# com decimal sobre TotalVenda gravado:
+            // Janelas (fim exclusivo):
+            //   hoje: [Hoje, Amanhã)
+            //   7dias: [Hoje-6, Amanhã)
+            //   mes: [dia 1º, Amanhã)
+            //   ano: [1º jan, Amanhã)
+            var inicio7Dias = hoje.AddDays(-6);
+            var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
+            var inicioAno = new DateTime(hoje.Year, 1, 1);
+            var dataMinimaCartoes = inicioAno < inicio7Dias ? inicioAno : inicio7Dias;
 
-            ViewBag.FaturamentoAno = await _context.Vendas
-                .Where(v => v.DataVenda.Year == DateTime.Today.Year)
-                .SumAsync(v => v.TotalVenda);
+            var vendasCartoes = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= dataMinimaCartoes && v.DataVenda < amanha)
+                .Select(v => new { v.DataVenda, v.TotalVenda })
+                .ToListAsync();
 
-            return View(listaVendas);
+            decimal totalHoje = vendasCartoes
+                .Where(v => v.DataVenda >= hoje && v.DataVenda < amanha)
+                .Sum(v => v.TotalVenda);
+
+            decimal total7Dias = vendasCartoes
+                .Where(v => v.DataVenda >= inicio7Dias && v.DataVenda < amanha)
+                .Sum(v => v.TotalVenda);
+
+            decimal totalMes = vendasCartoes
+                .Where(v => v.DataVenda >= inicioMes && v.DataVenda < amanha)
+                .Sum(v => v.TotalVenda);
+
+            decimal totalAno = vendasCartoes
+                .Where(v => v.DataVenda >= inicioAno && v.DataVenda < amanha)
+                .Sum(v => v.TotalVenda);
+
+            ViewBag.FaturamentoHoje = totalHoje;
+            ViewBag.FaturamentoSemana = total7Dias;
+            ViewBag.FaturamentoMes = totalMes;
+            ViewBag.FaturamentoAno = totalAno;
+
+            ViewBag.Titulo = titulo;
+            ViewBag.Subtitulo = $"{quantidadeTotal} venda{(quantidadeTotal == 1 ? "" : "s")} · {valorTotal:C}";
+            ViewBag.QuantidadeVendas = quantidadeTotal;
+            ViewBag.TotalVendas = valorTotal;
+            ViewBag.LimiteExcedido = limiteExcedido;
+
+            ViewBag.Periodo = periodoResolvido;
+            ViewBag.DataSelecionada = dataResolvida;
+            ViewBag.DataExport = dataResolvida?.ToString("yyyy-MM-dd");
+            ViewBag.PeriodoExport = periodoResolvido;
+            ViewBag.InicioJanela = temFiltro ? inicio : hoje;
+            ViewBag.FimJanela = temFiltro ? fim : amanha;
+
+            return View(listaExibida);
         }
 
         /// <summary>
-        /// BUG-34: fonte UNICA do filtro do historico. Devolve a janela
-        /// [inicio, fim) a aplicar nas vendas, ou (false, default, default)
-        /// quando nao ha filtro nenhum (a tela mostra tudo).
-        ///
-        /// As janelas usam o mesmo inicio dos cartoes do topo (a soma de 7 dias
-        /// atras), para o numero do cartao e a lista da tela concordarem:
-        ///   - dia: o dia inteiro, vindo do campo "Filtrar por dia";
-        ///   - semana: hoje mais os 6 dias anteriores (7 dias);
-        ///   - mes: do dia 1 do mes ate amanha;
-        ///   - ano: de 1 de janeiro ate amanha.
-        ///
-        /// "periodo" chega da querystring, entao e texto de usuario: so os tres
-        /// valores conhecidos sao aceitos e qualquer outro (ou nulo) cai no
-        /// comportamento anterior, que e o filtro de dia.
+        /// Fonte única do filtro do histórico: compatível com as exportações CSV e Excel.
         /// </summary>
-        private static (bool temFiltro, DateTime inicio, DateTime fim) ResolverFiltroHistorico(
+        public static (bool temFiltro, DateTime inicio, DateTime fim) ResolverFiltroHistorico(
             DateTime? data, string? periodo)
         {
-            var hoje = DateTime.Today;
+            var (temFiltro, inicio, fim, _, _, _) = ResolverFiltroHistoricoCompleto(data, periodo, true);
+            return (temFiltro, inicio, fim);
+        }
 
-            switch ((periodo ?? "").Trim().ToLowerInvariant())
+        /// <summary>
+        /// Resolução completa do filtro do histórico:
+        ///   - hoje: [Hoje, Amanhã)
+        ///   - 7dias: [Hoje-6, Amanhã)
+        ///   - mes: [1º do mês, Amanhã)
+        ///   - ano: [1º jan, Amanhã)
+        ///   - data avulsa: [d, d+1)
+        ///   - Sem parâmetros: todas as vendas
+        ///   - Período desconhecido, data futura ou ModelState inválido: caem em hoje
+        ///   - Data prevalece sobre período
+        /// </summary>
+        public static (bool temFiltro, DateTime inicio, DateTime fim, string? periodoResolvido, DateTime? dataResolvida, string titulo)
+            ResolverFiltroHistoricoCompleto(DateTime? data, string? periodo, bool modelStateValido)
+        {
+            var hoje = DateTime.Today;
+            var amanha = hoje.AddDays(1);
+
+            // 1. ModelState inválido -> cai em hoje
+            if (!modelStateValido)
             {
-                case "semana":
-                    return (true, hoje.AddDays(-6), hoje.AddDays(1));
+                return (true, hoje, amanha, "hoje", null, "Vendas de hoje");
+            }
+
+            // 2. Data prevalece sobre período
+            if (data.HasValue)
+            {
+                var d = data.Value.Date;
+                // Data futura -> cai em hoje
+                if (d > hoje)
+                {
+                    return (true, hoje, amanha, "hoje", null, "Vendas de hoje");
+                }
+
+                // Data avulsa válida <= hoje: janela [d, d+1)
+                return (true, d, d.AddDays(1), null, d, $"Vendas de {d:dd/MM/yyyy}");
+            }
+
+            // 3. Sem parâmetros (data nula e período nulo) -> TODAS as vendas
+            if (periodo == null)
+            {
+                return (false, default, default, null, null, "Todas as vendas");
+            }
+
+            // 4. Período informado
+            var p = periodo.Trim().ToLowerInvariant();
+            switch (p)
+            {
+                case "hoje":
+                    return (true, hoje, amanha, "hoje", null, "Vendas de hoje");
+
+                case "7dias":
+                    return (true, hoje.AddDays(-6), amanha, "7dias", null, "Vendas dos últimos 7 dias");
 
                 case "mes":
-                    return (true, new DateTime(hoje.Year, hoje.Month, 1), hoje.AddDays(1));
+                    return (true, new DateTime(hoje.Year, hoje.Month, 1), amanha, "mes", null, "Vendas do mês");
 
                 case "ano":
-                    return (true, new DateTime(hoje.Year, 1, 1), hoje.AddDays(1));
+                    return (true, new DateTime(hoje.Year, 1, 1), amanha, "ano", null, "Vendas do ano");
 
                 default:
-                    if (data.HasValue)
-                    {
-                        var dia = data.Value.Date;
-                        return (true, dia, dia.AddDays(1));
-                    }
-
-                    return (false, default, default);
+                    // Período desconhecido -> cai em hoje
+                    return (true, hoje, amanha, "hoje", null, "Vendas de hoje");
             }
         }
         // Local: CaixaController.cs

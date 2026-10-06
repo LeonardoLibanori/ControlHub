@@ -26,7 +26,7 @@ imprimir cupom e gerar relatórios — com login e perfis de acesso.
 | Frontend | Razor Views + Bootstrap + SweetAlert2 + JS próprio |
 | Roda em | `http://localhost:5236` (perfil `http` do `launchSettings.json`) |
 | Build | **0 erros, 0 avisos** |
-| Testes | **277/277**, 0 ignorado (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
+| Testes | **288/288**, 0 ignorado (`tests.QA`, xUnit) — `dotnet test tests.QA/tests.QA.csproj` |
 | Banco versionado no Git | ✅ sim (decisão de 02/10 — ver seção 7) |
 
 ---
@@ -203,6 +203,7 @@ migrations pendentes **sem perguntar**. Intencional, mas é preciso saber.
 | **BUG-30** | Reabrir o modal mantinha o valor da venda anterior no campo, e o botão abria habilitado para o valor errado | `resetarEtapaPagamento()` em `abrirModalPagamento()`: zera método, valor, troco, aviso e CPF |
 | **BUG-30** | `Enter` no campo de valor podia disparar a confirmação | `onkeydown` captura o `Enter` e faz `preventDefault()` |
 | **BUG-30** | O erro do servidor aparecia sempre como **"Erro no Estoque"**, mesmo quando a recusa era de dinheiro insuficiente (BUG-29) | Título passou a "Venda não concluída"; a **mensagem do servidor** é exibida (`res.message`), com *fallback* |
+| **BUG-36** | Lista de vendas do Histórico não acompanhava o período selecionado ou dia avulso; janelas divergiam dos cartões e faltava limite de linhas e subtítulo dinâmico | A lista passa a usar a MESMA janela dos cartões (`hoje`, `7dias`, `mes`, `ano`, `data` avulsa com fim exclusivo). Título dinâmico sem ícone, subtítulo "N vendas · R$ total", cartão "ÚLTIMOS 7 DIAS", campo de data só preenchido para filtro por dia, limite de 200 linhas com aviso e totais/contagem em C# com decimal sobre todas as vendas |
 
 > **Ordem de responsabilidade:** o **servidor continua sendo a autoridade**. O bloqueio no PDV é conveniência de operador; `CaixaController.FinalizarVenda` segue validando e recusando (`BUG-29`). Nada do payload, do cálculo do total ou do troco foi alterado.
 

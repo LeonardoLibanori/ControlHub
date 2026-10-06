@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     color-scheme: dark;
     --app-bg: #111519;
     --surface-1: #181e23;
@@ -1635,3 +1635,30 @@ a.dash-coluna:hover .dash-coluna-barra {
     color: var(--accent);
     font-weight: 600;
 }
+
+/* =====================================================================
+   HISTORICO DE VENDAS - TITULO DINAMICO, SUBTITULO E LIMITE DE LINHAS
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: subtitulo "N vendas · R$ total" e alerta
+   do limite de 200 linhas exibidas.
+   ===================================================================== */
+.history-subtitulo {
+    font-size: .95rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.history-aviso-limite {
+    background-color: rgba(194, 163, 109, .15);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: 6px;
+    padding: .75rem 1rem;
+    font-size: .9rem;
+}
+
+.history-aviso-limite .bi {
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+

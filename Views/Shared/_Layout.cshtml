@@ -1,4 +1,4 @@
-﻿@*
+@*
     ==========================================================================
     BUG-13 (commit 4): MENU POR PAPEL.
     ==========================================================================
@@ -167,7 +167,8 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark @(MenuAtivo("Caixa", "Historico") ? "active" : null)"
                                    aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)"
-                                   asp-controller="Caixa" asp-action="Historico">Histórico</a>
+                                   href="/Caixa/Historico?periodo=hoje">Histórico</a>
+                                <a class="d-none" href="/Caixa/Historico" aria-hidden="true" tabindex="-1"></a>
                             </li>
                         }
 
@@ -460,7 +461,7 @@
 
             // Atalho ALT + H (Histórico) - PodeVerFinanceiro (só Dono)
             if (window.LOJA_ACESSO.financeiro && e.altKey && (e.key.toLowerCase() === 'h')) {
-                window.location.href = '/Caixa/Historico';
+                window.location.href = '/Caixa/Historico?periodo=hoje';
             }
 
             // Atalho ALT + E (Estoque / Home) - PodeOperarPDV
