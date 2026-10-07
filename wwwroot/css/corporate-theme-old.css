@@ -1,0 +1,2293 @@
+:root {
+    color-scheme: dark;
+    --app-bg: #111519;
+    --surface-1: #181e23;
+    --surface-2: #20282e;
+    --surface-3: #283239;
+    --surface-input: #14191d;
+    --border: #364149;
+    --border-strong: #4a565e;
+    --text: #f1eee7;
+    --text-muted: #a5afb5;
+    --accent: #c2a36d;
+    --accent-hover: #d1b681;
+    --accent-ink: #171914;
+    --teal: #548f87;
+    --success: #63a582;
+    --danger: #cf7779;
+    --info: #82aebc;
+    --shadow: 0 18px 48px rgba(0, 0, 0, .24);
+    --bs-body-bg: var(--app-bg);
+    --bs-body-color: var(--text);
+    --bs-secondary-color: var(--text-muted);
+    --bs-border-color: var(--border);
+    --bs-primary: var(--accent);
+    --bs-success: var(--success);
+    --bs-danger: var(--danger);
+    --bs-warning: var(--accent);
+    --bs-info: var(--info);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    background: var(--app-bg);
+    color: var(--text);
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    font-size: 15px;
+}
+
+main[role="main"] {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand {
+    color: var(--text);
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+a {
+    color: var(--accent-hover);
+    text-decoration-color: rgba(194, 163, 109, .45);
+    text-underline-offset: 3px;
+}
+
+a:hover {
+    color: #e0c995;
+}
+
+.container,
+.container-fluid {
+    padding-inline: 1.25rem;
+}
+
+.navbar {
+    min-height: 66px;
+    padding-block: .65rem;
+    background: #171c20 !important;
+    border-bottom: 1px solid var(--border) !important;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .16) !important;
+}
+
+.navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+    color: var(--text) !important;
+    font-size: .92rem;
+    letter-spacing: .08em;
+}
+
+.navbar-brand .bi {
+    color: var(--accent);
+    font-size: 1.25rem;
+}
+
+.navbar-nav {
+    gap: .25rem;
+}
+
+.navbar .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .55rem .8rem !important;
+    border-radius: 6px;
+    color: var(--text-muted) !important;
+    font-weight: 600;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus-visible {
+    background: var(--surface-2);
+    color: var(--text) !important;
+}
+
+.navbar .nav-link .bi {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.navbar .btn .bi {
+    margin-right: .35rem;
+}
+
+.navbar .navbar-toggler {
+    border-color: var(--border-strong);
+}
+
+.navbar .navbar-toggler-icon {
+    filter: invert(1) grayscale(1);
+}
+
+.main-container {
+    width: min(100% - 2rem, 1440px);
+    max-width: 1440px;
+    margin: 1.75rem auto 2.5rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.main-container > h1 {
+    margin: 0 0 1.5rem;
+    color: var(--text);
+    text-align: left;
+    font-size: 1.55rem;
+    font-weight: 800;
+}
+
+.main-container h2,
+.main-container h3,
+.main-container h4,
+.main-container h5,
+.main-container h6 {
+    color: var(--text);
+}
+
+.tabela-card,
+.card,
+.modal-content,
+.modal-box {
+    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--border) !important;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+/* overflow-x: as tabelas (Historico e Estoque) tem colunas demais para a
+   largura no celular; sem rolagem elas estouravam o card e corriam por cima
+   dos demais elementos da pagina. Agora rolam DENTRO do card. */
+.tabela-card {
+    padding: 1rem;
+    margin-top: .75rem;
+    overflow-x: auto;
+}
+
+.card-header,
+.modal-header {
+    color: var(--text);
+    background: var(--surface-2) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.card-body,
+.modal-body,
+.modal-footer {
+    color: var(--text);
+}
+
+.card-footer {
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+}
+
+.bg-white,
+.bg-light {
+    color: var(--text) !important;
+    background-color: var(--surface-2) !important;
+}
+
+.text-dark {
+    color: var(--text) !important;
+}
+
+.text-muted,
+.text-secondary,
+.form-text {
+    color: var(--text-muted) !important;
+}
+
+.text-success {
+    color: #7fc29b !important;
+}
+
+.cash-positive {
+    color: #7fc29b;
+}
+
+.cash-negative {
+    color: #e08d91;
+}
+
+.text-danger {
+    color: #e08d91 !important;
+}
+
+.text-warning {
+    color: var(--accent-hover) !important;
+}
+
+.table {
+    --bs-table-color: var(--text);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-color: var(--text);
+    --bs-table-hover-bg: rgba(255, 255, 255, .035);
+    margin-bottom: 0;
+    color: var(--text);
+}
+
+.table > :not(caption) > * > * {
+    padding: .8rem .75rem;
+    color: var(--text);
+    background-color: transparent;
+    border-bottom-color: var(--border);
+}
+
+.table thead th {
+    color: #c5cdd0;
+    background: var(--surface-2) !important;
+    font-size: .77rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.table-hover > tbody > tr:hover > * {
+    color: var(--text);
+    background-color: rgba(194, 163, 109, .07);
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    border-bottom: 1px solid var(--border) !important;
+    vertical-align: middle;
+}
+
+.produto-link {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.produto-link:hover {
+    color: var(--accent-hover);
+}
+
+.busca-container {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 1.25rem;
+}
+
+.busca-form {
+    display: flex;
+    width: min(100%, 620px);
+    gap: .55rem;
+}
+
+.busca-form input {
+    width: 100%;
+    min-width: 0;
+    padding: .65rem .85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface-input);
+    color: var(--text);
+}
+
+/* Botao "Buscar" da tela de Estoque (Views/Home/Index.cshtml). Na troca pelo
+   tema a regra herdou so as cores (o grupo com .btn-novo la embaixo); sem
+   padding, raio e peso o browser desenhava o botaozinho padrao - feio e fora
+   do padrao do lado do input. Medidas casadas com .btn-novo. */
+.busca-form button {
+    padding: .62rem .9rem;
+    border-radius: 6px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.form-control,
+.form-select,
+.input-group-text,
+textarea.form-control {
+    color: var(--text);
+    background-color: var(--surface-input);
+    border-color: var(--border-strong);
+}
+
+.form-control::placeholder {
+    color: #7f8b92;
+}
+
+.form-control:focus,
+.form-select:focus {
+    color: var(--text);
+    background-color: #171d21;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 .2rem rgba(194, 163, 109, .16);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    color: #8d989e;
+    background-color: var(--surface-2);
+}
+
+.input-group-text {
+    color: var(--accent-hover);
+}
+
+.form-check-input {
+    background-color: var(--surface-input);
+    border-color: var(--border-strong);
+}
+
+.btn {
+    min-height: 38px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary,
+.btn-success,
+.busca-form button,
+.btn-novo {
+    color: var(--accent-ink) !important;
+    background: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+    box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-success:hover,
+.busca-form button:hover,
+.btn-novo:hover {
+    color: var(--accent-ink) !important;
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+}
+
+.btn-secondary,
+.btn-dark {
+    color: var(--text) !important;
+    background: #303a40 !important;
+    border: 1px solid #46535b !important;
+}
+
+.btn-secondary:hover,
+.btn-dark:hover {
+    color: #fff !important;
+    background: #3a464d !important;
+}
+
+.btn-outline-secondary,
+.btn-outline-dark {
+    color: #c3cbd0 !important;
+    background: transparent !important;
+    border: 1px solid var(--border-strong) !important;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-dark:hover {
+    color: var(--text) !important;
+    background: var(--surface-3) !important;
+}
+
+.btn-danger {
+    color: #fff !important;
+    background: #9d4f55 !important;
+    border-color: #9d4f55 !important;
+}
+
+.btn-danger:hover {
+    background: #b65f65 !important;
+    border-color: #b65f65 !important;
+}
+
+.btn-warning {
+    color: var(--accent-ink) !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+.btn-info {
+    color: #101619 !important;
+    background: var(--info) !important;
+    border-color: var(--info) !important;
+}
+
+.btn-novo {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .62rem .9rem;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.btn-novo:hover {
+    text-decoration: none;
+}
+
+/* Botao "Voltar ao Estoque" (Views/Home/Produto.cshtml). A regra nasceu no
+   site.css, que saiu de cena na troca pelo tema corporativo: sem ela o link
+   voltava sem borda nenhuma. O nome da classe e contrato - qa/http-authz.ps1
+   procura por 'btn-voltar-borda' no HTML devolvido ao Operador. */
+.btn-voltar-borda {
+    display: inline-block;
+    padding: .62rem 1.6rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text) !important;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.btn-voltar-borda:hover {
+    color: var(--accent-ink) !important;
+    background: var(--accent);
+    border-color: var(--accent);
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.acoes {
+    display: flex;
+    justify-content: center;
+    gap: .45rem;
+}
+
+.btn-editar,
+.btn-excluir {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    font-size: .84rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.btn-editar {
+    color: var(--accent-hover);
+    background: rgba(194, 163, 109, .08);
+    border-color: rgba(194, 163, 109, .36);
+}
+
+.btn-excluir {
+    color: #e18c90;
+    background: rgba(207, 119, 121, .08);
+    border-color: rgba(207, 119, 121, .3);
+}
+
+.btn-ajuste {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    max-width: 220px;
+    min-height: 46px;
+    padding: .6rem .9rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.btn-add {
+    background: rgba(99, 165, 130, .16);
+    border-color: rgba(99, 165, 130, .45);
+}
+
+.btn-rem {
+    background: rgba(207, 119, 121, .13);
+    border-color: rgba(207, 119, 121, .4);
+}
+
+.btn-ajuste:hover {
+    filter: brightness(1.12);
+}
+
+.badge {
+    border: 1px solid rgba(255, 255, 255, .12);
+    font-weight: 600;
+}
+
+.badge.bg-primary,
+.badge.bg-warning {
+    color: var(--accent-ink) !important;
+    background: var(--accent) !important;
+}
+
+.badge.bg-secondary {
+    color: #d6dde0 !important;
+    background: #39444a !important;
+}
+
+.badge.bg-danger {
+    color: #ffe8e8 !important;
+    background: #8f454b !important;
+}
+
+.alert {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--border);
+}
+
+.alert-success {
+    border-left: 3px solid var(--success);
+}
+
+.alert-danger,
+.alert-warning {
+    border-left: 3px solid var(--danger);
+}
+
+.alert-info {
+    color: #d4e4e8;
+    background: rgba(130, 174, 188, .12);
+    border-color: rgba(130, 174, 188, .3);
+}
+
+/* Modais custom (#modalPagamento no Caixa, #modalDetalhes no Historico). Nascem
+   ESCONDIDOS: quem abre e o JS, com style.display = "flex" / "none". A regra veio
+   do site.css, que saiu na troca pelo tema corporativo - sem ela o bloco de
+   pagamento (formas de pagamento, recebido/troco, CPF) aparecia aberto junto com
+   a tela do caixa, antes de finalizar a compra. */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 8, 10, .78);
+    backdrop-filter: blur(4px);
+}
+
+/* O aviso do SweetAlert precisa ficar ACIMA do modal custom (z-index 9999),
+   senao a mensagem de erro de estoque aparece atras do modal. */
+.swal2-container {
+    z-index: 12000 !important;
+}
+
+/* BUG-35 - o overlay dos ATALHOS cobria a tela inteira.
+   O .modal-overlay e position:fixed + inset:0 + z-index:9999. O botao que
+   fecha o modal usava style.display='none', mas o atalho ESC (no _Layout)
+   FAZIA o display alternar entre "" e "flex". Quando voltava para "" (vazio),
+   o estilo inline vazio anulava o `display: none` da regra .modal-overlay e o
+   overlay inteiro aparecia: a pagina ficava clicavel em nada, nem no menu de
+   perfil.
+   A correcao NAO foi "!important" aqui - isso quebraria o modal do PDV, que
+   abre por style.display='flex'. A correcao e NA FONTE: o ESC passou a
+   alternar a classe ".aberto" e o botao ENTENDI a remove. Assim o estado de
+   "escondido" nunca mais depende de style.display. */
+.modal-overlay.aberto {
+    display: flex;
+}
+
+
+.modal-box {
+    width: min(92vw, 480px);
+    padding: 1.35rem;
+    text-align: left;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) grayscale(1);
+}
+
+.btn-metodo-sel {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    min-height: 54px;
+    padding: .8rem 1rem;
+    color: var(--text);
+    text-align: left;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.btn-metodo-sel .bi {
+    width: 1.25rem;
+    color: var(--accent);
+    text-align: center;
+}
+
+.btn-metodo-sel:hover,
+.btn-metodo-sel.is-selected {
+    color: var(--text);
+    background: rgba(194, 163, 109, .12);
+    border-color: var(--accent);
+}
+
+#painelItem {
+    color: var(--text) !important;
+    background: var(--surface-2) !important;
+    border-color: var(--border) !important;
+}
+
+#displayNome {
+    color: var(--text) !important;
+}
+
+#exibirPreco {
+    color: var(--accent-hover) !important;
+    font-variant-numeric: tabular-nums;
+}
+
+#displayTotal {
+    color: var(--accent-hover) !important;
+    font-size: 1.8rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.cart-total-bar {
+    color: var(--text) !important;
+    background: var(--surface-2) !important;
+    border-top: 1px solid var(--border);
+}
+
+.cart-table-window {
+    height: 300px;
+    overflow: auto;
+    background: var(--surface-1) !important;
+}
+
+#sugestoes {
+    color: var(--text);
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 0 0 6px 6px;
+    box-shadow: var(--shadow);
+}
+
+#sugestoes .list-group-item {
+    color: var(--text);
+    background: transparent;
+    border-color: var(--border);
+}
+
+#sugestoes .list-group-item:hover {
+    background: var(--surface-3);
+}
+
+#modalAjudaAtalhos > div {
+    width: min(92vw, 520px) !important;
+    padding: 1.4rem !important;
+    color: var(--text) !important;
+    background: var(--surface-1) !important;
+    border: 1px solid var(--border) !important;
+    border-top: 3px solid var(--accent) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow);
+}
+
+kbd {
+    color: var(--accent-hover) !important;
+    background: var(--surface-3) !important;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+
+.footer,
+footer {
+    position: static;
+    width: 100%;
+    margin-top: auto;
+    padding: 1rem 0;
+    color: var(--text-muted) !important;
+    background: #151a1e;
+    border-top: 1px solid var(--border);
+    white-space: normal;
+}
+
+.footer .container,
+footer .container {
+    color: inherit !important;
+}
+
+.swal2-popup {
+    color: var(--text) !important;
+    background: var(--surface-1) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+}
+
+.swal2-title,
+.swal2-html-container {
+    color: var(--text) !important;
+}
+
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+    color: var(--text) !important;
+    background: var(--surface-input) !important;
+    border-color: var(--border-strong) !important;
+}
+
+.swal2-styled.swal2-confirm {
+    color: var(--accent-ink) !important;
+    background: var(--accent) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+}
+
+.swal2-styled.swal2-cancel,
+.swal2-styled.swal2-deny {
+    border-radius: 6px !important;
+    box-shadow: none !important;
+}
+
+/* O destaque dourado MIGRA (pedido do dono em 05/10/2026): a barra dourada do
+   topo so aparece enquanto "VENDAS DE HOJE" e o filtro em exibicao. Quando um
+   periodo (semana/mes/ano) esta no ar, o dourado passa para o cartao clicado e
+   este cartao aqui fica NEUTRO - antes os dois ficavam dourados ao mesmo tempo
+   ("tudo em volta dourado"). O is-ativo vem de .history-cartao-link. */
+.history-hero {
+    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--border);
+    border-radius: 8px;
+}
+
+.history-hero h1 {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.history-metric {
+    height: 100%;
+    padding: 1.2rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+/* BotÃ£o "Exportar CSV" (FASE A - item 3): irmÃ£o do .btn-novo, entÃ£o herda o
+   mesmo formato para os dois botÃµes ficarem iguais na mesma barra. Outlined de
+   propÃ³sito: Ã© uma aÃ§Ã£o de leitura, nÃ£o de escrita â€” nÃ£o pode parecer tÃ£o
+   forte quanto "Novo produto" e competir com ela. */
+.btn-exportar {
+    background-color: #fff;
+    color: #1a4d7a;
+    border: 2px solid #1a4d7a;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.btn-exportar:hover {
+    background-color: #1a4d7a;
+    color: #fff;
+}
+
+.history-filter {
+    padding: .85rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+/* O resumo do Historico nasceu em .container (max 1320 no xxl) enquanto o
+   titulo/tabela ficam em .main-container (min(100% - 2rem, 1440px)): no
+   desktop a secao HISTORICO DE VENDAS ficava mais larga que os cards de cima
+   e, no celular, o resumo sangrava para fora. Iguala as duas caixas - o
+   padding-inline: 0 deixa os cards alinhados na mesma borda da tabela. */
+.container.history-summary {
+    width: min(100% - 2rem, 1440px);
+    max-width: 1440px;
+    margin-inline: auto;
+    padding-inline: 0;
+}
+
+.product-form-panel {
+    width: min(100% - 2rem, 560px);
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.product-detail-title {
+    color: var(--text) !important;
+}
+
+.bi {
+    line-height: 1;
+    vertical-align: -.08em;
+}
+
+@media (max-width: 767.98px) {
+    .container,
+    .container-fluid {
+        padding-inline: .85rem;
+    }
+
+    .main-container {
+        /* 12px de cada lado: as .row do Bootstrap puxam ate -12px (g-4);
+           com 10px a pagina ganhava 2px de overflow horizontal (barra de
+           rolagem que desloca todo o conteudo, inclusive o titulo). */
+        width: calc(100% - 1.5rem);
+        margin-block: 1rem 1.5rem;
+    }
+
+    .container.history-summary {
+        width: calc(100% - 1.5rem);
+    }
+
+    .main-container > h1 {
+        font-size: 1.3rem;
+    }
+
+    .busca-form {
+        flex-direction: column;
+    }
+
+    .table-responsive {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+    }
+
+    .btn-ajuste {
+        min-height: 42px;
+        padding-inline: .55rem;
+        font-size: .84rem;
+    }
+
+    #displayTotal {
+        font-size: 1.35rem;
+    }
+}
+
+.cash-section-header {
+    color: var(--text) !important;
+    background: var(--surface-2) !important;
+}
+
+.payment-modal {
+    width: min(92vw, 480px);
+    border-top: 3px solid var(--accent) !important;
+}
+
+.payment-title {
+    color: var(--accent-hover);
+}
+
+.stock-shortage {
+    margin: 1.25rem 0;
+    padding: 1rem;
+    color: #f0c5c6;
+    background: rgba(207, 119, 121, .12);
+    border: 1px solid rgba(207, 119, 121, .35);
+    border-radius: 6px;
+}
+
+.stock-shortage hr {
+    border-color: var(--border-strong);
+}
+
+/* Neutro por padrao: o dourado do valor so entra quando o cartao e o filtro
+   ativo (regra .history-cartao-link.is-ativo la embaixo). */
+.history-today-total {
+    color: var(--text);
+    font-size: 2.15rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.section-eyebrow {
+    margin-bottom: .55rem;
+    color: var(--text-muted);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.history-action {
+    display: inline-grid;
+    width: 38px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+}
+
+.history-details-modal {
+    width: min(92vw, 540px);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.shortcut-help-panel {
+    width: min(92vw, 520px);
+    padding: 1.4rem;
+    color: var(--text);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.shortcut-help-panel h3 {
+    margin: 0 0 1rem;
+    text-align: left;
+}
+
+/* Menu de perfil da navbar: gatilho clean (icone + "Ola, nome") que abre as
+   opcoes (administrar usuarios / sair) em um dropdown a direita. */
+.user-session-trigger {
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.user-session-trigger:hover,
+.user-session-trigger:focus-visible {
+    background-color: #f1f3f5;
+    border-color: #dee2e6;
+}
+
+.user-session-trigger:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* ===========================================================================
+   FASE A - ITEM 1: ESTOQUE MINIMO / ALERTA DE ESTOQUE BAIXO
+   SÃ³ aparece quando o dono configurou um minimo > 0 E o estoque caiu abaixo.
+   Usa as mesmas variaveis do tema (--danger-like via vermelho do alerta).
+   =========================================================================== */
+.linha-estoque-baixo {
+    background-color: rgba(220, 53, 69, 0.10);
+    box-shadow: inset 3px 0 0 0 #dc3545;
+}
+
+.linha-estoque-baixo:hover {
+    background-color: rgba(220, 53, 69, 0.16);
+}
+
+.badge-estoque-baixo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
+    padding: 0.25em 0.6em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #fff;
+    background-color: #dc3545;
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.estoque-minimo-texto {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+
+/* =====================================================================
+   ETAPA B - DASHBOARD (.dash-*)
+   Bloco NOVO, acrescentado no FIM do arquivo. Nenhuma regra acima foi
+   alterada: o prefixo .dash- isola tudo e nao colide com nada do PDV.
+
+  SEM BIBLIOTECA DE GRAFICO, SEM CANVAS, SEM ICONE. O grafico de 7 dias e
+   feito com <div> de altura em % - o valor tambem vai em texto, entao se o
+   CSS nao carregar o numero continua legivel.
+
+   MOBILE: a grade e auto-fit (cartao larga no desktop, cartao inteiro no
+   celular) e toda tabela fica dentro de .dash-rolagem, que sobe a tabela
+   e NAO a pagina - sem barra horizontal no celular.
+   ===================================================================== */
+
+.dash-container {
+    padding-bottom: 3rem;
+}
+
+.dash-titulo {
+    margin-bottom: .25rem;
+}
+
+.dash-subtitulo {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+/* --- grade dos cartoes --------------------------------------------- */
+.dash-grade {
+    display: grid;
+    /* minmax(15rem, 1fr): 1 coluna no celular, 3+ no desktop, sem media
+       query - quem decide o numero de colunas e a largura disponivel. */
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dash-cartao {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: 1.25rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+}
+
+.dash-rotulo {
+    font-size: .75rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dash-valor {
+    font-size: 1.75rem;
+    line-height: 1.1;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.dash-observacao {
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+
+/* Numero que pede atencao: usa as cores que JA existem no tema. */
+.dash-negativo {
+    color: var(--danger);
+}
+
+/* --- secoes --------------------------------------------------------- */
+.dash-secao {
+    margin-bottom: 2rem;
+}
+
+.dash-titulo-secao {
+    font-size: 1.1rem;
+    margin-bottom: .75rem;
+    color: var(--text);
+}
+
+.dash-vazio {
+    color: var(--text-muted);
+    padding: 1rem 0;
+}
+
+/* --- tabelas -------------------------------------------------------- */
+/* overflow-x: auto no CONTAINER: a tabela rola dentro dela e a pagina
+   nunca ganha barra horizontal no celular. */
+.dash-rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: .75rem;
+}
+
+.dash-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+}
+
+.dash-tabela th,
+.dash-tabela td {
+    padding: .6rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    /* min-width + whitespace: impede a coluna de espremer em telas estreitas
+       (a rolagem do container assume a partir dai). */
+    min-width: 6rem;
+    white-space: nowrap;
+}
+
+.dash-tabela th {
+    font-size: .75rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.dash-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.dash-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Produto zerado: a linha mais urgente da lista. */
+.dash-linha-zero {
+    background: rgba(207, 119, 121, .12);
+}
+
+/* --- grafico de barras em CSS puro ---------------------------------- */
+/* 7 DIAS: cada coluna e um BOTAO (link navegavel pelo teclado). O
+   visual e mais moderno: fundo plano, sombra suave, borda fina e
+   destaque dourado no dia ativo. */
+.dash-grafico {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .45rem;
+    align-items: end;
+    padding: .75rem .5rem 0;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface-1);
+}
+
+/* Cada coluna e um botao: estilo plano moderno */
+.dash-coluna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+    padding: .35rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: .6rem;
+    transition: background-color .15s ease, transform .15s ease;
+}
+
+/* Hover nas colunas */
+.dash-coluna:hover {
+    background: var(--surface-2);
+}
+
+/* Foco do teclado visivel */
+.dash-coluna:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Trilho: fundo com sombra interna sutil */
+.dash-coluna-trilho {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    height: 6rem;
+    border-radius: .45rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .06);
+}
+
+/* Barra: cheia, com leve gradiente */
+.dash-coluna-barra {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+    transition: height .4s ease;
+}
+
+/* Label do dia */
+.dash-coluna-dia {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: .02em;
+    min-width: 2.2rem;
+    text-align: center;
+}
+
+/* Valor: apenas no dia ativo ou em 7 dias */
+.dash-coluna-valor {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+    word-break: break-word;
+}
+
+/* Dia ativo: destaque dourado */
+.dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .12);
+}
+
+.dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .18);
+    border-color: rgba(194, 163, 109, .35);
+}
+
+.dash-coluna.is-dia .dash-coluna-dia {
+    color: var(--text);
+    font-weight: 800;
+}
+
+.dash-coluna.is-dia .dash-coluna-barra {
+    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+}
+
+/* Dia zerado: visual mais claro */
+
+/* 30 DIAS: barras mais finas e colunas mais espaçadas */
+.dash-grafico-longo {
+    grid-template-columns: repeat(30, minmax(2.2rem, 1fr));
+    min-width: 46rem;
+    gap: .15rem;
+}
+
+.dash-grafico-longo .dash-coluna-trilho {
+    height: 4.5rem;
+}
+
+.dash-grafico-longo .dash-coluna-dia {
+    font-size: .6rem;
+    min-width: 1.8rem;
+}
+
+.dash-grafico-longo .dash-coluna-barra {
+    border-radius: 1px;
+}
+
+.dash-grafico-longo .dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .08);
+}
+
+.dash-grafico-longo .dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .15);
+    border-color: rgba(194, 163, 109, .25);
+}
+
+/* Responsividade para 30 dias em telas menores */
+@media (max-width: 70rem) {
+    .dash-grafico-longo {
+        grid-template-columns: repeat(15, minmax(0, 1fr));
+        min-width: 28rem;
+        gap: .2rem;
+    }
+}
+.dash-coluna-dash-coluna-vazia,
+.dash-coluna-vazia .dash-coluna-trilho {
+    opacity: .5;
+}
+
+.dash-coluna-vazia .dash-coluna-barra {
+    background: rgba(194, 163, 109, .15);
+    min-height: 2px;
+}
+
+/* No celular o grafico fica com rolagem lateral, em vez de espremer as 7 */
+@media (max-width: 30rem) {
+    .dash-grafico {
+        min-width: 22rem;
+    }
+
+    .dash-coluna-valor {
+        font-size: .62rem;
+    }
+
+    .dash-coluna-dia {
+        font-size: .6rem;
+    }
+}
+
+   ETAPA C - GRAFICO 7/30 DIAS E DETALHE POR DIA (.dash-*)
+   Continuacao do bloco acima, tambem no FIM do arquivo. Nenhuma regra
+   anterior foi alterada.
+
+   A BARRA Ã‰ UM LINK (<a>): o detalhe do dia abre sem nenhum JavaScript.
+   Por isso a coluna virou <a> com display:flex em vez de <div> - e o foco
+   de teclado precisa ficar visivel, senao o teclado nao enxerga o link.
+
+   30 DIAS: as barras ficam mais finas e o conjunto tem largura minima,
+   entao o CONTÃªINER (.dash-rolagem) rola. A pagina nunca ganha barra
+   horizontal - e o limite do scroll fica no bloco, nao no body.
+   ===================================================================== */
+
+.dash-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.dash-cabecalho .dash-titulo,
+.dash-cabecalho .dash-subtitulo {
+    margin-bottom: .15rem;
+}
+
+/* --- seletor 7 dias | 30 dias -------------------------------------- */
+.dash-periodo {
+    display: inline-flex;
+    gap: .25rem;
+    padding: .25rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.dash-periodo-opcao {
+    padding: .35rem .9rem;
+    border-radius: 999px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: .85rem;
+    white-space: nowrap;
+}
+
+.dash-periodo-opcao:hover {
+    color: var(--text);
+}
+
+.dash-periodo-opcao.is-ativo {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+/* --- total da janela, acima do grafico ------------------------------ */
+.dash-periodo-total {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: .75rem;
+}
+
+/* --- colunas que sao links ----------------------------------------- */
+a.dash-coluna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4rem;
+    min-width: 0;
+    padding: .35rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: .6rem;
+    transition: background-color .15s ease, transform .15s ease;
+}
+
+a.dash-coluna:hover {
+    background: var(--surface-2);
+}
+
+a.dash-coluna:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+a.dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .12);
+}
+
+a.dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .18);
+    border-color: rgba(194, 163, 109, .35);
+}
+
+a.dash-coluna.is-dia .dash-coluna-dia {
+    color: var(--text);
+    font-weight: 800;
+}
+
+a.dash-coluna.is-dia .dash-coluna-barra {
+    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+}
+
+a.dash-coluna.dash-coluna-vazia .dash-coluna-trilho {
+    opacity: .5;
+}
+
+a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
+    background: rgba(194, 163, 109, .15);
+    min-height: 2px;
+}
+
+/* --- 30 dias: barras finas e rolagem no CONTAINER -------------------- */
+.dash-rolagem-larga {
+    /* Padding interno: a barra nao encosta na borda do container. */
+    padding: .5rem 0;
+}
+
+.dash-grafico-longo {
+    /* 30 colunas: largura minima para cada uma continuar legivel. */
+    grid-template-columns: repeat(30, minmax(2.5rem, 1fr));
+    min-width: 52rem;
+    gap: .25rem;
+}
+
+.dash-grafico-longo .dash-coluna-trilho {
+    height: 7rem;
+}
+
+.dash-grafico-longo .dash-coluna-dia {
+    font-size: .6rem;
+}
+
+.dash-grafico-longo .dash-coluna-barra {
+    /* Fina de proposito: 30 barras lado a lado. */
+    min-width: 100%;
+    border-radius: 2px;
+}
+
+
+/* =====================================================================
+   BUG-30 - CONFIRMAR bloqueado com dinheiro insuficiente + aviso FALTAM
+   ---------------------------------------------------------------------
+   Bloco NOVO, no fim do arquivo de proposito: nao altera nenhuma regra
+   existente, so acrescenta. Sem recurso externo (nada de fonte remota):
+   o clamp() abaixo usa a fonte que o tema ja define.
+
+   Problema visual original: o rotulo "Faltam R$ 17,00" vinha inteiro dentro
+   do <h2> de 2rem, entao o texto quebrava no meio ("Faltam R$ 17," / "00"),
+   ficava com duas cores diferentes (o "Faltam R$" herdava uma, o valor outra)
+   e a rÃ©gua de 360px do celular nao comportava o numero.
+   A solucao e a MESMA estrutura nos dois estados - rotulo pequeno em cima
+   (TROCO ou FALTAM) e valor grande embaixo, em uma linha so.
+   ===================================================================== */
+
+/* Rotulo pequeno acima do valor. dim/neutro = o estado "Troco". */
+.pdv-valor-regiao .pdv-valor-rotulo {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.2;
+    margin-bottom: .1rem;
+}
+
+/* Estado "Faltam": o rotulo usa a cor de perigo, para o operador ler o
+   aviso antes mesmo de olhar o numero. */
+.pdv-valor-regiao .pdv-valor-rotulo.pdv-valor-rotulo-falta {
+    color: var(--danger);
+}
+
+/* O valor grande. O clamp() e o que resolve a largura: quanto menor a
+   viewport, menor a fonte, e white-space impede a quebra da linha.
+   1.75rem no piso e o menor tamanho que continua legivel no caixa. */
+.pdv-valor-regiao .pdv-valor-grande {
+    font-size: clamp(1.15rem, 7vw, 1.75rem);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: keep-all;
+    max-width: 100%;
+}
+
+/* O valor quando falta dinheiro, em vermelho. Fica DEPOIS de .pdv-valor-grande
+   para vencer o .text-success que o JS alterna. */
+.pdv-valor-regiao .pdv-valor-grande.pdv-valor-falta,
+.pdv-valor-regiao .pdv-valor-grande.text-danger {
+    color: var(--danger);
+}
+
+/* O CONFIRMAR bloqueado: apagado, sem o brilho do primario, e sem a
+   sombra de "pressionado" que Bootstrap aplica em .btn:active. */
+.pdv-btn-bloqueado,
+.pdv-btn-bloqueado:hover,
+.pdv-btn-bloqueado:focus,
+.pdv-btn-bloqueado:active {
+    opacity: .45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+
+/* BUG-30 (complemento): as duas etapas do modal de pagamento - pagamento e CPF -
+   nunca podem aparecer EMPILHADAS. Sem isto, o botao FINALIZAR E IMPRIMIR fica
+   coberto pelo da etapa de pagamento e o clique nao chega nele: o operador
+   clica e "nada acontece".
+
+   Esta regra NAO controla a exibicao ( Quem controla e o JS, via style.display
+   inline, que tem precedencia sobre este arquivo). Ela so garante que a etapa
+   oculta nao ocupe espaco: sem display:none herdado de algum lugar, as duas
+   secoes ficariam uma embaixo da outra. */
+#modalPagamento #secaoPagamento:not([style*="display"]),
+#modalPagamento #secaoCPF:not([style*="display"]) {
+    display: none;
+}
+
+
+/* =====================================================================
+   BUG-31 - ALINHAMENTO DO AVISO DE ESTOQUE BAIXO NA COLUNA "ESTOQUE"
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Sintoma: o badge "ESTOQUE BAIXO" aparecia TORTO - alguns pixels ABAIXO
+   da linha do numero ("2 kg", "21 un"). A causa nao era o badge em si: o
+   numero e a unidade nao estavam dentro de um container, entao o badge
+   inline-flex ficava sozinho na linha seguinte da celula, e o margin-top
+   de .badge-estoque-baixo o empurrava ainda mais para baixo.
+
+   Aqui o numero, a unidade e o badge ficam NA MESMA linha de base, com
+   flex-wrap para o "minimo: ..." cair para a linha de baixo em telas
+   estreitas sem estourar a coluna.
+   ===================================================================== */
+
+.estoque-valor-linha {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+/* O numero e a unidade como um bloco so; o nowrap impede que "19,375"
+   quebre entre o numero e o "kg", e o tabular-nums alinha os digitos
+   entre as linhas da tabela. */
+.estoque-valor-linha .estoque-quantidade {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* O badge deixa de descer: sem margin-top, fica alinhado pelo centro da
+   linha (align-items:center do container acima). */
+.estoque-valor-linha .badge-estoque-baixo {
+    margin-top: 0;
+    vertical-align: middle;
+}
+
+/* O "minimo: ..." vira um item da MESMA flex, alinhado a esquerda - deixa
+   de ser um div de bloco que empurrava a celula para baixo. */
+.estoque-valor-linha .estoque-minimo-texto {
+    margin-top: 0;
+    flex-basis: 100%;
+    white-space: nowrap;
+}
+
+/* =====================================================================
+   BUG-34 - CARTOES DO HISTORICO VIRARAM LINK
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Os cartoes "ESTA SEMANA / ESTE MES / ESTE ANO" viraram <a>, nao <section>.
+   Isso quebrava o visual por DOIS motivos, ambos resolvidos aqui:
+
+   1. O <a> e inline por padrao. Com display:block ele passa a ocupar a
+      celula, mas a altura nao acompanhava mais a do cartao grande ao lado -
+      a linha ficava com um card alto (o de HOJE) e tres baixos e tortos.
+   2. O Bootstrap (.p-3) e o tema (.history-metric, padding 1.2rem) mandavam
+      no padding ao mesmo tempo, entao o card clicavel ficava com o
+      espacamento de um deles e o com o do outro.
+
+   Aqui o clicavel usa box-sizing para o padding entrar DENTRO da caixa
+   (senao a borda estourava a celula) e mantem a altura igual a do cardao
+   grande, alinhada pelo mesmo grid.
+   ===================================================================== */
+
+/* =====================================================================
+   BUG-34 - CARTAO DO HISTORICO CLICAVEL (stretched-link)
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   Tentativa anterior trocou o <section> por <a> e o layout quebrou: <a> e
+   inline, entao nao aceita height:100% nem padding de bloco. Aqui o
+   cartao VOLTA a ser <section> (visual IGUAL ao de "VENDAS DE HOJE") e o
+   link e um <a> vazio absoluto por cima - o padrao "stretched-link" do
+   Bootstrap: ele cobre o card inteiro sem mexer em altura, padding ou borda.
+
+   O cartao selecionado usa a MESMA linguagem visual da aba ativa do menu
+   (dourado do --accent + risco na base), para a tela inteira falar um
+   unico "voce esta aqui".
+   ===================================================================== */
+
+.history-cartao-link {
+    position: relative;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+/* O link cobre o cartao todo, com z-index para ficar acima do texto. */
+.history-cartao-link .stretched-link::after {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    content: "";
+    border-radius: 8px;
+}
+
+.history-cartao-link .stretched-link:focus-visible {
+    outline: none;
+}
+
+/* O foco do teclado precisa aparecer no CARTAO (o link e vazio, entao o
+   outline do navegador sobre ele nao diria nada). */
+.history-cartao-link:has(.stretched-link:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Passar o mouse acende o cartao inteiro, e nao so o link. */
+.history-cartao-link:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+/* Cartao do filtro que esta em exibicao. */
+.history-cartao-link.is-ativo {
+    border-color: var(--accent);
+    background: var(--surface-2);
+    box-shadow: inset 0 -3px 0 0 var(--accent);
+}
+
+/* Texto dourado do badge em exibicao - inclui o valor do "VENDAS DE HOJE"
+   (.history-today-total): o dourado pertence ao filtro ATIVO, nunca aos dois. */
+.history-cartao-link.is-ativo .section-eyebrow,
+.history-cartao-link.is-ativo .history-today-total,
+.history-cartao-link.is-ativo h3 {
+    color: var(--accent-hover);
+}
+
+/* "Exibindo: <periodo>" - o texto que impede a confusao de a tela estar
+   mostrando o dia quando esta mostrando o ano. */
+.history-filtro-ativo {
+    margin: -.5rem 0 1rem;
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+
+.history-filtro-ativo strong {
+    color: var(--text);
+}
+
+.history-filtro-obs {
+    color: var(--accent-hover);
+}
+
+/* =====================================================================
+   BUG-34 - ABA ATIVA DO MENU
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: nao altera nenhuma regra acima.
+
+   A BARRA E CLARA (navbar-light) e o tema escuro troca a cor do texto da
+   nav para var(--text). O detalhe que fazia o destaque NAO aparecer: a regra
+   base .navbar .nav-link (L104) usa `color: ... !important`, entao uma
+   regra posterior SEM !important nunca vence - o item ativo ficava
+   exatamente igual aos outros, mesmo com aria-current="page" no HTML.
+   Por isso o !important aqui tambem: nao ha como destacar o item ativo sem
+   ele. O sinal visual e um conjunto, nao so a cor:
+     - cor dourada (--accent-hover);
+     - peso 700;
+     - fundo levemente claro;
+     - risco dourado na base.
+   ===================================================================== */
+
+.navbar .nav-link.active,
+.navbar .nav-link.active:hover,
+.navbar .nav-link.active:focus-visible {
+    color: var(--accent-hover) !important;
+    font-weight: 700;
+    background: rgba(194, 163, 109, .12) !important;
+    border-radius: 6px;
+    box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+/* O icone (quando houver) acompanha a cor do item ativo. */
+.navbar .nav-link.active .bi {
+    color: var(--accent-hover) !important;
+}
+
+/* No celular os itens ficam empilhados: o risco inferior vira um marcador a
+   esquerda, que continua legivel sem reservar espaco extra. */
+@media (max-width: 575.98px) {
+    .navbar .nav-link.active {
+        box-shadow: inset 2px 0 0 0 var(--accent);
+        padding-left: .75rem;
+    }
+}
+
+/* =====================================================================
+   DASHBOARD - BARRA DO DIA ABERTO (.dash-coluna.is-dia)
+   Clicar numa barra do grafico mostra as vendas do dia logo abaixo, no
+   proprio painel (?data= no Index). A barra ja aberta ganha destaque
+   dourado: o dono enxerga qual clique abre o dia e qual clique limpa.
+   Bloco NOVO, no fim do arquivo: nenhuma regra anterior foi alterada.
+   ===================================================================== */
+.dash-coluna.is-dia .dash-coluna-trilho {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.dash-coluna.is-dia .dash-coluna-dia {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.dash-coluna.is-dia .dash-coluna-valor {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* =====================================================================
+   HISTORICO DE VENDAS - TITULO DINAMICO, SUBTITULO E LIMITE DE LINHAS
+   ---------------------------------------------------------------------
+   Bloco NOVO no fim do arquivo: subtitulo "N vendas · R$ total" e alerta
+   do limite de 200 linhas exibidas.
+   ===================================================================== */
+.history-subtitulo {
+    font-size: .95rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.history-aviso-limite {
+    background-color: rgba(194, 163, 109, .15);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: 6px;
+    padding: .75rem 1rem;
+    font-size: .9rem;
+}
+
+.history-aviso-limite .bi {
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+
+/* =====================================================================
+   DASHBOARD - DETALHE DO DIA VIA AJAX (.dash-detalhe-*)
+   Bloco NOVO no fim do arquivo: carrega detalhes completos do dia
+   sem recarregar a pagina. Aparece logo abaixo do grafico ao clicar
+   numa barra.
+   ===================================================================== */
+
+.dash-detalhe-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-detalhe-titulo {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.dash-detalhe-status {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+}
+
+.dash-detalhe-status.status-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+}
+
+.dash-detalhe-status.status-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+}
+
+.dash-fechar-detalhe {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dash-fechar-detalhe:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dash-detalhe-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.dash-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: dash-spin 1s linear infinite;
+}
+
+@keyframes dash-spin {
+    to { transform: rotate(360deg); }
+}
+
+.dash-alert {
+    padding: .75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.dash-alert-erro {
+    background: rgba(207, 119, 121, .15);
+    border: 1px solid var(--danger);
+    color: #f0c5c6;
+}
+
+.dash-positivo {
+    color: var(--success);
+}
+
+.dash-negativo {
+    color: var(--danger);
+}
+
+/* Badges de status */
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .15rem .5rem;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+}
+
+.dash-badge.badge-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+    border: 1px solid rgba(99, 165, 130, .3);
+}
+
+.dash-badge.badge-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+    border: 1px solid rgba(194, 163, 109, .3);
+}
+
+.dash-linha-fechada {
+    opacity: .6;
+}
+
+.dash-linha-fechada:hover {
+    background-color: rgba(255, 255, 255, .02) !important;
+}
+
+/* Botao expandir itens da venda */
+.dash-expandir-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.dash-expandir-btn:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dash-expandir-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.dash-expandir-btn svg {
+    transition: transform .15s ease;
+}
+
+/* Linha de itens expandida */
+.dash-itens-venda td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.dash-itens-container {
+    padding: .75rem 1rem;
+    background: var(--surface-input, #14191d);
+    border-top: 1px solid var(--border);
+}
+
+.dash-tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+.dash-tabela-itens th,
+.dash-tabela-itens td {
+    padding: .5rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-tabela-itens th {
+    font-size: .7rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.dash-tabela-itens tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* =====================================================================
+   DASHBOARD - MELHORIAS VISUAIS NOS CARTÕES E DETALHE
+   ===================================================================== */
+
+/* Cards do dashboard: visual mais moderno com sombra, destaque e agradável arredondamento */
+.dash-cartao {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    padding: 1.45rem 1.5rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Destaque no card principal: borda superior mais forte e leve elevação */
+.dash-grade .dash-cartao:first-child {
+    border-top: 3px solid var(--accent);
+    box-shadow: 0 8px 24px rgba(194, 163, 109, .22);
+}
+
+/* Efeito hover nos cards */
+.dash-cartao:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
+    border-color: var(--border-strong);
+}
+
+/* Rótulo do card: maiúsculo, leve e com separação */
+.dash-rotulo {
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+/* Valor: destaque com dourado no card principal */
+.dash-grade .dash-cartao:first-child .dash-valor {
+    color: var(--accent);
+    font-size: 2rem;
+}
+
+.dash-valor {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    font-weight: 800;
+    color: var(--text);
+    word-break: break-word;
+    letter-spacing: -.01em;
+}
+
+/* Numero que pede atencao: usa as cores que JA existem no tema. */
+.dash-negativo {
+    color: var(--danger);
+}
+
+.dash-positivo {
+    color: var(--success);
+}
+
+/* --- Detalhe do dia: mesma largura do .main-container --- */
+.dash-detalhe-dia {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 1.5rem 1.5rem 1.75rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .2);
+}
+
+/* Cabeçalho do detalhe: alinhado com o layout do dashboard */
+.dash-detalhe-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: .9rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.dash-detalhe-titulo {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -.01em;
+}
+
+.dash-detalhe-status {
+    font-size: .78rem;
+    font-weight: 700;
+    padding: .4rem .85rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dash-detalhe-status.status-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+    border: 1px solid rgba(99, 165, 130, .3);
+}
+
+.dash-detalhe-status.status-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+    border: 1px solid rgba(194, 163, 109, .3);
+}
+
+/* Seções no detalhe: mesma altura de linha do dashboard */
+.dash-detalhe-dia .dash-secao {
+    margin-bottom: 1.75rem;
+}
+
+.dash-detalhe-dia .dash-titulo-secao {
+    font-size: 1.15rem;
+    margin-bottom: .85rem;
+    color: var(--text);
+    font-weight: 800;
+}
+
+/* Tabelas no detalhe com visao mais limpa */
+.dash-detalhe-dia .dash-rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: .85rem;
+    background: var(--surface-1);
+}
+
+.dash-detalhe-dia .dash-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+}
+
+.dash-detalhe-dia .dash-tabela th,
+.dash-detalhe-dia .dash-tabela td {
+    padding: .7rem .85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    min-width: 6rem;
+    white-space: nowrap;
+}
+
+.dash-detalhe-dia .dash-tabela th {
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.dash-detalhe-dia .dash-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dash-detalhe-dia .dash-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.dash-detalhe-dia .dash-vazio {
+    color: var(--text-muted);
+    padding: 1.25rem 0;
+}
+
+/* --- Reposicionamento do botão fechar do detalhe --- */
+.dash-detalhe-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-detalhe-header .dash-titulo-secao {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.dash-fechar-detalhe {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: .5rem;
+    color: var(--text-muted);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dash-fechar-detalhe:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Badges de status no detalhe */
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .6rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 999px;
+}
+
+.dash-badge.badge-fechado {
+    background: rgba(99, 165, 130, .15);
+    border-color: rgba(99, 165, 130, .3);
+    color: var(--success);
+}
+
+.dash-badge.badge-aberto {
+    background: rgba(194, 163, 109, .15);
+    border-color: rgba(194, 163, 109, .3);
+    color: var(--accent);
+}
+
+/* Container de itens expandidos do detalhe */
+.dash-itens-container {
+    padding: .75rem 1rem;
+    background: var(--surface-input, #14191d);
+    border-top: 1px solid var(--border);
+}
+
+.dash-tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+.dash-tabela-itens th,
+.dash-tabela-itens td {
+    padding: .5rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-tabela-itens th {
+    font-size: .7rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+/* Loading do detalhe */
+.dash-detalhe-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.dash-loading-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: dash-spin 1s linear infinite;
+}
+
+@keyframes dash-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Alerta no detalhe */
+.dash-alert {
+    padding: .85rem 1rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+}
+
+.dash-alert-erro {
+    background: rgba(207, 119, 121, .12);
+    border: 1px solid var(--danger);
+    color: #f0c5c6;
+}
+

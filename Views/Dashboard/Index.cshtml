@@ -26,7 +26,7 @@
 }
 
 <div class="main-container dash-container">
-    <div class="dash-cabecalho">
+    <div class="dash-cabecalho" style="display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:flex-end; width:100%; gap:1rem;">
         <div>
             <h1 class="dash-titulo">Dashboard</h1>
             <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
@@ -35,7 +35,7 @@
         @* Seletor de JANELA por link GET: sem JS, sem formulario, e a URL
            (?dias=30) continua compartilhavel — quem recebe o link ve a mesma
            janela. O controller so aceita 7 e 30 (regra do painel). *@
-        <nav class="dash-periodo" aria-label="Período do gráfico">
+        <nav class="dash-periodo" style="margin-left:auto; flex-shrink:0;" aria-label="Período do gráfico">
             <a class="dash-periodo-opcao @((!janelaLonga) ? "is-ativo" : null)"
                href="@Url.Action("Index", "Dashboard", new { dias = 7 })"
                aria-current="@((!janelaLonga) ? "page" : null)">7 dias</a>
@@ -52,10 +52,6 @@
     <div class="dash-periodo-total">
         <span class="dash-rotulo">@(Model.Dias == 30 ? "Últimos 30 dias" : "Últimos 7 dias")</span>
         <strong class="dash-valor">@Dinheiro(Model.TotalVendasPeriodo)</strong>
-        <span class="dash-observacao">
-            @(Model.NumeroVendasPeriodo == 1 ? "1 venda" : $"{Model.NumeroVendasPeriodo} vendas")
-            · clique numa barra para ver o dia
-        </span>
     </div>
 
     @* ------------------------------------------------------------------
@@ -69,10 +65,6 @@
         <div class="dash-cartao">
             <span class="dash-rotulo">Vendas de hoje</span>
             <strong class="dash-valor">@Dinheiro(Model.TotalVendasHoje)</strong>
-            <span class="dash-observacao">
-                @Model.NumeroVendasHoje @(Model.NumeroVendasHoje == 1 ? "venda" : "vendas")
-                · ticket médio @Dinheiro(Model.TicketMedio)
-            </span>
         </div>
 
         <div class="dash-cartao">
@@ -80,9 +72,6 @@
             <strong class="dash-valor @((Model.SaldoGaveta < 0m) ? "dash-negativo" : null)">
                 @Dinheiro(Model.SaldoGaveta)
             </strong>
-            <span class="dash-observacao">
-                Só vendas em dinheiro de hoje. É este número que limita a sangria.
-            </span>
         </div>
 
         <div class="dash-cartao">
@@ -90,7 +79,6 @@
             <strong class="dash-valor @((Model.TotalEstoqueBaixo > 0) ? "dash-negativo" : null)">
                 @(Model.TotalEstoqueBaixo == 1 ? "1 produto" : $"{Model.TotalEstoqueBaixo} produtos")
             </strong>
-            <span class="dash-observacao">Abaixo do mínimo configurado</span>
         </div>
     </div>
 
@@ -135,11 +123,11 @@
         }
     </div>
 
-    @* ------------------------------------------------------------------
+@* ------------------------------------------------------------------
        ÚLTIMOS 7 OU 30 DIAS em barras de HTML/CSS PURO: sem canvas, sem
        biblioteca, sem script. Cada barra é uma <div> com altura em % e um
-       <a> em volta - clicar SELECIONA o dia e as vendas dele aparecem
-       logo abaixo, no proprio painel (?data=). Clicar de novo limpa.
+       <button> em volta - clicar carrega os detalhes do dia via AJAX
+       logo abaixo do grafico, sem recarregar a pagina.
 
        A ALTURA vem de PercentualAltura (calculada no view-model). O PISO de 4%
        existe porque 9,98 contra um maximo de 1.000 daria ~1%: sem o piso a
@@ -149,7 +137,7 @@
        EM 30 DIAS o rotulo fica so com o dia ("04") e o valor so no title e
        no aria-label: 30 valores em texto nao cabem. A primeira barra e todo
        dia 1 ganham dd/MM, que e o que o dono precisa para se localizar.
-    *@
+   *@
     <div class="dash-secao">
         <h2 class="dash-titulo-secao">Vendas dos últimos @Model.Dias dias</h2>
 
@@ -159,15 +147,16 @@
                 @foreach (var d in Model.SerieUltimos7Dias)
                 {
                     var mostrarDataCompleta = !janelaLonga || d.Dia.Day == 1 || d.Dia == Model.SerieUltimos7Dias[0].Dia;
-                    @* Clique = ?data= no PROPRIO Index: as vendas do dia abrem
-                       embaixo, no mesmo painel. A barra ja aberta leva sem
-                       ?data= - o mesmo clique limpa a selecao. *@
                     var diaAberto = Model.DiaSelecionado.HasValue && Model.DiaSelecionado.Value == d.Dia;
-                    <a class="dash-coluna @(d.Total <= 0m ? "dash-coluna-vazia" : null) @(diaAberto ? "is-dia" : null)"
-                       href="@(diaAberto ? Url.Action("Index", "Dashboard", new { dias = Model.Dias }) : Url.Action("Index", "Dashboard", new { dias = Model.Dias, data = DataBarra(d.Dia) }))"
-                       aria-current="@(diaAberto ? "true" : null)"
-                       title="@RotuloDia(d)"
-                       aria-label="@RotuloDia(d)">
+                    <button type="button"
+                            class="dash-coluna @(d.Total <= 0m ? "dash-coluna-vazia" : null) @(diaAberto ? "is-dia" : null)"
+                            data-dia="@DataBarra(d.Dia)"
+                            data-dias="@Model.Dias"
+                            aria-current="@(diaAberto ? "true" : "false")"
+                            aria-pressed="@(diaAberto ? "true" : "false")"
+                            title="@RotuloDia(d)"
+                            aria-label="@RotuloDia(d)"
+                            @(d.Total <= 0m ? "disabled" : null)>
                         @if (!janelaLonga)
                         {
                             <span class="dash-coluna-valor">@Dinheiro(d.Total)</span>
@@ -178,65 +167,29 @@
                         <span class="dash-coluna-dia">
                             @(mostrarDataCompleta ? DataCurta(d.Dia) : SoDia(d.Dia))
                         </span>
-                    </a>
+                    </button>
                 }
             </div>
         </div>
     </div>
 
     @* ------------------------------------------------------------------
-       VENDAS DO DIA ESCOLHIDO: clicar numa barra do grafico la em cima
-       (?data=) traz o dia PARA AQUI - logo abaixo do grafico, no proprio
-       painel, sem abrir outra tela. A secao so aparece com um dia
-       selecionado (data futura chega nula e nao mostra nada). Por pedido
-       do dono ela substituiu a antiga secao "Ultimas vendas" do painel.
-    *@
-    @if (Model.DiaSelecionado.HasValue)
-    {
-        var diaSel = Model.DiaSelecionado.Value;
-
-        <div class="dash-secao">
-            <h2 class="dash-titulo-secao">Vendas de @diaSel.ToString("dd/MM/yyyy", br)</h2>
-
-            @if (Model.VendasDoDia.Count == 0)
-            {
-                <p class="dash-vazio">Nenhuma venda registrada neste dia.</p>
-            }
-            else
-            {
-                <div class="dash-rolagem">
-                    <table class="dash-tabela">
-                        <thead>
-                            <tr>
-                                <th scope="col">Venda</th>
-                                <th scope="col">Hora</th>
-                                <th scope="col">Forma</th>
-                                <th scope="col" class="dash-num">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var v in Model.VendasDoDia)
-                            {
-                                <tr>
-                                    <td>#@v.Id</td>
-                                    <td>@v.DataVenda.ToString("HH:mm", br)</td>
-                                    <td>@v.MetodoPagamento</td>
-                                    <td class="dash-num">@Dinheiro(v.Total)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-
-            <p class="dash-observacao">
-                @Dinheiro(Model.TotalDiaSelecionado)
-                · @(Model.NumeroVendasDia == 1 ? "1 venda" : $"{Model.NumeroVendasDia} vendas")
-                · <a asp-controller="Caixa" asp-action="Historico" asp-route-data="@DataBarra(diaSel)">Ver este dia no histórico</a>
-                · <a href="@Url.Action("Index", "Dashboard", new { dias = Model.Dias })">Limpar seleção</a>
-            </p>
+       DETALHE DO DIA (CARREGADO VIA AJAX): aparece logo abaixo do grafico
+       quando se clica numa barra. Substitui a antiga secao que recarregava
+       a pagina. O container fica vazio ate o primeiro clique.
+   *@
+    <div class="dash-secao" id="detalhe-dia-container" style="display: none;">
+        <div class="dash-detalhe-header">
+            <h2 class="dash-titulo-secao" id="detalhe-dia-titulo"></h2>
+            <button type="button" class="dash-fechar-detalhe" id="fecharDetalheDia" aria-label="Fechar detalhes do dia">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
-    }
+        <div id="detalhe-dia-conteudo" class="dash-detalhe-loading">
+            <div class="dash-loading-spinner"></div>
+            <p>Carregando detalhes do dia...</p>
+        </div>
+    </div>
 
     @* ------------------------------------------------------------------
        ESTOQUE BAIXO: os 5 mais críticos. O total real vem no cartão acima -
@@ -293,3 +246,127 @@
        quer movimentação recente usa o histórico do caixa. O campo
        UltimasVendas continua no view-model - os testes ETAPA A protegem. *@
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+
+            // Elementos do DOM
+            const container = document.getElementById('detalhe-dia-container');
+            const conteudo = document.getElementById('detalhe-dia-conteudo');
+            const titulo = document.getElementById('detalhe-dia-titulo');
+            const btnFechar = document.getElementById('fecharDetalheDia');
+            const colunas = document.querySelectorAll('.dash-coluna[data-dia]');
+
+            let diaAtual = null;
+
+            // Abre/fecha o painel de detalhe
+            function abrirDetalhe(dia, dias) {
+                if (diaAtual === dia) {
+                    fecharDetalhe();
+                    return;
+                }
+
+                diaAtual = dia;
+                container.style.display = 'block';
+                conteudo.innerHTML = `
+                    <div class="dash-detalhe-loading">
+                        <div class="dash-loading-spinner"></div>
+                        <p>Carregando detalhes do dia...</p>
+                    </div>
+                `;
+                titulo.textContent = `Detalhes de ${formatarData(dia)}`;
+
+                // Atualiza estado visual das colunas
+                colunas.forEach(c => {
+                    const isAtivo = c.dataset.dia === dia;
+                    c.classList.toggle('is-dia', isAtivo);
+                    c.setAttribute('aria-pressed', isAtivo);
+                    c.setAttribute('aria-current', isAtivo ? 'true' : 'false');
+                });
+
+                // Carrega via AJAX
+                fetch(`/Dashboard/DetalheDia?data=${dia}&dias=${dias}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Erro ao carregar');
+                        return r.text();
+                    })
+                    .then(html => {
+                        conteudo.innerHTML = html;
+                        inicializarExpandiveis();
+                    })
+                    .catch(err => {
+                        conteudo.innerHTML = `
+                            <div class="dash-alert dash-alert-erro">
+                                Erro ao carregar detalhes: ${err.message}
+                            </div>
+                        `;
+                    });
+            }
+
+            function fecharDetalhe() {
+                diaAtual = null;
+                container.style.display = 'none';
+                conteudo.innerHTML = '';
+                colunas.forEach(c => {
+                    c.classList.remove('is-dia');
+                    c.setAttribute('aria-pressed', 'false');
+                    c.setAttribute('aria-current', 'false');
+                });
+            }
+
+            function formatarData(iso) {
+                const [y, m, d] = iso.split('-');
+                return `${d}/${m}/${y}`;
+            }
+
+            // Inicializa botoes de expandir itens da venda
+            function inicializarExpandiveis() {
+                document.querySelectorAll('.dash-expandir-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const vendaId = this.dataset.vendaId;
+                        const linhaItens = document.getElementById(`itens-venda-${vendaId}`);
+                        const expandido = this.getAttribute('aria-expanded') === 'true';
+
+                        this.setAttribute('aria-expanded', !expandido);
+                        linhaItens.style.display = expandido ? 'none' : 'table-row';
+
+                        // Rotaciona a seta
+                        this.style.transform = expandido ? 'rotate(0deg)' : 'rotate(180deg)';
+                    });
+                });
+            }
+
+            // Event listeners
+            colunas.forEach(coluna => {
+                coluna.addEventListener('click', function () {
+                    const dia = this.dataset.dia;
+                    const dias = this.dataset.dias || '7';
+                    if (!this.disabled) {
+                        abrirDetalhe(dia, dias);
+                    }
+                });
+            });
+
+            btnFechar.addEventListener('click', fecharDetalhe);
+
+            // Fecha com ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && container.style.display !== 'none') {
+                    fecharDetalhe();
+                }
+            });
+
+            // Se ja havia um dia selecionado no load inicial (via ?data=), abre automaticamente
+            @if (Model.DiaSelecionado.HasValue)
+            {
+                @:document.addEventListener('DOMContentLoaded', function () {
+                @:    abrirDetalhe('@DataBarra(Model.DiaSelecionado.Value)', '@Model.Dias');
+                @:});
+            }
+        })();
+    </script>
+}

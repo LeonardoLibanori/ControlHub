@@ -1,0 +1,301 @@
+@model ControleEstoqueLoja.Controllers.DashboardDetalheDiaViewModel
+@using System.Globalization
+@{
+    var br = CultureInfo.GetCultureInfo("pt-BR");
+    string Dinheiro(decimal valor) => valor.ToString("C", br);
+    string Qtd(decimal valor) => valor.ToString("0.###", br);
+}
+
+@if (!string.IsNullOrEmpty(Model.Erro))
+{
+    <div class="dash-alert dash-alert-erro">@Model.Erro</div>
+}
+else
+{
+    <div class="dash-detalhe-dia">
+        @* ===== CABECALHO DO DIA ===== *@
+        <div class="dash-detalhe-cabecalho">
+            <h2 class="dash-detalhe-titulo">Detalhes de @Model.Dia.ToString("dd/MM/yyyy", br)</h2>
+            <span class="dash-detalhe-status @(Model.CaixaFechado ? "status-fechado" : "status-aberto")">
+                @(Model.CaixaFechado ? "Caixa Fechado" : "Caixa Aberto")
+                @if (Model.HorarioFechamento.HasValue)
+                {
+                    <span> · Fechado às @Model.HorarioFechamento.Value.ToString("HH:mm", br)</span>
+                }
+            </span>
+        </div>
+
+        @* ===== RESUMO FINANCEIRO (CARTOES NO MESMO PADRAO DO DASHBOARD) ===== *@
+        <div class="dash-grade">
+            <div class="dash-cartao">
+                <span class="dash-rotulo">Total do Dia</span>
+                <strong class="dash-valor">@Dinheiro(Model.TotalDia)</strong>
+                <span class="dash-observacao">@Model.NumeroVendas @(Model.NumeroVendas == 1 ? "venda" : "vendas") · Ticket @Dinheiro(Model.TicketMedio)</span>
+            </div>
+
+            <div class="dash-cartao">
+                <span class="dash-rotulo">Suprimentos</span>
+                <strong class="dash-valor dash-positivo">@Dinheiro(Model.TotalSuprimentos)</strong>
+                <span class="dash-observacao">@Model.Suprimentos.Count @(Model.Suprimentos.Count == 1 ? "registro" : "registros")</span>
+            </div>
+
+            <div class="dash-cartao">
+                <span class="dash-rotulo">Sangrias</span>
+                <strong class="dash-valor dash-negativo">@Dinheiro(Model.TotalSangrias)</strong>
+                <span class="dash-observacao">@Model.Sangrias.Count @(Model.Sangrias.Count == 1 ? "registro" : "registros")</span>
+            </div>
+
+            <div class="dash-cartao">
+                <span class="dash-rotulo">Saldo Esperado (Dinheiro)</span>
+                <strong class="dash-valor @((Model.TotalDia - Model.TotalSangrias + Model.TotalSuprimentos < 0) ? "dash-negativo" : null)">
+                    @Dinheiro(Model.TotalDia - Model.TotalSangrias + Model.TotalSuprimentos)
+                </strong>
+                <span class="dash-observacao">Vendas dinheiro + Suprimentos - Sangrias</span>
+            </div>
+        </div>
+
+        @* ===== VENDAS POR FORMA DE PAGAMENTO ===== *@
+        <div class="dash-secao">
+            <h3 class="dash-titulo-secao">Vendas por Forma de Pagamento</h3>
+            @if (Model.TotalPorMetodo.Count == 0)
+            {
+                <p class="dash-vazio">Nenhuma venda registrada neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela">
+                        <thead>
+                            <tr>
+                                <th scope="col">Forma</th>
+                                <th scope="col" class="dash-num">Total</th>
+                                <th scope="col" class="dash-num">Qtd. Vendas</th>
+                                <th scope="col" class="dash-num">% do Dia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in Model.TotalPorMetodo)
+                            {
+                                var pct = Model.TotalDia > 0 ? (m.Total / Model.TotalDia * 100m) : 0m;
+                                <tr>
+                                    <td>@m.Metodo</td>
+                                    <td class="dash-num">@Dinheiro(m.Total)</td>
+                                    <td class="dash-num">@Model.Vendas.Count(v => v.MetodoPagamento.Equals(m.Metodo, StringComparison.OrdinalIgnoreCase))</td>
+                                    <td class="dash-num">@pct.ToString("0.##", br)%</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        @* ===== SUPRIMENTOS ===== *@
+        <div class="dash-secao">
+            <h3 class="dash-titulo-secao">Suprimentos (@Model.Suprimentos.Count)</h3>
+            @if (Model.Suprimentos.Count == 0)
+            {
+                <p class="dash-vazio">Nenhum suprimento registrado neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela">
+                        <thead>
+                            <tr>
+                                <th scope="col">Hora</th>
+                                <th scope="col">Valor</th>
+                                <th scope="col">Descrição</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Suprimentos)
+                            {
+                                <tr class="@(s.IsFechado ? "dash-linha-fechada" : null)">
+                                    <td>@s.Data.ToString("HH:mm", br)</td>
+                                    <td class="dash-num dash-positivo">@Dinheiro(s.Valor)</td>
+                                    <td>@s.Descricao</td>
+                                    <td>
+                                        <span class="dash-badge @(s.IsFechado ? "badge-fechado" : "badge-aberto")">
+                                            @(s.IsFechado ? "Fechado" : "Aberto")
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        @* ===== SANGRIAS ===== *@
+        <div class="dash-secao">
+            <h3 class="dash-titulo-secao">Sangrias (@Model.Sangrias.Count)</h3>
+            @if (Model.Sangrias.Count == 0)
+            {
+                <p class="dash-vazio">Nenhuma sangria registrada neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela">
+                        <thead>
+                            <tr>
+                                <th scope="col">Hora</th>
+                                <th scope="col">Valor</th>
+                                <th scope="col">Descrição</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Sangrias)
+                            {
+                                <tr class="@(s.IsFechado ? "dash-linha-fechada" : null)">
+                                    <td>@s.Data.ToString("HH:mm", br)</td>
+                                    <td class="dash-num dash-negativo">@Dinheiro(Math.Abs(s.Valor))</td>
+                                    <td>@s.Descricao</td>
+                                    <td>
+                                        <span class="dash-badge @(s.IsFechado ? "badge-fechado" : "badge-aberto")">
+                                            @(s.IsFechado ? "Fechado" : "Aberto")
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        @* ===== PRODUTOS VENDIDOS (AGRUPADOS) ===== *@
+        <div class="dash-secao">
+            <h3 class="dash-titulo-secao">Produtos Vendidos (@Model.Produtos.Count)</h3>
+            @if (Model.Produtos.Count == 0)
+            {
+                <p class="dash-vazio">Nenhum produto vendido neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela">
+                        <thead>
+                            <tr>
+                                <th scope="col">Produto</th>
+                                <th scope="col" class="dash-num">Quantidade</th>
+                                <th scope="col" class="dash-num">Valor Total</th>
+                                <th scope="col" class="dash-num">% do Dia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.Produtos)
+                            {
+                                var pct = Model.TotalDia > 0 ? (p.Valor / Model.TotalDia * 100m) : 0m;
+                                <tr class="@(p.Quantidade <= 0 ? "dash-linha-zero" : null)">
+                                    <td>
+                                        <a asp-controller="Home" asp-action="Produto" asp-route-id="@p.ProdutoId">@p.Nome</a>
+                                    </td>
+                                    <td class="dash-num">@Qtd(p.Quantidade) @p.Unidade</td>
+                                    <td class="dash-num">@Dinheiro(p.Valor)</td>
+                                    <td class="dash-num">@pct.ToString("0.##", br)%</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        @* ===== VENDAS DO DIA (COM ITENS EXPANSIVEIS) ===== *@
+        <div class="dash-secao">
+            <h3 class="dash-titulo-secao">Vendas do Dia (@Model.Vendas.Count)</h3>
+            @if (Model.Vendas.Count == 0)
+            {
+                <p class="dash-vazio">Nenhuma venda registrada neste dia.</p>
+            }
+            else
+            {
+                <div class="dash-rolagem">
+                    <table class="dash-tabela dash-tabela-vendas">
+                        <thead>
+                            <tr>
+                                <th scope="col"></th>
+                                <th scope="col">Venda</th>
+                                <th scope="col">Hora</th>
+                                <th scope="col">Forma</th>
+                                <th scope="col">Vendedor</th>
+                                <th scope="col" class="dash-num">Total</th>
+                                <th scope="col" class="dash-num">Recebido</th>
+                                <th scope="col" class="dash-num">Troco</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in Model.Vendas)
+                            {
+                                var vendaComItens = Model.VendasComItens.FirstOrDefault(vi => vi.Id == v.Id);
+                                var temItens = vendaComItens?.Itens?.Count > 0;
+
+                                <tr class="@(v.IsFechado ? "dash-linha-fechada" : null) @(temItens ? "tem-itens" : null)">
+                                    <td>
+                                        @if (temItens)
+                                        {
+                                            <button type="button" class="dash-expandir-btn" data-venda-id="@v.Id" aria-expanded="false" aria-controls="itens-venda-@v.Id" title="Ver itens da venda">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                            </button>
+                                        }
+                                    </td>
+                                    <td>#@v.Id</td>
+                                    <td>@v.DataVenda.ToString("HH:mm", br)</td>
+                                    <td>@v.MetodoPagamento</td>
+                                    <td>@(string.IsNullOrEmpty(v.CodigoVendedor) ? "—" : v.CodigoVendedor)</td>
+                                    <td class="dash-num">@Dinheiro(v.Total)</td>
+                                    <td class="dash-num">@(v.ValorRecebido > 0 ? Dinheiro(v.ValorRecebido) : "—")</td>
+                                    <td class="dash-num">@(v.ValorTroco > 0 ? Dinheiro(v.ValorTroco) : "—")</td>
+                                    <td>
+                                        <span class="dash-badge @(v.IsFechado ? "badge-fechado" : "badge-aberto")">
+                                            @(v.IsFechado ? "Fechado" : "Aberto")
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                @if (temItens)
+                                {
+                                    <tr class="dash-itens-venda" id="itens-venda-@v.Id" style="display: none;">
+                                        <td colspan="9">
+                                            <div class="dash-itens-container">
+                                                <table class="dash-tabela-itens">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col">Produto</th>
+                                                            <th scope="col" class="dash-num">Qtd</th>
+                                                            <th scope="col" class="dash-num">Preço Unit.</th>
+                                                            <th scope="col" class="dash-num">Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var item in vendaComItens.Itens)
+                                                        {
+                                                            <tr>
+                                                                <td>
+                                                                    <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.ProdutoId">@item.Nome</a>
+                                                                </td>
+                                                                <td class="dash-num">@Qtd(item.Quantidade) @item.Unidade</td>
+                                                                <td class="dash-num">@Dinheiro(item.PrecoUnitario)</td>
+                                                                <td class="dash-num">@Dinheiro(item.Subtotal)</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}

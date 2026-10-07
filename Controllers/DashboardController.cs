@@ -342,7 +342,7 @@ namespace ControleEstoqueLoja.Controllers
             });
         }
 
-        /// <summary>
+/// <summary>
         /// "O que foi vendido": agrupa por produto e soma Quantidade EM C#.
         ///
         /// POR QUE EM C# E NAO EM SQL: Quantidade e decimal em TEXT no SQLite e
@@ -389,24 +389,208 @@ namespace ControleEstoqueLoja.Controllers
                 .ThenBy(p => p.Nome, StringComparer.Ordinal)
                 .ToList();
         }
+
+        // =====================================================================
+        // DETALHE COMPLETO DO DIA (AJAX)
+        // =====================================================================
+
+        /// <summary>
+        /// Retorna o HTML parcial com TODAS as informacoes do dia selecionado.
+        /// Carregado via AJAX ao clicar na barra do grafico - nao recarrega a pagina.
+        ///
+        /// Inclui:
+        /// - Vendas por forma de pagamento (PIX, Dinheiro, etc.)
+        /// - Suprimentos com horarios
+        /// - Sangrias com horarios
+        /// - Status de fechamento do caixa (se houve e quando)
+        /// - Itens vendidos (produtos com quantidade e valor)
+        /// - Lista de vendas com detalhes
+        ///
+        /// Leitura pura (regra 25): sem POST/PUT/DELETE, somas em decimal EM C#.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> DetalheDia(DateTime? data)
+        {
+            var hoje = DateTime.Today;
+
+            if (!data.HasValue || data.Value.Date > hoje)
+            {
+                return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
+                {
+                    Dia = data?.Date ?? hoje,
+                    Erro = "Data inválida ou futura."
+                });
+            }
+
+            var dia = data.Value.Date;
+            var fim = dia.AddDays(1);
+
+            // ---- VENDAS DO DIA (com itens para detalhar) ----
+            var vendas = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= dia && v.DataVenda < fim)
+                .OrderByDescending(v => v.DataVenda)
+                .ThenByDescending(v => v.Id)
+                .ToListAsync();
+
+            var vendasDetalhe = vendas.Select(v => new DashboardVendaDetalhe
+            {
+                Id = v.Id,
+                DataVenda = v.DataVenda,
+                MetodoPagamento = v.MetodoPagamento,
+                Total = v.TotalVenda,
+                ValorRecebido = v.ValorRecebido,
+                ValorTroco = v.ValorTroco,
+                CPFCliente = v.CPFCliente,
+                CodigoVendedor = v.CodigoVendedor,
+                IsFechado = v.IsFechado,
+            }).ToList();
+
+            // ---- TOTAIS POR FORMA DE PAGAMENTO ----
+            var totalPorMetodo = vendasDetalhe
+                .GroupBy(v => v.MetodoPagamento, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new DashboardTotalPorMetodo
+                {
+                    Metodo = g.First().MetodoPagamento,
+                    Total = g.Sum(v => v.Total)
+                })
+                .OrderByDescending(m => m.Total)
+                .ToList();
+
+            // ---- MOVIMENTACOES DO DIA (Suprimentos e Sangrias) ----
+            var movimentacoes = await _context.CaixaMovimentacoes
+                .AsNoTracking()
+                .Where(m => m.Data >= dia && m.Data < fim)
+                .OrderBy(m => m.Data)
+                .ToListAsync();
+
+            var suprimentos = movimentacoes
+                .Where(m => m.Tipo.Equals("Suprimento", StringComparison.OrdinalIgnoreCase))
+                .Select(m => new DashboardMovimentacaoDetalhe
+                {
+                    Id = m.Id,
+                    Data = m.Data,
+                    Tipo = m.Tipo,
+                    Valor = m.Valor,
+                    Descricao = m.Descricao,
+                    IsFechado = m.IsFechado
+                })
+                .ToList();
+
+            var sangrias = movimentacoes
+                .Where(m => m.Tipo.Equals("Sangria", StringComparison.OrdinalIgnoreCase))
+                .Select(m => new DashboardMovimentacaoDetalhe
+                {
+                    Id = m.Id,
+                    Data = m.Data,
+                    Tipo = m.Tipo,
+                    Valor = m.Valor,
+                    Descricao = m.Descricao,
+                    IsFechado = m.IsFechado
+                })
+                .ToList();
+
+            // ---- STATUS DE FECHAMENTO DO CAIXA ----
+            // Verifica se todas as vendas e movimentacoes do dia estao fechadas
+            var vendasFechadas = vendas.All(v => v.IsFechado);
+            var movsFechadas = movimentacoes.All(m => m.IsFechado);
+            var caixaFechado = vendas.Count > 0 || movimentacoes.Count > 0 ? (vendasFechadas && movsFechadas) : false;
+
+            // Tenta inferir o horario do fechamento pela ultima alteracao de IsFechado
+            // (nao temos timestamp separado, entao usamos a data da ultima venda/mov fechada)
+            DateTime? horarioFechamento = null;
+            if (caixaFechado)
+            {
+                var ultimasFechadas = new List<DateTime>();
+                if (vendas.Any(v => v.IsFechado))
+                    ultimasFechadas.Add(vendas.Where(v => v.IsFechado).Max(v => v.DataVenda));
+                if (movimentacoes.Any(m => m.IsFechado))
+                    ultimasFechadas.Add(movimentacoes.Where(m => m.IsFechado).Max(m => m.Data));
+
+                if (ultimasFechadas.Count > 0)
+                    horarioFechamento = ultimasFechadas.Max();
+            }
+
+            // ---- PRODUTOS VENDIDOS (itens agrupados) ----
+            var produtos = await MontarProdutosDoDiaAsync(dia, fim);
+
+            // ---- ITENS DETALHADOS DE CADA VENDA (para expandir) ----
+            var vendasComItens = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= dia && v.DataVenda < fim)
+                .Select(v => new
+                {
+                    v.Id,
+                    v.DataVenda,
+                    v.MetodoPagamento,
+                    v.TotalVenda,
+                    Itens = v.Itens.Select(i => new
+                    {
+                        i.ProdutoId,
+                        i.Produto.Nome,
+                        i.Produto.Tipo,
+                        i.Quantidade,
+                        i.PrecoUnitario
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            var vendasComItensDetalhe = vendasComItens.Select(v => new DashboardVendaComItens
+            {
+                Id = v.Id,
+                DataVenda = v.DataVenda,
+                MetodoPagamento = v.MetodoPagamento,
+                Total = v.TotalVenda,
+                Itens = v.Itens.Select(i => new DashboardItemVendaDetalhe
+                {
+                    ProdutoId = i.ProdutoId,
+                    Nome = i.Nome,
+                    Quantidade = i.Quantidade,
+                    PrecoUnitario = i.PrecoUnitario,
+                    PorPeso = i.Tipo == TipoProduto.PorPeso
+                }).ToList()
+            }).ToList();
+
+return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
+            {
+                Dia = dia,
+                TotalDia = vendasDetalhe.Sum(v => v.Total),
+                NumeroVendas = vendasDetalhe.Count,
+                TicketMedio = vendasDetalhe.Count == 0 ? 0m : Math.Round(vendasDetalhe.Sum(v => v.Total) / vendasDetalhe.Count, 2, MidpointRounding.AwayFromZero),
+                Vendas = vendasDetalhe,
+                TotalPorMetodo = totalPorMetodo,
+                Suprimentos = suprimentos,
+                Sangrias = sangrias,
+                CaixaFechado = caixaFechado,
+                HorarioFechamento = horarioFechamento,
+                Produtos = produtos,
+                VendasComItens = vendasComItensDetalhe,
+                TotalSuprimentos = suprimentos.Sum(s => s.Valor),
+                TotalSangrias = Math.Abs(sangrias.Sum(s => s.Valor))
+});
+        }
     }
 
-    /// <summary>
-    /// Projecao minima de uma venda dentro da janela: so a data e o total
-    /// gravado. Carregar a venda inteira arrastaria os itens, que nao servem
-    /// para nada no grafico.
-    /// </summary>
-    public class VendaPeriodo
-    {
-        public DateTime Data { get; set; }
-        public decimal Total { get; set; }
-    }
+// =====================================================================
+// TIPOS DO VIEW-MODEL
+// =====================================================================
 
-    // =====================================================================
-    // TIPOS DO VIEW-MODEL
-    // =====================================================================
+/// <summary>
+/// Projecao minima de uma venda dentro da janela: so a data e o total
+/// gravado. Carregar a venda inteira arrastaria os itens, que nao servem
+/// para nada no grafico.
+/// </summary>
+public class VendaPeriodo
+{
+    public DateTime Data { get; set; }
+    public decimal Total { get; set; }
+}
 
-    /// <summary>Total vendido hoje, agrupado por metodo de pagamento.</summary>
+// =====================================================================
+// TIPOS DO VIEW-MODEL
+// =====================================================================
+
+/// <summary>Total vendido hoje, agrupado por metodo de pagamento.</summary>
     public class DashboardTotalPorMetodo
     {
         public string Metodo { get; set; } = string.Empty;
@@ -554,5 +738,90 @@ namespace ControleEstoqueLoja.Controllers
         public DateTime DataVenda { get; set; }
         public string MetodoPagamento { get; set; } = string.Empty;
         public decimal Total { get; set; }
+    }
+
+    // =====================================================================
+    // VIEW-MODELS DO DETALHE COMPLETO DO DIA (AJAX)
+    // =====================================================================
+
+    /// <summary>Detalhe completo de um dia para o partial AJAX.</summary>
+    public class DashboardDetalheDiaViewModel
+    {
+        public DateTime Dia { get; set; }
+        public string? Erro { get; set; }
+
+        // Resumo financeiro
+        public decimal TotalDia { get; set; }
+        public int NumeroVendas { get; set; }
+        public decimal TicketMedio { get; set; }
+        public decimal TotalSuprimentos { get; set; }
+        public decimal TotalSangrias { get; set; }
+
+        // Vendas por forma de pagamento
+        public List<DashboardTotalPorMetodo> TotalPorMetodo { get; set; } = new();
+
+        // Movimentacoes
+        public List<DashboardMovimentacaoDetalhe> Suprimentos { get; set; } = new();
+        public List<DashboardMovimentacaoDetalhe> Sangrias { get; set; } = new();
+
+        // Fechamento do caixa
+        public bool CaixaFechado { get; set; }
+        public DateTime? HorarioFechamento { get; set; }
+
+        // Produtos vendidos (agrupados)
+        public List<DashboardDiaProduto> Produtos { get; set; } = new();
+
+        // Vendas com itens (para expandir)
+        public List<DashboardVendaComItens> VendasComItens { get; set; } = new();
+
+        // Vendas simples (lista)
+        public List<DashboardVendaDetalhe> Vendas { get; set; } = new();
+    }
+
+    /// <summary>Uma venda com detalhes basicos para a lista.</summary>
+    public class DashboardVendaDetalhe
+    {
+        public int Id { get; set; }
+        public DateTime DataVenda { get; set; }
+        public string MetodoPagamento { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+        public decimal ValorRecebido { get; set; }
+        public decimal ValorTroco { get; set; }
+        public string? CPFCliente { get; set; }
+        public string? CodigoVendedor { get; set; }
+        public bool IsFechado { get; set; }
+    }
+
+    /// <summary>Uma movimentacao (suprimento/sangria) com detalhes.</summary>
+    public class DashboardMovimentacaoDetalhe
+    {
+        public int Id { get; set; }
+        public DateTime Data { get; set; }
+        public string Tipo { get; set; } = string.Empty;
+        public decimal Valor { get; set; }
+        public string Descricao { get; set; } = string.Empty;
+        public bool IsFechado { get; set; }
+    }
+
+    /// <summary>Item de venda para o detalhe expandido.</summary>
+    public class DashboardItemVendaDetalhe
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public decimal Quantidade { get; set; }
+        public decimal PrecoUnitario { get; set; }
+        public bool PorPeso { get; set; }
+        public string Unidade => PorPeso ? "kg" : "un";
+        public decimal Subtotal => Math.Round(PrecoUnitario * Quantidade, 2, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>Venda com seus itens para expandir na tela.</summary>
+    public class DashboardVendaComItens
+    {
+        public int Id { get; set; }
+        public DateTime DataVenda { get; set; }
+        public string MetodoPagamento { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+        public List<DashboardItemVendaDetalhe> Itens { get; set; } = new();
     }
 }

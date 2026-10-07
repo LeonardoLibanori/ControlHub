@@ -16,17 +16,6 @@ function csrfHeaders(extra) {
     });
 }
 
-// 1. MOTOR DO ATALHO
-let modalAtalhosInstance = null;
-document.addEventListener('keydown', function(e) {
-    if (e.altKey && (e.key === 'm' || e.key === 'M')) {
-        e.preventDefault();
-        const modalElement = document.getElementById('modalAtalhos');
-        if (!modalElement || modalElement.classList.contains('show')) return;
-        if (!modalAtalhosInstance) modalAtalhosInstance = new bootstrap.Modal(modalElement);
-        modalAtalhosInstance.show();
-    }
-});
 
 // 2. ABRIR TELAS DE SANGRIA/SUPRIMENTO
 function prepararSangria() { abrirModalOperacao('Sangria'); }

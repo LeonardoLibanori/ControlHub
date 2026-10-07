@@ -446,7 +446,9 @@
             const modalElement = document.getElementById('modalAtalhos');
 
             // Se o modal existir na página atual, verificamos se está visível
-            const isVisible = modalElement && modalElement.classList.contains('show');
+            // Verifica o estado do modal usando a API do Bootstrap
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            const isVisible = modalInstance !== null;
 
 
             // BUG-13 (commit 4): os atalhos de NAVEGACAO obedecem as MESMAS policies

@@ -1161,58 +1161,156 @@ footer .container {
 }
 
 /* --- grafico de barras em CSS puro ---------------------------------- */
+/* 7 DIAS: cada coluna e um BOTAO (link navegavel pelo teclado). O
+   visual e mais moderno: fundo plano, sombra suave, borda fina e
+   destaque dourado no dia ativo. */
 .dash-grafico {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: .5rem;
+    gap: .45rem;
     align-items: end;
-    padding: 1rem .5rem 0;
+    padding: .75rem .5rem 0;
     border: 1px solid var(--border);
-    border-radius: .75rem;
+    border-radius: 1rem;
+    background: var(--surface-1);
 }
 
+/* Cada coluna e um botao: estilo plano moderno */
 .dash-coluna {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .35rem;
+    gap: .4rem;
     min-width: 0;
+    padding: .35rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: .6rem;
+    transition: background-color .15s ease, transform .15s ease;
 }
 
-.dash-coluna-valor {
-    font-size: .7rem;
-    color: var(--text-muted);
-    text-align: center;
-    word-break: break-all;
+/* Hover nas colunas */
+.dash-coluna:hover {
+    background: var(--surface-2);
 }
 
-/* Trilho com altura FIXA: e a barra que cresce dentro dele, entao as 7
-   colunas ficam alinhadas pelo topo do graphicismo. */
+/* Foco do teclado visivel */
+.dash-coluna:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Trilho: fundo com sombra interna sutil */
 .dash-coluna-trilho {
     display: flex;
     align-items: flex-end;
     width: 100%;
-    height: 8rem;
-    background: rgba(255, 255, 255, .04);
-    border-radius: .35rem;
+    height: 6rem;
+    border-radius: .45rem;
     overflow: hidden;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .06);
 }
 
+/* Barra: cheia, com leve gradiente */
 .dash-coluna-barra {
     width: 100%;
-    background: var(--accent);
-    /* min-height garante que um dia com 0 ainda mostre a "base" da barra:
-       a coluna some inteira sem ela. */
+    min-height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+    transition: height .4s ease;
+}
+
+/* Label do dia */
+.dash-coluna-dia {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: .02em;
+    min-width: 2.2rem;
+    text-align: center;
+}
+
+/* Valor: apenas no dia ativo ou em 7 dias */
+.dash-coluna-valor {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+    word-break: break-word;
+}
+
+/* Dia ativo: destaque dourado */
+.dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .12);
+}
+
+.dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .18);
+    border-color: rgba(194, 163, 109, .35);
+}
+
+.dash-coluna.is-dia .dash-coluna-dia {
+    color: var(--text);
+    font-weight: 800;
+}
+
+.dash-coluna.is-dia .dash-coluna-barra {
+    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+}
+
+/* Dia zerado: visual mais claro */
+
+/* 30 DIAS: barras mais finas e colunas mais espaçadas */
+.dash-grafico-longo {
+    grid-template-columns: repeat(30, minmax(2.2rem, 1fr));
+    min-width: 46rem;
+    gap: .15rem;
+}
+
+.dash-grafico-longo .dash-coluna-trilho {
+    height: 4.5rem;
+}
+
+.dash-grafico-longo .dash-coluna-dia {
+    font-size: .6rem;
+    min-width: 1.8rem;
+}
+
+.dash-grafico-longo .dash-coluna-barra {
+    border-radius: 1px;
+}
+
+.dash-grafico-longo .dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .08);
+}
+
+.dash-grafico-longo .dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .15);
+    border-color: rgba(194, 163, 109, .25);
+}
+
+/* Responsividade para 30 dias em telas menores */
+@media (max-width: 70rem) {
+    .dash-grafico-longo {
+        grid-template-columns: repeat(15, minmax(0, 1fr));
+        min-width: 28rem;
+        gap: .2rem;
+    }
+}
+.dash-coluna-dash-coluna-vazia,
+.dash-coluna-vazia .dash-coluna-trilho {
+    opacity: .5;
+}
+
+.dash-coluna-vazia .dash-coluna-barra {
+    background: rgba(194, 163, 109, .15);
     min-height: 2px;
 }
 
-.dash-coluna-dia {
-    font-size: .7rem;
-    color: var(--text-muted);
-}
-
-/* No celular o grafico fica com rolagem lateral, em vez de espremer as 7
-   barras a ponto de virar um risco. */
+/* No celular o grafico fica com rolagem lateral, em vez de espremer as 7 */
 @media (max-width: 30rem) {
     .dash-grafico {
         min-width: 22rem;
@@ -1221,10 +1319,12 @@ footer .container {
     .dash-coluna-valor {
         font-size: .62rem;
     }
+
+    .dash-coluna-dia {
+        font-size: .6rem;
+    }
 }
 
-
-/* =====================================================================
    ETAPA C - GRAFICO 7/30 DIAS E DETALHE POR DIA (.dash-*)
    Continuacao do bloco acima, tambem no FIM do arquivo. Nenhuma regra
    anterior foi alterada.
@@ -1240,11 +1340,22 @@ footer .container {
 
 .dash-cabecalho {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1.25rem;
+    width: 100%;
+}
+
+.dash-cabecalho > div:first-child {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.dash-cabecalho > nav.dash-periodo {
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .dash-cabecalho .dash-titulo,
@@ -1259,6 +1370,7 @@ footer .container {
     padding: .25rem;
     border: 1px solid var(--border);
     border-radius: 999px;
+    margin-left: auto;  /* FORÇA ALINHAMENTO À DIREITA */
 }
 
 .dash-periodo-opcao {
@@ -1298,11 +1410,19 @@ a.dash-coluna {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .35rem;
+    gap: .4rem;
     min-width: 0;
+    padding: .35rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
     text-decoration: none;
-    /* Focus visivel: a coluna virou link navegavel pelo teclado. */
-    border-radius: .35rem;
+    border-radius: .6rem;
+    transition: background-color .15s ease, transform .15s ease;
+}
+
+a.dash-coluna:hover {
+    background: var(--surface-2);
 }
 
 a.dash-coluna:focus-visible {
@@ -1310,16 +1430,31 @@ a.dash-coluna:focus-visible {
     outline-offset: 2px;
 }
 
-a.dash-coluna:hover .dash-coluna-trilho {
-    border-color: var(--border-strong);
+a.dash-coluna.is-dia {
+    background: rgba(194, 163, 109, .12);
 }
 
-a.dash-coluna:hover .dash-coluna-barra {
-    background: var(--accent-hover);
+a.dash-coluna.is-dia .dash-coluna-trilho {
+    background: rgba(194, 163, 109, .18);
+    border-color: rgba(194, 163, 109, .35);
 }
 
-.dash-coluna-vazia .dash-coluna-trilho {
-    opacity: .6;
+a.dash-coluna.is-dia .dash-coluna-dia {
+    color: var(--text);
+    font-weight: 800;
+}
+
+a.dash-coluna.is-dia .dash-coluna-barra {
+    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+}
+
+a.dash-coluna.dash-coluna-vazia .dash-coluna-trilho {
+    opacity: .5;
+}
+
+a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
+    background: rgba(194, 163, 109, .15);
+    min-height: 2px;
 }
 
 /* --- 30 dias: barras finas e rolagem no CONTAINER -------------------- */
@@ -1660,5 +1795,543 @@ a.dash-coluna:hover .dash-coluna-barra {
 .history-aviso-limite .bi {
     color: var(--accent);
     font-size: 1.1rem;
+}
+
+/* =====================================================================
+   DASHBOARD - DETALHE DO DIA VIA AJAX (.dash-detalhe-*)
+   Bloco NOVO no fim do arquivo: carrega detalhes completos do dia
+   sem recarregar a pagina. Aparece logo abaixo do grafico ao clicar
+   numa barra.
+   ===================================================================== */
+
+.dash-detalhe-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-detalhe-titulo {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.dash-detalhe-status {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+}
+
+.dash-detalhe-status.status-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+}
+
+.dash-detalhe-status.status-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+}
+
+.dash-fechar-detalhe {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dash-fechar-detalhe:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dash-detalhe-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.dash-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: dash-spin 1s linear infinite;
+}
+
+@keyframes dash-spin {
+    to { transform: rotate(360deg); }
+}
+
+.dash-alert {
+    padding: .75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.dash-alert-erro {
+    background: rgba(207, 119, 121, .15);
+    border: 1px solid var(--danger);
+    color: #f0c5c6;
+}
+
+.dash-positivo {
+    color: var(--success);
+}
+
+.dash-negativo {
+    color: var(--danger);
+}
+
+/* Badges de status */
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .15rem .5rem;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+}
+
+.dash-badge.badge-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+    border: 1px solid rgba(99, 165, 130, .3);
+}
+
+.dash-badge.badge-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+    border: 1px solid rgba(194, 163, 109, .3);
+}
+
+.dash-linha-fechada {
+    opacity: .6;
+}
+
+.dash-linha-fechada:hover {
+    background-color: rgba(255, 255, 255, .02) !important;
+}
+
+/* Botao expandir itens da venda */
+.dash-expandir-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.dash-expandir-btn:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dash-expandir-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.dash-expandir-btn svg {
+    transition: transform .15s ease;
+}
+
+/* Linha de itens expandida */
+.dash-itens-venda td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.dash-itens-container {
+    padding: .75rem 1rem;
+    background: var(--surface-input, #14191d);
+    border-top: 1px solid var(--border);
+}
+
+.dash-tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+.dash-tabela-itens th,
+.dash-tabela-itens td {
+    padding: .5rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-tabela-itens th {
+    font-size: .7rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.dash-tabela-itens tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* =====================================================================
+   DASHBOARD - MELHORIAS VISUAIS NOS CARTÕES E DETALHE
+   ===================================================================== */
+
+/* Cards do dashboard: visual mais moderno com sombra, destaque e agradável arredondamento */
+.dash-cartao {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    padding: 1.45rem 1.5rem;
+    background: var(--surface-input, #14191d);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Cada card com sua cor característica */
+.dash-grade .dash-cartao:nth-child(1) {
+    border-top: 3px solid var(--success);
+}
+.dash-grade .dash-cartao:nth-child(1) .dash-valor {
+    color: var(--success);
+}
+
+.dash-grade .dash-cartao:nth-child(2) {
+    border-top: 3px solid var(--info);
+}
+.dash-grade .dash-cartao:nth-child(2) .dash-valor {
+    color: var(--info);
+}
+
+.dash-grade .dash-cartao:nth-child(3) {
+    border-top: 3px solid var(--danger);
+}
+.dash-grade .dash-cartao:nth-child(3) .dash-valor {
+    color: var(--danger);
+}
+
+/* Valor dos cards */
+.dash-grade .dash-cartao .dash-valor {
+    font-size: 2rem;
+}
+
+/* Efeito hover nos cards - brilho na cor do card */
+.dash-cartao:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
+    border-color: var(--border-strong);
+}
+
+.dash-grade .dash-cartao:nth-child(1):hover {
+    border-color: var(--success);
+    box-shadow: 0 8px 28px rgba(99, 165, 130, .2);
+}
+
+.dash-grade .dash-cartao:nth-child(2):hover {
+    border-color: var(--info);
+    box-shadow: 0 8px 28px rgba(130, 174, 188, .2);
+}
+
+.dash-grade .dash-cartao:nth-child(3):hover {
+    border-color: var(--danger);
+    box-shadow: 0 8px 28px rgba(207, 119, 121, .2);
+}
+
+/* Rótulo do card: maiúsculo, leve e com separação */
+.dash-rotulo {
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+/* Valor dos cards - cores definidas por card acima */
+
+.dash-valor {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    font-weight: 800;
+    color: var(--text);
+    word-break: break-word;
+    letter-spacing: -.01em;
+}
+
+/* Numero que pede atencao: usa as cores que JA existem no tema. */
+.dash-negativo {
+    color: var(--danger);
+}
+
+.dash-positivo {
+    color: var(--success);
+}
+
+/* --- Detalhe do dia: mesma largura do .main-container --- */
+.dash-detalhe-dia {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 1.5rem 1.5rem 1.75rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .2);
+}
+
+/* Cabeçalho do detalhe: alinhado com o layout do dashboard */
+.dash-detalhe-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: .9rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.dash-detalhe-titulo {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -.01em;
+}
+
+.dash-detalhe-status {
+    font-size: .78rem;
+    font-weight: 700;
+    padding: .4rem .85rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dash-detalhe-status.status-fechado {
+    color: var(--success);
+    background: rgba(99, 165, 130, .15);
+    border: 1px solid rgba(99, 165, 130, .3);
+}
+
+.dash-detalhe-status.status-aberto {
+    color: var(--accent);
+    background: rgba(194, 163, 109, .15);
+    border: 1px solid rgba(194, 163, 109, .3);
+}
+
+/* Seções no detalhe: mesma altura de linha do dashboard */
+.dash-detalhe-dia .dash-secao {
+    margin-bottom: 1.75rem;
+}
+
+.dash-detalhe-dia .dash-titulo-secao {
+    font-size: 1.15rem;
+    margin-bottom: .85rem;
+    color: var(--text);
+    font-weight: 800;
+}
+
+/* Tabelas no detalhe com visao mais limpa */
+.dash-detalhe-dia .dash-rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: .85rem;
+    background: var(--surface-1);
+}
+
+.dash-detalhe-dia .dash-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+}
+
+.dash-detalhe-dia .dash-tabela th,
+.dash-detalhe-dia .dash-tabela td {
+    padding: .7rem .85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    min-width: 6rem;
+    white-space: nowrap;
+}
+
+.dash-detalhe-dia .dash-tabela th {
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.dash-detalhe-dia .dash-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dash-detalhe-dia .dash-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.dash-detalhe-dia .dash-vazio {
+    color: var(--text-muted);
+    padding: 1.25rem 0;
+}
+
+/* --- Reposicionamento do botão fechar do detalhe --- */
+.dash-detalhe-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-detalhe-header .dash-titulo-secao {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.dash-fechar-detalhe {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: .5rem;
+    color: var(--text-muted);
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.dash-fechar-detalhe:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Badges de status no detalhe */
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .6rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 999px;
+}
+
+.dash-badge.badge-fechado {
+    background: rgba(99, 165, 130, .15);
+    border-color: rgba(99, 165, 130, .3);
+    color: var(--success);
+}
+
+.dash-badge.badge-aberto {
+    background: rgba(194, 163, 109, .15);
+    border-color: rgba(194, 163, 109, .3);
+    color: var(--accent);
+}
+
+/* Container de itens expandidos do detalhe */
+.dash-itens-container {
+    padding: .75rem 1rem;
+    background: var(--surface-input, #14191d);
+    border-top: 1px solid var(--border);
+}
+
+.dash-tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+.dash-tabela-itens th,
+.dash-tabela-itens td {
+    padding: .5rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.dash-tabela-itens th {
+    font-size: .7rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+/* Loading do detalhe */
+.dash-detalhe-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.dash-loading-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: dash-spin 1s linear infinite;
+}
+
+@keyframes dash-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Alerta no detalhe */
+.dash-alert {
+    padding: .85rem 1rem;
+    border-radius: .75rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+}
+
+.dash-alert-erro {
+    background: rgba(207, 119, 121, .12);
+    border: 1px solid var(--danger);
+    color: #f0c5c6;
 }
 
