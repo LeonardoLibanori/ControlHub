@@ -13,7 +13,7 @@ namespace ControleEstoqueLoja.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        // Inje��o do Banco de Dados
+        // Injeção do Banco de Dados
         private readonly ApplicationDbContext _context;
 
         public HomeController(ApplicationDbContext context, IConfiguration? config = null)
@@ -268,7 +268,7 @@ namespace ControleEstoqueLoja.Controllers
             return View(produto);
         }
 
-        // Exclus�o Real no Banco
+        // Exclusão Real no Banco
         /// <summary>
         /// Exclusao LOGICA (soft delete) do produto.
         ///
@@ -288,13 +288,13 @@ namespace ControleEstoqueLoja.Controllers
             if (produto != null)
             {
                 produto.Ativo = false;  // BUG-08 soft delete: NUNCA Remove() aqui
-                _context.SaveChanges(); // Salva a exclus�o no arquivo .db
+                _context.SaveChanges(); // Salva a exclusão no arquivo .db
             }
 
             return RedirectToAction("Index");
         }
 
-        // Movimenta��o de Estoque (Entrada/Sa�da)
+        // Movimentação de Estoque (Entrada/Saída)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
@@ -330,7 +330,7 @@ namespace ControleEstoqueLoja.Controllers
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
         public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras, string? estoqueMinimo = null)
         {
-            // 1. Pre�o: O JS envia "500" para R$ 5,00. Dividimos por 100.
+            // 1. Preço: O JS envia "500" para R$ 5,00. Dividimos por 100.
             decimal.TryParse(preco, out decimal valorBruto);
             decimal precoFinal = valorBruto / 100;
 
@@ -341,7 +341,7 @@ namespace ControleEstoqueLoja.Controllers
                 return RedirectToAction("Index");
             }
 
-            // 2. Quantidade: O seu JS j� limpa para "10.5", usamos InvariantCulture
+            // 2. Quantidade: O seu JS já limpa para "10.5", usamos InvariantCulture
             decimal.TryParse(quantidade?.Replace(",", "."),
                              System.Globalization.NumberStyles.Any,
                              System.Globalization.CultureInfo.InvariantCulture,
@@ -418,10 +418,10 @@ namespace ControleEstoqueLoja.Controllers
             // Procura o produto pelo ID
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
 
-            // Se n�o achar, avisa que n�o existe
+            // Se não achar, avisa que não existe
             if (produto == null) return NotFound();
 
-            // Abre a p�gina "Editar.cshtml" levando os dados do produto junto
+            // Abre a página "Editar.cshtml" levando os dados do produto junto
             return View(produto);
         }
         [HttpPost]

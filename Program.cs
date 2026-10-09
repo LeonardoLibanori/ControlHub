@@ -17,8 +17,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
-// Isso vai imprimir no console do Visual Studio exatamente onde o arquivo est�
-Console.WriteLine($"O BANCO ATIVO �: {connectionString}");
+// Isso vai imprimir no console do Visual Studio exatamente onde o arquivo está
+Console.WriteLine($"O BANCO ATIVO É: {connectionString}");
 // ----------------------------------------------
 
 // Adicione isso ANTES do builder.Build()

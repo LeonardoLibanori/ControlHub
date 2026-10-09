@@ -479,6 +479,62 @@ histórico de preço, CSV).
 9. **Perfis mais finos** (gerente, caixa) além de Dono/Operador
 10. **Recuperação de senha** e 2FA
 
+
+
+---
+
+## 0c. Mapeamento da entrada — _Layout.cshtml (verificado 10/2026)
+
+### Estrutura do shell que será criado
+
+- **Corpo**: `<body class="app-shell">` (classe de habilitação do JS) ou, para
+  Login/Setup (casas de acesso, sem shell), o `<body>` sem a classe.
+- **Shell**: `.app-shell` → flex column (min-height 100vh). Dentro:
+  - `.app-sidebar` (fixo, `left:0`, `width: 272px`, `z-index: 1040`): top (brand),
+    `<nav class="app-nav">` (itens + seção do usuário), footer (tema + estado).
+  - `.app-main` (flex:1): `.app-header` (hambúrguer, tema, busca, avatar + menu),
+    `.app-content` (max-width 1440px, margin auto, padding), `.app-footer`.
+- **Conteúdo das telas**: `@RenderBody()` dentro de `.app-content` — **não
+  muda**, nem ordem, nem contéudo.
+- **Legado**: `.main-container` permanece nos Views, com override escopado
+  `.app-content .main-container { width:100%; margin:0 }` (sem duplicar padding
+  da caixa do shell; sem overflow no mobile).
+
+### Elementos não de navegação (chrome) mapeados
+
+| ID/Classe | Uso | Status |
+|---|---|---|
+| `campoBusca`, `#sugestoes` | busca global do header | mantido no header, escondido no mobile |
+| `#modalAtalhos` | menu numerado Alt+M | mantido, fora do shell, sobreposto |
+| `#modalOperacao` | sangria/suprimento | mantido |
+| `#modalAjudaAtalhos` | overlay de ajuda (`.aberto`) | mantido, sobreposição global |
+| `#btnMenuPerfil`, `.dropdown-menu` | perfil + tema/Usuários/Sair | mantido no header |
+| `#campoBusca` | foco + ESC limpa | mantido no Esc handler |
+
+### Atalhos Alt+ mapeados (todos com `if (window.LOJA_ACESSO...)` no
+`keydown` inline do _Layout; politica via `Security/Policies.cs`)
+
+| Atalho | Destino | Policy | Exibir no sidebar |
+|---|---|---|---|
+| `Alt+E` | `/Home/Index` | PodeOperarPDV | `Estoque` |
+| `Alt+C` | `/Caixa` | PodeOperarPDV | `Caixa` |
+| `Alt+H` | `/Caixa/Historico?periodo=hoje` | PodeVerFinanceiro | `Histórico` |
+| `Alt+M` | `#modalAtalhos` (numbers 1-7) | `temMenuAtalhos` | — (modal) |
+| `Escape` | fechar modal Ajuda / limpar campoBusca | — | — |
+
+### Login/Setup usam layout separado
+
+- `Views/Account/Login.cshtml` e `Views/Account/Setup.cshtml` e
+  `Views/Account/AcessoNegado.cshtml` — **não** estendem `_Layout` com shell;
+  respondem `ViewContext` é a mesma mas `User.Identity.IsAuthenticated` é falso,
+  portanto a ramificação `if (autenticado)` não entra, e o `<header>` original
+  (menu simples) é renderizado. O shell só nasce quando `autenticado == true`.
+
+### Regra de decisão (verificar depois)
+
+- O shell só é colocado se `autenticado == true`. Senão, o HTML original
+  (header/brand/navbar) é mantido inalterado.
+
 ### (c) Integrações com IA
 11. **Previsão de demanda / sugestão de reposição** (usa estoque mínimo + histórico)
 12. **Leitura de nota fiscal (OCR + LLM)** para entrada de produtos
@@ -491,6 +547,21 @@ histórico de preço, CSV).
 
 ```powershell
 # build limpo
+
+### AJUSTE DE SHELL 3 DE 3 — cabeçalho do Dashboard (10/10/2026)
+
+- **Objetivo:** remover a linha de subtítulo `"dd/MM/aaaa · conferência do dia"` abaixo do título "Dashboard" e transformar o seletor de janela ("7 dias | 30 dias") em uma linha flex alinhada ao centro da primeira linha do título, com `gap: 16px` e `margin-bottom: 24px` até o primeiro cartão.
+- **Mudanças:**
+  - `Views/Dashboard/Index.cshtml`: linha do subtítulo removida; estrutura do cabeçalho deixou de carregar estilo inline e passou a depender da folha de estilos.
+  - `wwwroot/css/corporate-theme.css`: novo bloco no fim da folha (`.dash-cabecalho` em `display: flex`, `justify-content: space-between`, `align-items: center`, `gap: 16px`, `margin-bottom: 24px`; `.dash-titulo` com `margin-bottom: 0`; em `(max-width: 767.98px)` o cabeçalho vira coluna, `row-gap: 12px` e `margin-bottom: 16px`).
+  - Causa raiz: a regra `.dash-cabecalho` original ficava dentro de um bloco de comentário quebrado (`*/` órfão no FINAL da regra, na descrição "ETAPA C"), de modo que `display: flex` nunca aplicava. O bloco novo no fim da folha foi deixado **auto-suficiente** (sem depender da regra quebrada).
+- **Verificações CDP (Dono, ambos os temas):**
+  - `1440`: gap header→cartão `24px`, `dCentro=0px`, `"conferência"` não aparece, `overflowX=0`.
+  - `1024`: gap `24px`, `dCentro=0px`, `"conferência"` não aparece, `overflowX=0`.
+  - `390`: gap `16px` (seletor desce abaixo do título com `12px` entre si, `margin-bottom` do cabeçalho `16px`), `dCentro=49px` (esperado: seletor em coluna), `"conferência"` não aparece, `overflowX=0`.
+- **Resultados:** build 0 erros; `dotnet test tests.QA` `288/288`; `encoding-check` 0; `css-balance` 451 pares; `contrast` `60/60`; `nav-smoke` **82/82** em Dono e no escuro. FALHA de autonomia isolada do Operador na instância de teste (`operador@teste.com` não existe no `.db` temporário de QA) — não interfere no escopo deste ajuste.
+- **Commit:** `fix(dashboard): removes subtitle and repositions period selector`.
+
 dotnet build                              # 0 erros, 0 avisos
 
 # suíte completa
@@ -522,7 +593,243 @@ dotnet ef migrations list
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado em 05/10/2026 a partir de `main@178babb`.*
+---
+
+## 14. REDESIGN PASSO 1 DE 5 — TEMAS CLARO/ESCURO POR TOKENS (08/10/2026)
+
+### O que mudou
+
+**`wwwroot/css/corporate-theme.css`** — toda cor agora vive em quatro blocos
+de paleta no topo do arquivo; as regras consomem `var(...)`:
+
+1. `:root, :root[data-theme="dark"]` — paleta **escura** (padrão)
+2. `:root` — derivados (`color-mix` 14% fundo / 55% borda), **aliases legados**
+   (`--app-bg`, `--surface-*`, `--accent`, `--text-muted`…) e tokens comuns
+   (botões coloridos, variáveis `--bs-*` do Bootstrap, dropdown)
+3. `:root[data-theme="light"]` — paleta **clara** (escolha explícita)
+4. `@media (prefers-color-scheme: light)` sobre `:root:not([data-theme])` —
+   modo **auto** acompanhando o sistema
+
+O **dourado foi aposentado**: `--accent` agora é a série **azul**
+(`--c-blue`/`--t-blue`); dourados fixos (`#c2a36d`, `rgba(194,163,109,*)`)
+viraram tokens azuis ou `color-mix`. Selos e botões coloridos usam **tinta de
+série** (texto `--t-*` sobre fundo `--s-*-fundo` 14%) nos dois temas; no claro
+só a ação primária é azul sólido com texto branco. Restos conhecidos: **6
+cores fixas em `style=""`** em 3 Views (Caixa/Index ×4 `#004d1a`,
+Home/Editar ×1, Home/Privacy ×1 — Views intocáveis por regra) e sombras
+decorativas `rgba(0,0,0,*)` (não são texto/fundo de leitura).
+
+**`Views/Shared/_Layout.cshtml`** — script inline no `<head>` **antes de
+qualquer CSS**: lê a chave `controlhub-tema` do `localStorage`
+(`auto`/`claro`/`escuro`), grava `data-theme` no `<html>` e expõe
+`aplicarTema()`; no menu de perfil, três opções de texto
+(`role="menuitemradio"` + `aria-checked` sincronizado). Sem `data-theme`, o
+`prefers-color-scheme` do CSS decide junto com o SO.
+
+**`qa/contrast.mjs` (novo)** — guarda de contraste: lê os blocos de paleta,
+resolve `var()`/`color-mix()`, calcula a razão WCAG exata de 29 pares por
+paleta (58 no total; 4.5:1 texto, 3.0:1 borda de ação) e confere que o bloco
+auto é espelho exato do claro. **Achou e corrigiu** a borda do botão primário
+escura (2.93 < 3.0 → tinta 55% → 70%).
+
+**`qa/screenshot-themes.mjs` (novo)** — Chrome headless + CDP puro (sem npm):
+12 prints (Login, Estoque, Caixa+modal de pagamento, Histórico, Usuários,
+Dashboard × 2 temas). Credenciais só por variável de ambiente
+(`PRINTS_EMAIL`/`PRINTS_SENHA`).
+
+### Verificação (08/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `dotnet build --no-incremental` | 0 erros; 1 aviso **pré-existente** CS8602 (`_DetalheDiaPartial.cshtml(277)`) |
+| `dotnet test tests.QA` | **288/288** |
+| `node qa/encoding-check.mjs` | 148 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 331 pares balanceados |
+| `node qa/contrast.mjs` | **58/58 pares**, auto = claro |
+| `qa/http-assets.ps1` | 13/13 (6 assets × 2 com/sem gzip) |
+| `qa/http-authz.ps1 -Porta 5321` | **131/131** + hash do `.db` versionado idêntico |
+| Prints (6 telas × 2 temas) | 12 PNGs; luminância confere o tema em 11/12 — `caixa-modal-claro` mede 92 lux porque o overlay escuro cobre a página clara (o modal branco fica por cima; páginas escuras medem 16–29 lux) |
+| `git diff` de arquivos protegidos | vazio (só CSS, `_Layout`, `ESTADO` e `qa/` novo) |
+
+**Destino dos prints**: a tarefa pedia `E:\Sistema de Estoque\prints\`, mas
+esta máquina **não tem unidade E:** — os PNGs ficaram em
+`c:\Aplicações & Sistemas\Sistema de Estoque\prints\` (raiz do workspace).
+
+### Regras mantidas
+
+- `controleestoque.db` **modificado antes desta sessão** e **excluído do
+  `git add`** (não foi tocado; hash confirmado pelo http-authz)
+- Nenhuma migration, nenhum `--force`, nenhum push, testes intactos
+- `@media print` e o cupom **não** foram alterados
+- Nada em Models, Controllers, ApplicationDbContext, CaixaController, Export*
+
+---
+
+## 15. AJUSTE DE SHELL (1 DE 3) — MENU DO USUÁRIO ÚNICO, CHAVE DE TEMA E FAIXA ENXUTA (09/10/2026)
+
+Tag de partida: `pre-ajuste-1` (`2cbf740`). Escopo: reescrever o shell
+autenticado do `_Layout.cshtml` (sidebar, menu do usuário, chave de tema e
+faixa superior) com verificação CDP/QA completa e **commit único**.
+
+### O que mudou
+
+- **`Views/Shared/_Layout.cshtml`** (ramificação `if (autenticado)` reescrita):
+  - **Sidebar** `#app-sidebar` com marca `ControlHub`, grupos **Operação**
+    (Estoque; Caixa se `podeVerFinanceiro`) e **Gestão** (Histórico; Dashboard
+    — o grupo inteiro **dentro** do `@if (podeVerFinanceiro)`, corrige item
+    órfão para o Operador), item ativo via `MenuAtivo(...)` (bug do ativo
+    duplo em `/Caixa/Historico` corrigido: `MenuAtivo("Caixa","Index")` para o
+    PDV).
+  - **Menu do usuário único**: botão `#btnUsuario` (aria-haspopup/controls/
+    expanded) + `#menuUsuario` (`role="menu"`) com `Usuários` (só Dono) e
+    `Sair` (form com antiforgery). Sumiram `#btnMenuPerfil`, `.dropdown-menu`
+    e o `<b>` da navbar antiga.
+  - **Chave de tema**: `<button class="app-theme" role="switch"
+    aria-checked>` com knob e ícones lua/sol; sem botão `#btnTheme` antigo.
+  - **Faixa superior enxuta**: `.app-header` contém **só** `#btnMenu`
+    (hambúrguer) + `.app-caminho` (grupo / página). Sumiram a busca
+    (`#campoBusca`, `.busca-form`) e os atalhos de perfil.
+  - Modais (`modalAtalhos`, `modalOperacao`, `modalAjudaAtalhos`) **fora** do
+    if/else (compartilhados); `IConfiguration` injetado para `Marca:Nome`.
+- **`wwwroot/js/shell.js`** (novo, sem dependências): menu do usuário
+  (abre/fecha, Esc, clique fora, setas), chave de tema (alterna
+  escuro/claro e persiste), hambúrguer (recolhe em ≥1024px persistindo
+  `controlhub-sidebar`; gaveta + cortina abaixo de 1024px). Expõe
+  `window.SHELL` para os testes.
+- **`wwwroot/css/corporate-theme.css`**: blocos "AJUSTE DE SHELL" (sidebar,
+  menu, chave, faixa, cortina, gaveta) e token `--knob-ink` nas 3 paletas
+  (escuro `#0B1220`, claro/auto `#FFFFFF`).
+- **`qa/cdp-helper.mjs`** (novo): infraestrutura CDP comum (Chrome headless +
+  DevTools puro, sem npm) — login e medições reutilizáveis.
+- **`qa/shell-check.mjs`** (novo): 7 verificações (V1 itens da sidebar por
+  papel, V2 ativo/aria-current por tela + gate do Operador no Dashboard,
+  V3 menu do usuário único, V4 chave de tema + contraste do knob ≥ 3:1 ao
+  vivo, V5 faixa enxuta, V6 larguras 1440/390 com gaveta/cortina/Esc,
+  V7 baseline) para **Dono + Operador × 2 temas × Estoque + Dashboard**;
+  grava `prints\baseline-menu.json`.
+- **`qa/contrast.mjs`**: novo par obrigatório "icone sob o knob / fundo do
+  knob" (`knob-ink` vs `c-blue`, mínimo 3.0) nas duas paletas.
+- **`qa/http-authz.ps1`**: 3 seletores de "o que o navegador mostra"
+  atualizados para o markup novo (nome em `<span class="app-usuario__nome">`;
+  Histórico com `?periodo=hoje`). Autorização (200/403/302) intocada.
+
+### Verificação (09/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `node qa/shell-check.mjs` | **142/142** — 7 verificações; Dono+Operador, escuro+claro, 1440+390px, Estoque+Dashboard; knob 7.21:1 (escuro) e 5.17:1 (claro) |
+| `dotnet build --no-incremental` | 0 erros; 1 aviso **pré-existente** CS8602 |
+| `dotnet test tests.QA` | **288/288** (`TestResults/shell-ajuste1.trx`) |
+| `node qa/encoding-check.mjs` | 153 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 444 pares balanceados |
+| `node qa/contrast.mjs` | **60/60 pares** (58 + 2 do knob), auto = claro |
+| `qa/http-assets.ps1` | 13/13 (6 assets × 2 com/sem gzip) |
+| `qa/http-authz.ps1 -Porta 5323` | **131/131** + hash do `.db` versionado idêntico |
+| `git diff` protegidos | vazio (só `_Layout`, CSS, `shell.js`, `ESTADO` e `qa/`) |
+| grep do diff | nenhum `Html.Raw`/`innerHTML`/recurso externo novo (os 3 `http://` são localhost nos scripts QA) |
+| Seed de dados de QA | Dono e Operador criados no banco **temporário** `%TEMP%\qa-shell.db` (app de QA na porta 5311); versionado intocado |
+
+### Regras mantidas
+
+- `controleestoque.db` continua **modificado de antes da sessão** e
+  **excluído do `git add`**; hash SHA256 idêntico antes/depois do http-authz
+- Nenhuma migration, nenhum `--force`, nenhum push; gates de permissão
+  originais (policies BUG-13) preservados — o menu só pergunta ao mesmo
+  `IAuthorizationService` das rotas
+- Views intocáveis (Models/Controllers/`@media print`/cupom) não mudaram
+
+---
+
+## 16. AJUSTE DE SHELL (2 DE 3) — HISTÓRICO ABRE E ALT+M FUNCIONA (10/10/2026)
+
+Escopo: fazer o **menu administrativo abrir** e o **Histórico abrir**, sem mudar
+lógica de sangria/suprimento/fechamento/relatório/reimpressão/vendedores — só
+navegação e o menu. Só `Views/Shared/_Layout.cshtml`, `wwwroot/css/corporate-theme.css`
+(bloco novo no fim), `wwwroot/js/shell.js`, `wwwroot/js/site.js`, `qa/` e este
+arquivo. `admin-caixa.js` **não** foi tocado (os botões 1–7 continuam chamando as
+mesmas funções de lá).
+
+### Causa de cada defeito (com evidência)
+
+**Histórico.** No shell autenticado (novo) o item já apontava certo
+(`/Caixa/Historico?periodo=hoje`, via `asp-route-periodo`) e abria HTTP 200 com
+"Vendas de hoje" e zero erros de console (medido por CDP). O defeito real estava
+no **navbar antigo** (branch `else`, telas de login/Setup): o href era
+`/Caixa/Historóico?periodo=hoje` — com **acento errado em "Historóico"**, que não
+bate com a action `Historico` e daria 404. Corrigido para `Historico`.
+
+**Alt+M / atalhos.** Quatro causas, todas no handler de teclado inline do
+`_Layout`:
+
+1. **Casava por `e.key`** (`e.key === 'm'`, `'c'/'h'/'e'` via `toLowerCase`).
+   `e.key` depende do layout de teclado: em layout não-US o Alt+letra devolve
+   outro caractere e o atalho simplesmente não vem. Passou a casar por
+   **`event.code`** (`KeyM`/`KeyC`/`KeyE`/`KeyH`, `Digit1..7`), idêntico em
+   qualquer layout.
+2. **Estado do overlay errado**: usava `bootstrap.Modal.getInstance(modal) !== null`,
+   que só diz que a instância *existe* (mesmo escondida) — depois do 1º abrir/fechar
+   o `Alt+M` parava de abrir. Passou a usar `modal.classList.contains('show')`.
+3. **Esc não fechava** o overlay: o handler só alternava o `modalAjudaAtalhos` e, no
+   PDV, o `#campoBusca` em foco era limpo antes de qualquer coisa. Agora, com o
+   overlay aberto, **Esc o fecha primeiro**; **clique-fora** (backdrop) também fecha.
+4. **Empilhamento**: garantido por bloco CSS explícito — `#modalAtalhos` (z 1080) e
+   seu backdrop (1070) ficam acima da sidebar (1040) e da faixa superior (1030).
+
+Permissões preservadas: `Alt+C`/`Alt+E` exigem `LOJA_ACESSO.pdv`; `Alt+H` exige
+`LOJA_ACESSO.financeiro` (só Dono); `Alt+M` abre o overlay renderizado por
+`temMenuAtalhos` (admin p/ Dono, do caixa p/ Operador). Nenhum destino nem policy mudou.
+
+### O que mudou
+
+- `Views/Shared/_Layout.cshtml`: handler de teclado reescrito (por `event.code`,
+  `preventDefault`, estado real por `classList`, Esc e clique-fora fecham, mesmas
+  policies e mesmos destinos, números 1–7 chamam os mesmos `data-key`); href do
+  navbar antigo corrigido (`Historóico` → `Historico`).
+- `wwwroot/css/corporate-theme.css`: bloco novo no fim (`#modalAtalhos` 1080,
+  `body > .modal-backdrop` 1070) — 446 pares de chave, equilibrado.
+- `qa/nav-smoke.mjs`: guarda nova (reaproveita `qa/cdp-helper.mjs`).
+- `qa/up-shell.ps1`: sobe a instância de teste (porta 5311, `.db` temporário em
+  `%TEMP%`) e cria Dono + Operador — base para a guarda e o diagnóstico.
+- `qa/cdp-helper.mjs`: `aoEvento` (assinantes de eventos CDP) para a guarda contar
+  erros de console e respostas `>= 400`.
+- `wwwroot/js/shell.js` e `wwwroot/js/site.js`: **sem mudança** (shell.js só mexe na
+  gaveta; site.js está vazio) — o handler único é o inline do `_Layout`.
+
+### A guarda nova — `qa/nav-smoke.mjs`
+
+Para **Dono e Operador**, nos **dois temas**: cada destino do menu (e "Usuários"
+pelo menu do usuário, Dono) abre **HTTP 200**, breadcrumb coerente, **zero erros de
+console** e **zero requisições `>= 400`**; `Alt+M` abre o overlay em todas as telas
+e `Esc` o fecha; `Alt+C`/`Alt+E`/`Alt+H` navegam para o destino certo; o Operador
+não vê itens fora da policy e `/Dashboard` dá acesso negado. Os atalhos são
+disparados com `event.code` real e um `key` de layout não-US (ex.: `µ` para Alt+M):
+só um handler por `code` passa — é assim que a regressão fica presa.
+
+### Verificação (10/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `node qa/nav-smoke.mjs --base http://localhost:5311` | **82/82** — Dono+Operador, escuro+claro |
+| `dotnet build --no-incremental` | 0 erros; 1 aviso **pré-existente** CS8602 em `_DetalheDiaPartial.cshtml` (confirmado no baseline com as mudanças em stash) |
+| `dotnet test tests.QA` | **288/288** (`TestResults/ajuste2.trx`) |
+| `node qa/encoding-check.mjs` | 153 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 446 pares balanceados |
+| `node qa/contrast.mjs` | **60/60 pares**, 0 problemas |
+| `qa/http-assets.ps1` | **13/13** (6 assets × 2 com/sem gzip) |
+| `qa/http-authz.ps1` | **0 falhas** + hash do `controleestoque.db` versionado **idêntico** antes/depois |
+| `git diff` protegidos | vazio (só `_Layout`, CSS, `cdp-helper.mjs`, `nav-smoke.mjs`, `up-shell.ps1`, `ESTADO`) |
+
+### Regras mantidas
+
+- `controleestoque.db` **intacto** (hash SHA256 idêntico antes/depois do http-authz)
+  e **fora do `git add`**; seed de QA só no `.db` temporário em `%TEMP%`
+- Nenhuma migration, nenhum `--force`, nenhum push; policies BUG-13 preservadas
+- `admin-caixa.js`, `CaixaController`, Models, `ApplicationDbContext`, `Export*` e
+  testes existentes **não** mudaram; capturas em `E:\Sistema de Estoque\prints\`
+
+---
+
+*Fim do relatório. Gerado em 02/10/2026, atualizado em 10/10/2026 (ajustes de shell 1 e 2 de 3) a partir de `main@34c14bc`.*
 
 
 

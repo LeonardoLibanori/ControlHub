@@ -1,31 +1,253 @@
-:root {
+/* ==========================================================================
+   PASSO 1 DO REDESIGN - CORES POR TOKENS (tema claro e escuro)
+   --------------------------------------------------------------------------
+   Regra do arquivo: toda cor vive nos blocos de paleta abaixo; as regras so
+   consomem var(...). Estrutura:
+
+     1. :root, :root[data-theme="dark"]        - paleta ESCURA (padrao)
+     2. :root                                  - derivados (14%/55%), aliases
+        legados e tokens IGUAS nos dois temas
+     3. :root[data-theme="light"]              - paleta CLARA (escolha explicita)
+     4. @media (prefers-color-scheme: light)   - paleta CLARA para quem ficou em
+        :root:not([data-theme])                "automatico" (sem data-theme)
+
+   Tokens de serie: --c-* = cor cheia (decor/bordas), --t-* = tinta de selo/
+   texto (contraste), --s-*-fundo = 14% e --s-*-borda = 55% sobre o cartao.
+   O destaque dourado foi aposentado: --accent agora e a serie AZUL.
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
     color-scheme: dark;
-    --app-bg: #111519;
-    --surface-1: #181e23;
-    --surface-2: #20282e;
-    --surface-3: #283239;
-    --surface-input: #14191d;
-    --border: #364149;
-    --border-strong: #4a565e;
-    --text: #f1eee7;
-    --text-muted: #a5afb5;
-    --accent: #c2a36d;
-    --accent-hover: #d1b681;
-    --accent-ink: #171914;
-    --teal: #548f87;
-    --success: #63a582;
-    --danger: #cf7779;
-    --info: #82aebc;
-    --shadow: 0 18px 48px rgba(0, 0, 0, .24);
-    --bs-body-bg: var(--app-bg);
+
+    /* --- paleta escura: fundos escuros, nunca cor viva solida como fundo --- */
+    --bg-page: #111519;
+    --bg-sidebar: #0D1013;
+    --bg-card: #171C20;
+    --bg-alt: #1E252B;
+    --bg-input: #101417;
+    --line: #2B353D;
+    --line-input: #3A464E;
+    --text: #ECF0F4;
+    --text-soft: #A5AFB5;
+
+    --c-blue: #5EA2FF;
+    --c-violet: #9D86F6;
+    --c-cyan: #5FC4DE;
+    --c-green: #58C997;
+    --c-amber: #F5B445;
+    --c-coral: #FF7B7B;
+    --c-slate: #B6C1CC;
+
+    --t-blue: #8DBBFF;
+    --t-violet: #BCADFB;
+    --t-cyan: #9CD9E9;
+    --t-green: #91E3C4;
+    --t-amber: #FFD68A;
+    --t-coral: #FFB2B2;
+
+    /* fundo do item/periodo/cartao em exibicao ("voce esta aqui") */
+    --bg-ativo: color-mix(in srgb, var(--c-blue) 14%, var(--bg-card));
+
+    /* botao primario: tinta de serie (selo), nada de azul solido vivo */
+    --btn-primary-bg: color-mix(in srgb, var(--c-blue) 14%, var(--bg-card));
+    --btn-primary-bd: color-mix(in srgb, var(--c-blue) 70%, var(--bg-card));
+    --btn-primary-ink: var(--t-blue);
+    --knob-ink: #0B1220;
+    --btn-primary-bg-hover: color-mix(in srgb, var(--c-blue) 26%, var(--bg-card));
+    --btn-primary-bd-hover: color-mix(in srgb, var(--c-blue) 78%, var(--bg-card));
+
+    /* secundario/neutro */
+    --btn-neutral-bg: var(--bg-alt);
+    --btn-neutral-bd: var(--line);
+    --btn-neutral-ink: var(--text);
+    --btn-neutral-bg-hover: color-mix(in srgb, var(--text) 10%, var(--bg-alt));
+    --btn-neutral-bd-hover: var(--line-input);
+
+    /* ink SOLIDO sobre --accent solido (Swal confirm e pílula is-ativo) */
+    --accent-ink: #0B1220;
+    --shadow: 0 14px 34px rgba(0, 0, 0, .5);
+    --filtro-icone: invert(1) grayscale(1);
+}
+
+:root {
+    /* --- derivados: 14% de fundo e 55% de borda de cada serie sobre o cartao --- */
+    --s-blue-fundo: color-mix(in srgb, var(--c-blue) 14%, var(--bg-card));
+    --s-blue-borda: color-mix(in srgb, var(--c-blue) 55%, var(--bg-card));
+    --s-violet-fundo: color-mix(in srgb, var(--c-violet) 14%, var(--bg-card));
+    --s-violet-borda: color-mix(in srgb, var(--c-violet) 55%, var(--bg-card));
+    --s-cyan-fundo: color-mix(in srgb, var(--c-cyan) 14%, var(--bg-card));
+    --s-cyan-borda: color-mix(in srgb, var(--c-cyan) 55%, var(--bg-card));
+    --s-green-fundo: color-mix(in srgb, var(--c-green) 14%, var(--bg-card));
+    --s-green-borda: color-mix(in srgb, var(--c-green) 55%, var(--bg-card));
+    --s-amber-fundo: color-mix(in srgb, var(--c-amber) 14%, var(--bg-card));
+    --s-amber-borda: color-mix(in srgb, var(--c-amber) 55%, var(--bg-card));
+    --s-coral-fundo: color-mix(in srgb, var(--c-coral) 14%, var(--bg-card));
+    --s-coral-borda: color-mix(in srgb, var(--c-coral) 55%, var(--bg-card));
+
+    /* anel de foco comum (inputs e gatilho do menu de perfil) */
+    --foco-anel: color-mix(in srgb, var(--c-blue) 22%, transparent);
+
+    /* botao colorido: nos DOIS temas = tinta de serie (selo) sobre o cartao */
+    --btn-success-bg: color-mix(in srgb, var(--c-green) 14%, var(--bg-card));
+    --btn-success-bd: color-mix(in srgb, var(--c-green) 55%, var(--bg-card));
+    --btn-success-ink: var(--t-green);
+    --btn-success-bg-hover: color-mix(in srgb, var(--c-green) 26%, var(--bg-card));
+    --btn-success-bd-hover: color-mix(in srgb, var(--c-green) 78%, var(--bg-card));
+
+    --btn-warning-bg: color-mix(in srgb, var(--c-amber) 14%, var(--bg-card));
+    --btn-warning-bd: color-mix(in srgb, var(--c-amber) 55%, var(--bg-card));
+    --btn-warning-ink: var(--t-amber);
+    --btn-warning-bg-hover: color-mix(in srgb, var(--c-amber) 26%, var(--bg-card));
+    --btn-warning-bd-hover: color-mix(in srgb, var(--c-amber) 78%, var(--bg-card));
+
+    --btn-info-bg: color-mix(in srgb, var(--c-cyan) 14%, var(--bg-card));
+    --btn-info-bd: color-mix(in srgb, var(--c-cyan) 55%, var(--bg-card));
+    --btn-info-ink: var(--t-cyan);
+    --btn-info-bg-hover: color-mix(in srgb, var(--c-cyan) 26%, var(--bg-card));
+    --btn-info-bd-hover: color-mix(in srgb, var(--c-cyan) 78%, var(--bg-card));
+
+    --btn-danger-bg: color-mix(in srgb, var(--c-coral) 14%, var(--bg-card));
+    --btn-danger-bd: color-mix(in srgb, var(--c-coral) 55%, var(--bg-card));
+    --btn-danger-ink: var(--t-coral);
+    --btn-danger-bg-hover: color-mix(in srgb, var(--c-coral) 26%, var(--bg-card));
+    --btn-danger-bd-hover: color-mix(in srgb, var(--c-coral) 78%, var(--bg-card));
+
+    /* --- aliases legados: os nomes antigos do tema continuam existindo --- */
+    --app-bg: var(--bg-page);
+    --surface-1: var(--bg-card);
+    --surface-2: var(--bg-alt);
+    --surface-3: var(--line);
+    --surface-input: var(--bg-input);
+    --border: var(--line);
+    --border-strong: var(--line-input);
+    --text-muted: var(--text-soft);
+    --accent: var(--c-blue);
+    --accent-hover: var(--t-blue);
+    --teal: var(--info);
+    --success: var(--t-green);
+    --danger: var(--t-coral);
+    --info: var(--t-cyan);
+
+    /* --- variaveis do Bootstrap consumidas pelo tema --- */
+    --bs-body-bg: var(--bg-page);
     --bs-body-color: var(--text);
-    --bs-secondary-color: var(--text-muted);
-    --bs-border-color: var(--border);
-    --bs-primary: var(--accent);
-    --bs-success: var(--success);
-    --bs-danger: var(--danger);
-    --bs-warning: var(--accent);
-    --bs-info: var(--info);
+    --bs-secondary-color: var(--text-soft);
+    --bs-border-color: var(--line);
+    --bs-primary: var(--c-blue);
+    --bs-success: var(--c-green);
+    --bs-danger: var(--c-coral);
+    --bs-warning: var(--c-amber);
+    --bs-info: var(--c-cyan);
+
+    /* dropdown do menu de perfil acompanha o tema */
+    --bs-dropdown-bg: var(--bg-card);
+    --bs-dropdown-color: var(--text);
+    --bs-dropdown-link-color: var(--text-soft);
+    --bs-dropdown-link-hover-bg: var(--bg-alt);
+    --bs-dropdown-link-hover-color: var(--text);
+    --bs-dropdown-link-active-bg: var(--bg-ativo);
+    --bs-dropdown-link-active-color: var(--t-blue);
+    --bs-dropdown-divider-bg: var(--line);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg-page: #F3F6FB;
+    --bg-sidebar: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --bg-alt: #E9EEF5;
+    --bg-input: #FFFFFF;
+    --line: #E2E8F0;
+    --line-input: #CBD5E1;
+    --text: #0F172A;
+    --text-soft: #475569;
+
+    --c-blue: #2563EB;
+    --c-violet: #7C3AED;
+    --c-cyan: #0891B2;
+    --c-green: #16A34A;
+    --c-amber: #D97706;
+    --c-coral: #DC2626;
+    --c-slate: #64748B;
+
+    --t-blue: #1D4ED8;
+    --t-violet: #6D28D9;
+    --t-cyan: #155E75;
+    --t-green: #065F46;
+    --t-amber: #92400E;
+    --t-coral: #991B1B;
+
+    --bg-ativo: #EAF1FE;
+
+    /* no claro, acao primaria = azul solido com texto branco (o unico solido) */
+    --btn-primary-bg: var(--c-blue);
+    --btn-primary-bd: var(--c-blue);
+    --btn-primary-ink: #FFFFFF;
+    --knob-ink: #FFFFFF;
+    --btn-primary-bg-hover: var(--t-blue);
+    --btn-primary-bd-hover: var(--t-blue);
+
+    --btn-neutral-bg: var(--bg-card);
+    --btn-neutral-bd: var(--line-input);
+    --btn-neutral-ink: var(--text);
+    --btn-neutral-bg-hover: color-mix(in srgb, var(--text) 8%, var(--bg-card));
+    --btn-neutral-bd-hover: var(--line-input);
+
+    --accent-ink: #FFFFFF;
+    --shadow: 0 14px 34px rgba(15, 23, 42, .14);
+    --filtro-icone: none;
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        color-scheme: light;
+
+        --bg-page: #F3F6FB;
+        --bg-sidebar: #F8FAFC;
+        --bg-card: #FFFFFF;
+        --bg-alt: #E9EEF5;
+        --bg-input: #FFFFFF;
+        --line: #E2E8F0;
+        --line-input: #CBD5E1;
+        --text: #0F172A;
+        --text-soft: #475569;
+
+        --c-blue: #2563EB;
+        --c-violet: #7C3AED;
+        --c-cyan: #0891B2;
+        --c-green: #16A34A;
+        --c-amber: #D97706;
+        --c-coral: #DC2626;
+        --c-slate: #64748B;
+
+        --t-blue: #1D4ED8;
+        --t-violet: #6D28D9;
+        --t-cyan: #155E75;
+        --t-green: #065F46;
+        --t-amber: #92400E;
+        --t-coral: #991B1B;
+
+        --bg-ativo: #EAF1FE;
+
+        --btn-primary-bg: var(--c-blue);
+        --btn-primary-bd: var(--c-blue);
+        --btn-primary-ink: #FFFFFF;
+        --knob-ink: #FFFFFF;
+        --btn-primary-bg-hover: var(--t-blue);
+        --btn-primary-bd-hover: var(--t-blue);
+
+        --btn-neutral-bg: var(--bg-card);
+        --btn-neutral-bd: var(--line-input);
+        --btn-neutral-ink: var(--text);
+        --btn-neutral-bg-hover: color-mix(in srgb, var(--text) 8%, var(--bg-card));
+        --btn-neutral-bd-hover: var(--line-input);
+
+        --accent-ink: #FFFFFF;
+        --shadow: 0 14px 34px rgba(15, 23, 42, .14);
+        --filtro-icone: none;
+    }
 }
 
 * {
@@ -62,12 +284,12 @@ h1, h2, h3, h4, h5, h6,
 
 a {
     color: var(--accent-hover);
-    text-decoration-color: rgba(194, 163, 109, .45);
+    text-decoration-color: color-mix(in srgb, var(--c-blue) 45%, transparent);
     text-underline-offset: 3px;
 }
 
 a:hover {
-    color: #e0c995;
+    color: var(--accent);
 }
 
 .container,
@@ -78,7 +300,7 @@ a:hover {
 .navbar {
     min-height: 66px;
     padding-block: .65rem;
-    background: #171c20 !important;
+    background: var(--bg-sidebar) !important;
     border-bottom: 1px solid var(--border) !important;
     box-shadow: 0 6px 22px rgba(0, 0, 0, .16) !important;
 }
@@ -131,7 +353,7 @@ a:hover {
 }
 
 .navbar .navbar-toggler-icon {
-    filter: invert(1) grayscale(1);
+    filter: var(--filtro-icone);
 }
 
 .main-container {
@@ -216,23 +438,23 @@ a:hover {
 }
 
 .text-success {
-    color: #7fc29b !important;
+    color: var(--success) !important;
 }
 
 .cash-positive {
-    color: #7fc29b;
+    color: var(--success);
 }
 
 .cash-negative {
-    color: #e08d91;
+    color: var(--danger);
 }
 
 .text-danger {
-    color: #e08d91 !important;
+    color: var(--danger) !important;
 }
 
 .text-warning {
-    color: var(--accent-hover) !important;
+    color: var(--t-amber) !important;
 }
 
 .table {
@@ -240,7 +462,7 @@ a:hover {
     --bs-table-bg: transparent;
     --bs-table-border-color: var(--border);
     --bs-table-hover-color: var(--text);
-    --bs-table-hover-bg: rgba(255, 255, 255, .035);
+    --bs-table-hover-bg: color-mix(in srgb, var(--text) 4%, transparent);
     margin-bottom: 0;
     color: var(--text);
 }
@@ -253,7 +475,7 @@ a:hover {
 }
 
 .table thead th {
-    color: #c5cdd0;
+    color: var(--text-soft);
     background: var(--surface-2) !important;
     font-size: .77rem;
     font-weight: 700;
@@ -263,7 +485,7 @@ a:hover {
 
 .table-hover > tbody > tr:hover > * {
     color: var(--text);
-    background-color: rgba(194, 163, 109, .07);
+    background-color: color-mix(in srgb, var(--c-blue) 7%, transparent);
 }
 
 table {
@@ -330,20 +552,20 @@ textarea.form-control {
 }
 
 .form-control::placeholder {
-    color: #7f8b92;
+    color: var(--text-soft);
 }
 
 .form-control:focus,
 .form-select:focus {
     color: var(--text);
-    background-color: #171d21;
+    background-color: color-mix(in srgb, var(--text) 5%, var(--surface-input));
     border-color: var(--accent);
-    box-shadow: 0 0 0 .2rem rgba(194, 163, 109, .16);
+    box-shadow: 0 0 0 .2rem var(--foco-anel);
 }
 
 .form-control:disabled,
 .form-select:disabled {
-    color: #8d989e;
+    color: var(--text-soft);
     background-color: var(--surface-2);
 }
 
@@ -368,40 +590,52 @@ textarea.form-control {
 }
 
 .btn-primary,
-.btn-success,
 .busca-form button,
 .btn-novo {
-    color: var(--accent-ink) !important;
-    background: var(--accent) !important;
-    border: 1px solid var(--accent) !important;
+    color: var(--btn-primary-ink) !important;
+    background: var(--btn-primary-bg) !important;
+    border: 1px solid var(--btn-primary-bd) !important;
     box-shadow: none !important;
 }
 
 .btn-primary:hover,
-.btn-success:hover,
 .busca-form button:hover,
 .btn-novo:hover {
-    color: var(--accent-ink) !important;
-    background: var(--accent-hover) !important;
-    border-color: var(--accent-hover) !important;
+    color: var(--btn-primary-ink) !important;
+    background: var(--btn-primary-bg-hover) !important;
+    border-color: var(--btn-primary-bd-hover) !important;
+}
+
+.btn-success {
+    color: var(--btn-success-ink) !important;
+    background: var(--btn-success-bg) !important;
+    border: 1px solid var(--btn-success-bd) !important;
+    box-shadow: none !important;
+}
+
+.btn-success:hover {
+    color: var(--btn-success-ink) !important;
+    background: var(--btn-success-bg-hover) !important;
+    border-color: var(--btn-success-bd-hover) !important;
 }
 
 .btn-secondary,
 .btn-dark {
-    color: var(--text) !important;
-    background: #303a40 !important;
-    border: 1px solid #46535b !important;
+    color: var(--btn-neutral-ink) !important;
+    background: var(--btn-neutral-bg) !important;
+    border: 1px solid var(--btn-neutral-bd) !important;
 }
 
 .btn-secondary:hover,
 .btn-dark:hover {
-    color: #fff !important;
-    background: #3a464d !important;
+    color: var(--btn-neutral-ink) !important;
+    background: var(--btn-neutral-bg-hover) !important;
+    border-color: var(--btn-neutral-bd-hover) !important;
 }
 
 .btn-outline-secondary,
 .btn-outline-dark {
-    color: #c3cbd0 !important;
+    color: var(--text-soft) !important;
     background: transparent !important;
     border: 1px solid var(--border-strong) !important;
 }
@@ -413,26 +647,26 @@ textarea.form-control {
 }
 
 .btn-danger {
-    color: #fff !important;
-    background: #9d4f55 !important;
-    border-color: #9d4f55 !important;
+    color: var(--btn-danger-ink) !important;
+    background: var(--btn-danger-bg) !important;
+    border-color: var(--btn-danger-bd) !important;
 }
 
 .btn-danger:hover {
-    background: #b65f65 !important;
-    border-color: #b65f65 !important;
+    background: var(--btn-danger-bg-hover) !important;
+    border-color: var(--btn-danger-bd-hover) !important;
 }
 
 .btn-warning {
-    color: var(--accent-ink) !important;
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
+    color: var(--btn-warning-ink) !important;
+    background: var(--btn-warning-bg) !important;
+    border-color: var(--btn-warning-bd) !important;
 }
 
 .btn-info {
-    color: #101619 !important;
-    background: var(--info) !important;
-    border-color: var(--info) !important;
+    color: var(--btn-info-ink) !important;
+    background: var(--btn-info-bg) !important;
+    border-color: var(--btn-info-bd) !important;
 }
 
 .btn-novo {
@@ -464,9 +698,9 @@ textarea.form-control {
 }
 
 .btn-voltar-borda:hover {
-    color: var(--accent-ink) !important;
-    background: var(--accent);
-    border-color: var(--accent);
+    color: var(--btn-primary-ink) !important;
+    background: var(--btn-primary-bg-hover);
+    border-color: var(--btn-primary-bd-hover);
     text-decoration: none;
     transform: translateY(-1px);
 }
@@ -492,14 +726,14 @@ textarea.form-control {
 
 .btn-editar {
     color: var(--accent-hover);
-    background: rgba(194, 163, 109, .08);
-    border-color: rgba(194, 163, 109, .36);
+    background: color-mix(in srgb, var(--c-blue) 8%, transparent);
+    border-color: color-mix(in srgb, var(--c-blue) 36%, transparent);
 }
 
 .btn-excluir {
-    color: #e18c90;
-    background: rgba(207, 119, 121, .08);
-    border-color: rgba(207, 119, 121, .3);
+    color: var(--danger);
+    background: color-mix(in srgb, var(--c-coral) 8%, transparent);
+    border-color: color-mix(in srgb, var(--c-coral) 30%, transparent);
 }
 
 .btn-ajuste {
@@ -518,13 +752,13 @@ textarea.form-control {
 }
 
 .btn-add {
-    background: rgba(99, 165, 130, .16);
-    border-color: rgba(99, 165, 130, .45);
+    background: color-mix(in srgb, var(--c-green) 16%, transparent);
+    border-color: color-mix(in srgb, var(--c-green) 45%, transparent);
 }
 
 .btn-rem {
-    background: rgba(207, 119, 121, .13);
-    border-color: rgba(207, 119, 121, .4);
+    background: color-mix(in srgb, var(--c-coral) 13%, transparent);
+    border-color: color-mix(in srgb, var(--c-coral) 40%, transparent);
 }
 
 .btn-ajuste:hover {
@@ -532,24 +766,32 @@ textarea.form-control {
 }
 
 .badge {
-    border: 1px solid rgba(255, 255, 255, .12);
+    border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
     font-weight: 600;
 }
 
-.badge.bg-primary,
+.badge.bg-primary {
+    color: var(--t-blue) !important;
+    background: var(--s-blue-fundo) !important;
+    border-color: var(--s-blue-borda) !important;
+}
+
 .badge.bg-warning {
-    color: var(--accent-ink) !important;
-    background: var(--accent) !important;
+    color: var(--t-amber) !important;
+    background: var(--s-amber-fundo) !important;
+    border-color: var(--s-amber-borda) !important;
 }
 
 .badge.bg-secondary {
-    color: #d6dde0 !important;
-    background: #39444a !important;
+    color: var(--text) !important;
+    background: var(--bg-alt) !important;
+    border-color: var(--line) !important;
 }
 
 .badge.bg-danger {
-    color: #ffe8e8 !important;
-    background: #8f454b !important;
+    color: var(--t-coral) !important;
+    background: var(--s-coral-fundo) !important;
+    border-color: var(--s-coral-borda) !important;
 }
 
 .alert {
@@ -568,9 +810,9 @@ textarea.form-control {
 }
 
 .alert-info {
-    color: #d4e4e8;
-    background: rgba(130, 174, 188, .12);
-    border-color: rgba(130, 174, 188, .3);
+    color: var(--t-cyan);
+    background: color-mix(in srgb, var(--c-cyan) 12%, transparent);
+    border-color: color-mix(in srgb, var(--c-cyan) 30%, transparent);
 }
 
 /* Modais custom (#modalPagamento no Caixa, #modalDetalhes no Historico). Nascem
@@ -617,8 +859,9 @@ textarea.form-control {
     text-align: left;
 }
 
-.modal-header .btn-close {
-    filter: invert(1) grayscale(1);
+.modal-header .btn-close,
+.btn-close-white {
+    filter: var(--filtro-icone);
 }
 
 .btn-metodo-sel {
@@ -644,7 +887,7 @@ textarea.form-control {
 .btn-metodo-sel:hover,
 .btn-metodo-sel.is-selected {
     color: var(--text);
-    background: rgba(194, 163, 109, .12);
+    background: var(--bg-ativo);
     border-color: var(--accent);
 }
 
@@ -725,7 +968,7 @@ footer {
     margin-top: auto;
     padding: 1rem 0;
     color: var(--text-muted) !important;
-    background: #151a1e;
+    background: var(--bg-sidebar);
     border-top: 1px solid var(--border);
     white-space: normal;
 }
@@ -799,9 +1042,9 @@ footer .container {
    propÃ³sito: Ã© uma aÃ§Ã£o de leitura, nÃ£o de escrita â€” nÃ£o pode parecer tÃ£o
    forte quanto "Novo produto" e competir com ela. */
 .btn-exportar {
-    background-color: #fff;
-    color: #1a4d7a;
-    border: 2px solid #1a4d7a;
+    background-color: var(--bg-card);
+    color: var(--t-blue);
+    border: 2px solid color-mix(in srgb, var(--c-blue) 70%, var(--bg-card));
     border-radius: 8px;
     padding: 10px 18px;
     font-weight: 700;
@@ -814,8 +1057,8 @@ footer .container {
 }
 
 .btn-exportar:hover {
-    background-color: #1a4d7a;
-    color: #fff;
+    background-color: var(--btn-primary-bg-hover);
+    color: var(--btn-primary-ink);
 }
 
 .history-filter {
@@ -915,9 +1158,9 @@ footer .container {
 .stock-shortage {
     margin: 1.25rem 0;
     padding: 1rem;
-    color: #f0c5c6;
-    background: rgba(207, 119, 121, .12);
-    border: 1px solid rgba(207, 119, 121, .35);
+    color: var(--t-coral);
+    background: color-mix(in srgb, var(--c-coral) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-coral) 35%, transparent);
     border-radius: 6px;
 }
 
@@ -980,12 +1223,12 @@ footer .container {
 
 .user-session-trigger:hover,
 .user-session-trigger:focus-visible {
-    background-color: #f1f3f5;
-    border-color: #dee2e6;
+    background-color: var(--bg-alt);
+    border-color: var(--line);
 }
 
 .user-session-trigger:focus-visible {
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.2rem var(--foco-anel);
 }
 
 /* ===========================================================================
@@ -994,12 +1237,12 @@ footer .container {
    Usa as mesmas variaveis do tema (--danger-like via vermelho do alerta).
    =========================================================================== */
 .linha-estoque-baixo {
-    background-color: rgba(220, 53, 69, 0.10);
-    box-shadow: inset 3px 0 0 0 #dc3545;
+    background-color: color-mix(in srgb, var(--c-coral) 10%, transparent);
+    box-shadow: inset 3px 0 0 0 var(--c-coral);
 }
 
 .linha-estoque-baixo:hover {
-    background-color: rgba(220, 53, 69, 0.16);
+    background-color: color-mix(in srgb, var(--c-coral) 16%, transparent);
 }
 
 .badge-estoque-baixo {
@@ -1011,8 +1254,9 @@ footer .container {
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.03em;
-    color: #fff;
-    background-color: #dc3545;
+    color: var(--t-coral);
+    background-color: var(--s-coral-fundo);
+    border: 1px solid var(--s-coral-borda);
     border-radius: 999px;
     vertical-align: middle;
 }
@@ -1066,7 +1310,7 @@ footer .container {
     flex-direction: column;
     gap: .35rem;
     padding: 1.25rem;
-    background: var(--surface-input, #14191d);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: .75rem;
 }
@@ -1157,7 +1401,7 @@ footer .container {
 
 /* Produto zerado: a linha mais urgente da lista. */
 .dash-linha-zero {
-    background: rgba(207, 119, 121, .12);
+    background: color-mix(in srgb, var(--c-coral) 12%, transparent);
 }
 
 /* --- grafico de barras em CSS puro ---------------------------------- */
@@ -1210,8 +1454,8 @@ footer .container {
     height: 6rem;
     border-radius: .45rem;
     overflow: hidden;
-    background: rgba(255, 255, 255, .03);
-    border: 1px solid rgba(255, 255, 255, .06);
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 /* Barra: cheia, com leve gradiente */
@@ -1244,12 +1488,12 @@ footer .container {
 
 /* Dia ativo: destaque dourado */
 .dash-coluna.is-dia {
-    background: rgba(194, 163, 109, .12);
+    background: var(--bg-ativo);
 }
 
 .dash-coluna.is-dia .dash-coluna-trilho {
-    background: rgba(194, 163, 109, .18);
-    border-color: rgba(194, 163, 109, .35);
+    background: color-mix(in srgb, var(--c-blue) 18%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--c-blue) 35%, var(--bg-card));
 }
 
 .dash-coluna.is-dia .dash-coluna-dia {
@@ -1258,7 +1502,7 @@ footer .container {
 }
 
 .dash-coluna.is-dia .dash-coluna-barra {
-    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+    background: linear-gradient(180deg, var(--t-blue), var(--c-blue));
 }
 
 /* Dia zerado: visual mais claro */
@@ -1284,12 +1528,12 @@ footer .container {
 }
 
 .dash-grafico-longo .dash-coluna.is-dia {
-    background: rgba(194, 163, 109, .08);
+    background: color-mix(in srgb, var(--c-blue) 8%, var(--bg-card));
 }
 
 .dash-grafico-longo .dash-coluna.is-dia .dash-coluna-trilho {
-    background: rgba(194, 163, 109, .15);
-    border-color: rgba(194, 163, 109, .25);
+    background: color-mix(in srgb, var(--c-blue) 15%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--c-blue) 25%, var(--bg-card));
 }
 
 /* Responsividade para 30 dias em telas menores */
@@ -1306,7 +1550,7 @@ footer .container {
 }
 
 .dash-coluna-vazia .dash-coluna-barra {
-    background: rgba(194, 163, 109, .15);
+    background: color-mix(in srgb, var(--c-blue) 15%, transparent);
     min-height: 2px;
 }
 
@@ -1399,7 +1643,7 @@ footer .container {
     gap: .2rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.25rem;
-    background: var(--surface-input, #14191d);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
     border-radius: .75rem;
@@ -1431,12 +1675,12 @@ a.dash-coluna:focus-visible {
 }
 
 a.dash-coluna.is-dia {
-    background: rgba(194, 163, 109, .12);
+    background: var(--bg-ativo);
 }
 
 a.dash-coluna.is-dia .dash-coluna-trilho {
-    background: rgba(194, 163, 109, .18);
-    border-color: rgba(194, 163, 109, .35);
+    background: color-mix(in srgb, var(--c-blue) 18%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--c-blue) 35%, var(--bg-card));
 }
 
 a.dash-coluna.is-dia .dash-coluna-dia {
@@ -1445,7 +1689,7 @@ a.dash-coluna.is-dia .dash-coluna-dia {
 }
 
 a.dash-coluna.is-dia .dash-coluna-barra {
-    background: linear-gradient(180deg, #d4b97a, #c2a36d);
+    background: linear-gradient(180deg, var(--t-blue), var(--c-blue));
 }
 
 a.dash-coluna.dash-coluna-vazia .dash-coluna-trilho {
@@ -1453,7 +1697,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-trilho {
 }
 
 a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
-    background: rgba(194, 163, 109, .15);
+    background: color-mix(in srgb, var(--c-blue) 15%, transparent);
     min-height: 2px;
 }
 
@@ -1730,7 +1974,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 .navbar .nav-link.active:focus-visible {
     color: var(--accent-hover) !important;
     font-weight: 700;
-    background: rgba(194, 163, 109, .12) !important;
+    background: var(--bg-ativo) !important;
     border-radius: 6px;
     box-shadow: inset 0 -2px 0 0 var(--accent);
 }
@@ -1784,7 +2028,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .history-aviso-limite {
-    background-color: rgba(194, 163, 109, .15);
+    background-color: var(--s-blue-fundo);
     border: 1px solid var(--accent);
     color: var(--text);
     border-radius: 6px;
@@ -1827,12 +2071,12 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .dash-detalhe-status.status-fechado {
     color: var(--success);
-    background: rgba(99, 165, 130, .15);
+    background: color-mix(in srgb, var(--c-green) 15%, transparent);
 }
 
 .dash-detalhe-status.status-aberto {
     color: var(--accent);
-    background: rgba(194, 163, 109, .15);
+    background: var(--bg-ativo);
 }
 
 .dash-fechar-detalhe {
@@ -1884,9 +2128,9 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .dash-alert-erro {
-    background: rgba(207, 119, 121, .15);
+    background: color-mix(in srgb, var(--c-coral) 15%, transparent);
     border: 1px solid var(--danger);
-    color: #f0c5c6;
+    color: var(--t-coral);
 }
 
 .dash-positivo {
@@ -1911,14 +2155,14 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .dash-badge.badge-fechado {
     color: var(--success);
-    background: rgba(99, 165, 130, .15);
-    border: 1px solid rgba(99, 165, 130, .3);
+    background: var(--s-green-fundo);
+    border: 1px solid var(--s-green-borda);
 }
 
 .dash-badge.badge-aberto {
     color: var(--accent);
-    background: rgba(194, 163, 109, .15);
-    border: 1px solid rgba(194, 163, 109, .3);
+    background: var(--bg-ativo);
+    border: 1px solid color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
 }
 
 .dash-linha-fechada {
@@ -1926,7 +2170,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .dash-linha-fechada:hover {
-    background-color: rgba(255, 255, 255, .02) !important;
+    background-color: color-mix(in srgb, var(--text) 3%, transparent) !important;
 }
 
 /* Botao expandir itens da venda */
@@ -1968,7 +2212,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .dash-itens-container {
     padding: .75rem 1rem;
-    background: var(--surface-input, #14191d);
+    background: var(--surface-input);
     border-top: 1px solid var(--border);
 }
 
@@ -2007,7 +2251,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     flex-direction: column;
     gap: .45rem;
     padding: 1.45rem 1.5rem;
-    background: var(--surface-input, #14191d);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 1rem;
     box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
@@ -2136,14 +2380,14 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .dash-detalhe-status.status-fechado {
     color: var(--success);
-    background: rgba(99, 165, 130, .15);
-    border: 1px solid rgba(99, 165, 130, .3);
+    background: color-mix(in srgb, var(--c-green) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-green) 30%, transparent);
 }
 
 .dash-detalhe-status.status-aberto {
     color: var(--accent);
-    background: rgba(194, 163, 109, .15);
-    border: 1px solid rgba(194, 163, 109, .3);
+    background: var(--bg-ativo);
+    border: 1px solid color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
 }
 
 /* Seções no detalhe: mesma altura de linha do dashboard */
@@ -2259,21 +2503,21 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .dash-badge.badge-fechado {
-    background: rgba(99, 165, 130, .15);
-    border-color: rgba(99, 165, 130, .3);
+    background: var(--s-green-fundo);
+    border-color: var(--s-green-borda);
     color: var(--success);
 }
 
 .dash-badge.badge-aberto {
-    background: rgba(194, 163, 109, .15);
-    border-color: rgba(194, 163, 109, .3);
+    background: var(--bg-ativo);
+    border-color: color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
     color: var(--accent);
 }
 
 /* Container de itens expandidos do detalhe */
 .dash-itens-container {
     padding: .75rem 1rem;
-    background: var(--surface-input, #14191d);
+    background: var(--surface-input);
     border-top: 1px solid var(--border);
 }
 
@@ -2330,8 +2574,734 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .dash-alert-erro {
-    background: rgba(207, 119, 121, .12);
+    background: color-mix(in srgb, var(--c-coral) 12%, transparent);
     border: 1px solid var(--danger);
-    color: #f0c5c6;
+    color: var(--t-coral);
+}
+
+
+/* ==========================================================================
+   SHELL / LAYOUT DO PAINEL (PASSO 2 DO REDESENHO)
+   Sidebar fixa + header sticky + area de conteudo. Todos os tokens vem de
+   cima (--bg-sidebar, --line, --c-blue etc.), entao acompanha claro/escuro.
+   Usado SOMENTE no branch @if (autenticado) do _Layout.
+   ========================================================================== */
+
+.app-shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+    background: var(--bg-page);
+}
+
+.app-sidebar {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1040;
+}
+
+.app-sidebar__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: 1.1rem 1.1rem .9rem;
+}
+
+.app-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    text-decoration: none;
+    color: var(--text);
+    min-width: 0;
+}
+
+.app-brand__symbol {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    font-weight: 800;
+    font-size: .85rem;
+    letter-spacing: .5px;
+    color: var(--btn-primary-ink);
+    background: var(--btn-primary-bg);
+    border: 1px solid var(--btn-primary-bd);
+}
+
+.app-brand__name {
+    font-weight: 700;
+    font-size: .98rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-sidebar__shortcut {
+    font-size: .68rem;
+    padding: .18rem .45rem;
+    border-radius: 6px;
+    color: var(--text-soft);
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+}
+
+.app-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: .18rem;
+    padding: .5rem .7rem;
+    flex: 1 1 auto;
+}
+
+.app-sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .6rem .7rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-soft);
+    font-weight: 500;
+    transition: background .15s ease, color .15s ease;
+}
+
+.app-sidebar__item:hover {
+    background: var(--bg-alt);
+    color: var(--text);
+}
+
+.app-sidebar__item.active {
+    color: var(--btn-primary-ink);
+    background: var(--btn-primary-bg);
+    border: 1px solid var(--btn-primary-bd);
+    padding: calc(.6rem - 1px) calc(.7rem - 1px);
+}
+
+.app-sidebar__icon {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 7px;
+    font-weight: 700;
+    font-size: .8rem;
+    background: var(--bg-alt);
+    color: var(--text-soft);
+}
+
+.app-sidebar__item.active .app-sidebar__icon {
+    color: var(--btn-primary-ink);
+}
+
+.app-sidebar__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-sidebar__bottom {
+    padding: .8rem .9rem 1rem;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+}
+
+.app-user {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+}
+
+.app-user__name {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.app-user__role {
+    font-size: .78rem;
+    color: var(--text-soft);
+}
+
+.app-user__btn {
+    margin-top: .4rem;
+    align-self: flex-start;
+    font-size: .8rem;
+    color: var(--btn-primary-ink);
+    text-decoration: none;
+}
+
+.app-sidebar__logout {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-soft);
+    padding: .5rem .7rem;
+    border-radius: 9px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.app-sidebar__logout:hover {
+    background: color-mix(in srgb, var(--c-coral) 14%, transparent);
+    color: var(--t-coral);
+    border-color: var(--c-coral);
+}
+
+.app-main {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100vh;
+}
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .7rem 1.2rem;
+    background: color-mix(in srgb, var(--bg-sidebar) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+}
+
+.app-header__menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.app-header__menu-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.app-header__center {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.app-header__search {
+    width: min(100%, 520px);
+}
+
+.app-header__search-icon,
+.app-header__search-submit-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.app-header__right {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-left: auto;
+}
+
+.app-header__theme {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease;
+}
+
+.app-header__theme:hover {
+    color: var(--text);
+    border-color: var(--c-blue);
+}
+
+.app-header__theme-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.app-header__user {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .4rem .7rem .4rem .4rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 600;
+    font-size: .88rem;
+    cursor: pointer;
+    max-width: 220px;
+}
+
+.app-header__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    padding: 4px;
+}
+
+.app-content {
+    flex: 1 1 auto;
+    padding: 1.5rem;
+    min-width: 0;
+}
+
+.app-footer {
+    padding: 1rem 1.5rem;
+    color: var(--text-soft);
+    font-size: .82rem;
+    border-top: 1px solid var(--line);
+}
+
+@media (max-width: 70rem) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .app-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform .22s ease;
+        box-shadow: 0 0 40px rgba(0, 0, 0, .35);
+    }
+
+    .app-sidebar.aberto {
+        transform: translateX(0);
+    }
+
+    .app-main {
+        grid-column: 1;
+    }
+
+    .app-header__menu {
+        display: inline-flex;
+    }
+
+    .app-header__center {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 30rem) {
+    .app-content {
+        padding: 1rem;
+    }
+
+    .app-header__user span {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   AJUSTE DE SHELL (1 de 3) - sidebar, menu do usuario, chave de tema,
+   faixa superior. Bloco NOVO: tudo prefixado app-/. Nao mexe no resto.
+   Layout: grid de 240px (sidebar) + 1fr (conteudo). >=1024px o hamburguer
+   RECOLHE a sidebar (html[data-sidebar="fechada"]); abaixo disso a sidebar
+   vira gaveta por cima do conteudo, com cortina escura.
+   ========================================================================== */
+
+.app-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+    background: var(--bg-page);
+}
+
+/* --- SIDEBAR --- */
+.app-sidebar {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 1040;
+    transition: transform .2s ease;
+}
+
+.app-sidebar__top {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    padding: 1rem 1.1rem .9rem;
+    min-width: 0;
+}
+
+.app-brand {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.app-brand__loja {
+    font-size: .8rem;
+    color: var(--text-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-sidebar__grupo {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-soft);
+    padding: .9rem 1.1rem .3rem;
+}
+
+.app-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    padding: 0 .55rem;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.app-sidebar__item {
+    display: flex;
+    align-items: center;
+    padding: .5rem .6rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-soft);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.app-sidebar__item:hover { background: var(--bg-alt); color: var(--text); }
+
+.app-sidebar__item.active {
+    background: color-mix(in srgb, var(--c-blue) 14%, transparent);
+    color: var(--t-blue);
+    font-weight: 600;
+}
+
+/* --- rodape da sidebar: linha do tema + botao do usuario --- */
+.app-sidebar__bottom {
+    border-top: 1px solid var(--line);
+    padding: .7rem .8rem .8rem;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+}
+
+.app-theme-linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+}
+
+.app-theme-linha__rotulo {
+    font-size: .82rem;
+    color: var(--text-soft);
+}
+
+/* chave (switch) de tema - passo 2 */
+.app-theme {
+    position: relative;
+    width: 64px;
+    height: 32px;
+    box-sizing: border-box;
+    border: 1px solid var(--line-input);
+    border-radius: 16px;
+    background: var(--bg-alt);
+    padding: 0;
+    cursor: pointer;
+}
+.app-theme:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 2px; }
+
+.app-theme-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    z-index: 0;
+    transition: transform 150ms ease;
+}
+.app-theme[aria-checked="true"] .app-theme-knob { transform: translateX(0); }
+.app-theme[aria-checked="false"] .app-theme-knob { transform: translateX(32px); }
+
+.app-theme-ico {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 31px;
+    display: grid;
+    place-items: center;
+    z-index: 1;
+    color: var(--text-soft);
+}
+.app-theme-moon { left: 0; }
+.app-theme-sun { right: 0; }
+.app-theme-ico svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* icone sob o knob ganha tinta de alto contraste */
+.app-theme[aria-checked="true"] .app-theme-moon { color: var(--knob-ink); }
+.app-theme[aria-checked="false"] .app-theme-sun { color: var(--knob-ink); }
+
+/* botao do usuario (abre o menu para cima) */
+.app-usuario { position: relative; }
+
+.app-usuario__botao {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    padding: .5rem .6rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+}
+.app-usuario__botao:hover { background: var(--bg-alt); }
+.app-usuario__botao:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 2px; }
+
+.app-usuario__info { display: flex; flex-direction: column; min-width: 0; }
+.app-usuario__nome { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-usuario__papel { font-size: .78rem; color: var(--text-soft); }
+
+/* chevron desenhado em CSS (sem caractere, sem fonte de icone) */
+.app-usuario__chevron {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--text-soft);
+    border-bottom: 2px solid var(--text-soft);
+    transform: rotate(45deg);
+    transition: transform .15s ease;
+}
+.app-usuario__botao[aria-expanded="true"] .app-usuario__chevron { transform: rotate(225deg); }
+
+.app-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 6px);
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .3);
+    padding: .3rem;
+    display: none;
+    z-index: 1050;
+}
+.app-menu.aberto { display: block; }
+
+.app-menu__item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: .5rem .6rem;
+    border-radius: 7px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+.app-menu__item:hover { background: var(--bg-alt); }
+.app-menu__item:focus-visible { outline: 2px solid var(--c-blue); outline-offset: -2px; }
+.app-menu__item--sair { color: var(--t-coral); }
+
+/* --- FAIXA SUPERIOR (56px) --- */
+.app-main {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100vh;
+}
+
+.app-header {
+    height: 56px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: 0 1rem;
+    background: var(--bg-page);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+/* hamburguer: tres barras desenhadas em CSS */
+.app-hamburguer {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+.app-hamburguer:hover { background: var(--bg-alt); }
+.app-hamburguer:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 2px; }
+.app-hamburguer__barra {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 1px;
+}
+
+.app-caminho { display: flex; align-items: baseline; gap: .4rem; font-size: 14px; min-width: 0; }
+.app-caminho__grupo { color: var(--text-soft); }
+.app-caminho__sep { color: var(--text-soft); }
+.app-caminho__pagina { color: var(--text); font-weight: 600; }
+
+.app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
+
+.app-footer {
+    padding: 1rem 1.4rem;
+    color: var(--text-soft);
+    font-size: .82rem;
+    border-top: 1px solid var(--line);
+}
+
+/* cortina da gaveta (mobile) */
+.cortina-sidebar {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .45);
+    z-index: 1035;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+}
+.cortina-sidebar.ativo { opacity: 1; pointer-events: auto; }
+
+/* --- RECOLHER no desktop (>=1024px) --- */
+@media (min-width: 1024px) {
+    html[data-sidebar="fechada"] .app-shell { grid-template-columns: 1fr; }
+    html[data-sidebar="fechada"] .app-sidebar { display: none; }
+    html[data-sidebar="fechada"] .app-main { grid-column: 1; }
+}
+
+/* --- GAVETA abaixo de 1024px --- */
+@media (max-width: 1023.98px) {
+    .app-shell { grid-template-columns: 1fr; }
+    .app-main { grid-column: 1; }
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 240px;
+        transform: translateX(-100%);
+        box-shadow: 0 0 40px rgba(0, 0, 0, .4);
+    }
+    .app-sidebar.aberto { transform: translateX(0); }
+}
+
+@media (max-width: 30rem) {
+    .app-content { padding: 1rem; }
+}
+
+/* modais/sweetalert/overlay de atalhos sempre ACIMA da sidebar */
+.swal2-container { z-index: 2000 !important; }
+.modal { z-index: 1060; }
+.shortcut-help-overlay { z-index: 2100; }
+
+/* ============================================================================
+   AJUSTE DE SHELL 2 - overlay do menu (Alt+M) acima da sidebar e da faixa.
+   Garantia EXPLICITA de empilhamento: #modalAtalhos e seu backdrop ficam ACIMA
+   da sidebar (.app-sidebar, z 1040) e da faixa superior (.app-header, z 1030).
+   O seletor por id tem mais peso que a regra generica `.modal { z-index:1060 }`.
+   ============================================================================ */
+#modalAtalhos { z-index: 1080; }
+body > .modal-backdrop { z-index: 1070; }
+
+
+/* ============================================================================
+   AJUSTE DE SHELL 3 - cabecalho do Dashboard.
+   O subtitulo "dd/MM/aaaa · conferência do dia" foi REMOVIDO na view. Aqui o
+   cabecalho vira uma linha flex: titulo a esquerda, seletor "7 dias | 30 dias"
+   a direita, alinhados pelo CENTRO da primeira linha do titulo. align-items:
+   center poe os centros a coincidir; com o subtitulo fora e o margin-bottom do
+   titulo zerado, o centro do titulo = centro da sua unica linha. gap 16px e
+   24px acima do primeiro cartao (.dash-periodo-total, o "Ultimos 7/30 dias").
+   Em <= 767.98px o seletor DESCE para baixo do titulo (12px) e o cabecalho
+   fica 16px acima do cartao. Nada mais muda no Dashboard.
+   ============================================================================ */
+.dash-cabecalho {
+    display: flex;             /* auto-suficiente: a regra original (.dash-cabecalho
+                                  display:flex) fica depois de um */ orfao e nao vale */
+    flex-wrap: nowrap;
+    align-items: center;       /* centro do titulo = centro do seletor */
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;       /* >= 24px acima do primeiro cartao */
+    width: 100%;
+}
+
+.dash-cabecalho .dash-titulo {
+    margin-bottom: 0;           /* subtitulo saiu: centro da linha exato */
+}
+
+@media (max-width: 767.98px) {
+    .dash-cabecalho {
+        flex-direction: column;
+        align-items: flex-start;
+        row-gap: 12px;          /* 12px entre o titulo e o seletor */
+        margin-bottom: 16px;    /* >= 16px acima do primeiro cartao */
+    }
+
+    .dash-cabecalho > nav.dash-periodo {
+        margin-left: 0;         /* desce alinhado a esquerda, sob o titulo */
+    }
 }
 

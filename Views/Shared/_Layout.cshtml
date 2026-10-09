@@ -1,4 +1,4 @@
-@*
+﻿@*
     ==========================================================================
     BUG-13 (commit 4): MENU POR PAPEL.
     ==========================================================================
@@ -14,6 +14,7 @@
 *@
 @inject IAuthorizationService Autorizacao
 @inject UserManager<Usuario> GerenciadorDeUsuarios
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuracao
 @{
     var autenticado = User.Identity?.IsAuthenticated == true;
 
@@ -32,6 +33,25 @@
         if (!string.Equals(rotaAtual, controller, StringComparison.OrdinalIgnoreCase)) return false;
         return acao is null || string.Equals(acaoAtual, acao, StringComparison.OrdinalIgnoreCase);
     }
+
+    // Marca (Marca:Nome, padrao "ControlHub") e loja (Loja:Nome, vazio).
+    // Mesma fonte das exportacoes - a tela e o Excel falam a mesma coisa.
+    var marcaNome = Configuracao["Marca:Nome"];
+    if (string.IsNullOrWhiteSpace(marcaNome)) { marcaNome = "ControlHub"; }
+    var lojaNome = Configuracao["Loja:Nome"] ?? string.Empty;
+
+    // Caminho da faixa superior: "grupo / pagina". Mapeia a rota atual para
+    // um dos grupos do menu; fora do menu, cai no titulo da pagina.
+    var (grupoAtual, paginaAtual) = (rotaAtual.ToLowerInvariant(), acaoAtual.ToLowerInvariant()) switch
+    {
+        ("home", _) => ("Operação", "Estoque"),
+        ("caixa", "historico") => ("Gestão", "Histórico"),
+        ("caixa", _) => ("Operação", "Caixa"),
+        ("dashboard", _) => ("Gestão", "Dashboard"),
+        _ => ((string?)null, (string?)null)
+    };
+    var caminhoTexto = paginaAtual ?? (ViewData["Title"] as string) ?? "";
+
 
     var podeOperarPdv = false;
     var podeReimprimirCupom = false;
@@ -109,6 +129,52 @@
             admin: @(podeAcessarAdmin ? "true" : "false")
         };
     </script>
+    @* PASSO 2 DO REDESIGN - CHAVE DE TEMA (unica) + estado da sidebar.
+       Roda ANTES de qualquer <link> de CSS: a pagina nasce com o data-theme
+       certo e nao pisca no tema errado. Chave no localStorage:
+       controlhub-tema ("auto" padrao, "claro" ou "escuro"). O estado de
+       "recolher" a sidebar (desktop) vem de controlhub-sidebar. *@
+    <script>
+        (function () {
+            var chave = 'controlhub-tema';
+            var raiz = document.documentElement;
+            var tema = 'auto';
+            try {
+                var salvo = localStorage.getItem(chave);
+                if (salvo === 'claro' || salvo === 'escuro' || salvo === 'auto') { tema = salvo; }
+            } catch (e) { tema = 'auto'; }
+
+            // tema EFETIVO: com "auto" segue o sistema.
+            var efetivo = tema;
+            if (tema === 'auto') {
+                efetivo = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'escuro' : 'claro';
+            }
+            if (efetivo === 'claro') { raiz.setAttribute('data-theme', 'light'); }
+            else { raiz.setAttribute('data-theme', 'dark'); }
+
+            // estado de recolher da sidebar (desktop)
+            try {
+                if (localStorage.getItem('controlhub-sidebar') === 'fechada') {
+                    raiz.setAttribute('data-sidebar', 'fechada');
+                }
+            } catch (e) { }
+
+            window.CONTROLHUB_TEMA = { chave: chave, valor: tema };
+            window.aplicarTema = function (novo) {
+                if (novo !== 'auto' && novo !== 'claro' && novo !== 'escuro') { return; }
+                tema = novo;
+                window.CONTROLHUB_TEMA.valor = novo;
+                try { localStorage.setItem(chave, novo); } catch (e) { }
+                var efi = novo;
+                if (novo === 'auto') {
+                    efi = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'escuro' : 'claro';
+                }
+                if (efi === 'claro') { raiz.setAttribute('data-theme', 'light'); }
+                else { raiz.setAttribute('data-theme', 'dark'); }
+                document.dispatchEvent(new CustomEvent('controlhub-tema', { detail: novo }));
+            };
+        })();
+    </script>
     @* Nome do produto: generico de proposito. A identidade visual da loja
        (CNPJ, endereco, telefone) ainda nao esta parametrizada - ver
        Views/Caixa/GerarCupom.cshtml e a secao "Dados da empresa" do README. *@
@@ -120,7 +186,97 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/corporate-theme.css" asp-append-version="true" />
 </head>
-<body>
+<body>@if (autenticado)
+{
+    <div class="app-shell" id="appShell">
+        <aside class="app-sidebar" id="app-sidebar" aria-label="Navegação principal">
+            <div class="app-sidebar__top">
+                <a class="app-brand" href="/" title="@marcaNome">@marcaNome</a>
+                @if (!string.IsNullOrWhiteSpace(lojaNome))
+                {
+                    <span class="app-brand__loja">@lojaNome</span>
+                }
+            </div>
+            <nav class="app-sidebar__nav">
+                <div class="app-sidebar__grupo">Operação</div>
+                <a class="app-sidebar__item @(MenuAtivo("Home") ? "active" : null)" href="/Home/Index" aria-current="@(MenuAtivo("Home") ? "page" : null)">Estoque</a>
+                @if (podeVerFinanceiro)
+                {
+                    <a class="app-sidebar__item @(MenuAtivo("Caixa", "Index") ? "active" : null)" href="/Caixa" aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)">Caixa</a>
+                }
+                @if (podeVerFinanceiro)
+                {
+                    <div class="app-sidebar__grupo">Gestão</div>
+                    <a class="app-sidebar__item @(MenuAtivo("Caixa", "Historico") ? "active" : null)" asp-controller="Caixa" asp-action="Historico" asp-route-periodo="hoje" aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)">Histórico</a>
+                    <a class="app-sidebar__item @(MenuAtivo("Dashboard") ? "active" : null)" href="/Dashboard" aria-current="@(MenuAtivo("Dashboard") ? "page" : null)">Dashboard</a>
+                }
+            </nav>
+            <div class="app-sidebar__bottom">
+                <div class="app-theme-linha">
+                    <span class="app-theme-linha__rotulo">Tema</span>
+                    <button type="button" class="app-theme" role="switch" aria-checked="true" aria-label="Modo escuro">
+                        <span class="app-theme-knob" aria-hidden="true"></span>
+                        <span class="app-theme-ico app-theme-moon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        </span>
+                        <span class="app-theme-ico app-theme-sun" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                        </span>
+                    </button>
+                </div>
+                <div class="app-usuario">
+                    <button type="button" class="app-usuario__botao" id="btnUsuario" aria-haspopup="menu" aria-expanded="false" aria-controls="menuUsuario">
+                        <span class="app-usuario__info">
+                            <span class="app-usuario__nome">@nomeExibido</span>
+                            <span class="app-usuario__papel">@papelExibido</span>
+                        </span>
+                        <span class="app-usuario__chevron" aria-hidden="true"></span>
+                    </button>
+                    <div class="app-menu" id="menuUsuario" role="menu" aria-hidden="true">
+                        @if (podeGerenciarUsuarios)
+                        {
+                            <a class="app-menu__item" role="menuitem" asp-controller="Usuarios" asp-action="Index">Usuários</a>
+                        }
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0" role="none">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="app-menu__item app-menu__item--sair" role="menuitem">Sair</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <div class="app-main" id="appMain">
+            <header class="app-header">
+                <button class="app-hamburguer" id="btnMenu" type="button" aria-controls="app-sidebar" aria-expanded="true" aria-label="Abrir ou fechar o menu">
+                    <span class="app-hamburguer__barra"></span>
+                    <span class="app-hamburguer__barra"></span>
+                    <span class="app-hamburguer__barra"></span>
+                </button>
+                <div class="app-caminho">
+                    @if (grupoAtual != null)
+                    {
+                        <span class="app-caminho__grupo">@grupoAtual</span>
+                        <span class="app-caminho__sep" aria-hidden="true">/</span>
+                        <span class="app-caminho__pagina">@paginaAtual</span>
+                    }
+                    else
+                    {
+                        <span class="app-caminho__pagina">@caminhoTexto</span>
+                    }
+                </div>
+            </header>
+            <main class="app-content" id="appContent">@RenderBody()</main>
+            <footer class="app-footer">
+                <div class="container">&copy; 2026 - Controle de Estoque e Caixa</div>
+            </footer>
+        </div>
+        <div class="cortina-sidebar" id="cortinaSidebar" aria-hidden="true"></div>
+    </div>
+    <script src="~/js/shell.js" asp-append-version="true"></script>
+}
+else
+{
+    
     <header>
         <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom shadow-sm mb-0">
             <div class="container-fluid">
@@ -153,7 +309,7 @@
                             </li>
                             <li class="nav-item">
                                 @* asp-controller="Caixa" mantido; a acao separa o
-                                   PDV (Index) do Historico, que sao do mesmo
+                                   PDV (Index) do Historóico, que sao do mesmo
                                    controller - sem isso os dois ficariam ativos. *@
                                 <a class="nav-link text-dark @(MenuAtivo("Caixa", "Index") ? "active" : null)"
                                    aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)"
@@ -178,7 +334,7 @@
                            do _Layout, sem uma Authorize nova aqui.
 
                            Mudancas (BUG-32): o item saiu do INICIO da barra para
-                           DEPOIS de Historico e passou a se chamar "Dashboard"
+                           DEPOIS de Historóico e passou a se chamar "Dashboard"
                            (antes "Inicio"). A rota nao mudou - continua
                            Dashboard/Index, que e o que os testes e os atalhos
                            usam. BUG-33: sem icone - a barra usa so o nome. *@
@@ -222,6 +378,33 @@
                                     </span>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <span class="dropdown-item-text small text-muted">
+                                        <i class="bi bi-palette me-2" aria-hidden="true"></i>Tema
+                                    </span>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="auto"
+                                            role="menuitemradio" aria-checked="true"
+                                            onclick="aplicarTema('auto')">
+                                        <i class="bi bi-circle-half me-2" aria-hidden="true"></i>Automático
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="claro"
+                                            role="menuitemradio" aria-checked="false"
+                                            onclick="aplicarTema('claro')">
+                                        <i class="bi bi-sun me-2" aria-hidden="true"></i>Claro
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="escuro"
+                                            role="menuitemradio" aria-checked="false"
+                                            onclick="aplicarTema('escuro')">
+                                        <i class="bi bi-moon-stars me-2" aria-hidden="true"></i>Escuro
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 @if (podeGerenciarUsuarios)
                                 {
                                     <li>
@@ -247,6 +430,15 @@
     
     <main role="main">
 
+        @RenderBody()
+    </main>
+
+    <footer class="footer text-muted text-center py-3">
+        <div class="container" style="color: white;">
+            &copy; 2026 - Controle de Estoque e Caixa
+        </div>
+    </footer>
+}
 
         @* Modal Atalhos (Mantido) *@
         @if (temMenuAtalhos)
@@ -399,14 +591,6 @@
             </div>
         </div>
 
-        @RenderBody()
-    </main>
-
-    <footer class="footer text-muted text-center py-3">
-        <div class="container" style="color: white;">
-            &copy; 2026 - Controle de Estoque e Caixa
-        </div>
-    </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -442,67 +626,74 @@
 
         document.addEventListener('keydown', function(e) {
 
-            // Captura o Modal de Atalhos
-            const modalElement = document.getElementById('modalAtalhos');
+            // AJUSTE DE SHELL 2: atalhos agora casam por event.code (KeyM/KeyC/
+            // KeyE/KeyH, Digit1..7), que e IDENTICO em qualquer layout de teclado.
+            // O codigo antigo comparava e.key ('m','c'...): em layout nao-US o
+            // Alt+letra devolve outro caractere e o atalho simplesmente nao vinha.
+            const modal = document.getElementById('modalAtalhos');
+            // Estado REAL do overlay: a classe 'show' do Bootstrap, e nao
+            // "getInstance() !== null" (que so diz que a instancia existe, mesmo
+            // escondida - bug que fazia o Alt+M parar de abrir depois do 1o uso).
+            const overlayAberto = !!(modal && modal.classList.contains('show'));
+            const code = e.code || '';
+            const A = window.LOJA_ACESSO || {};
 
-            // Se o modal existir na página atual, verificamos se está visível
-            // Verifica o estado do modal usando a API do Bootstrap
-            const modalInstance = bootstrap.Modal.getInstance(modalElement);
-            const isVisible = modalInstance !== null;
-
-
-            // BUG-13 (commit 4): os atalhos de NAVEGACAO obedecem as MESMAS policies
-            // do menu - window.LOJA_ACESSO e gerado pelo Razor com o resultado de
-            // IAuthorizationService. Atalho escondido e atalho que nao existe:
-            // quem nao pode ver /Caixa/Historico tambem nao chega nele por teclado.
-            // Atalho ALT + C (Caixa) - PodeOperarPDV (Dono e Operador)
-            if (window.LOJA_ACESSO.pdv && e.altKey && (e.key === 'c' || e.key === 'C')) {
-                window.location.href = '/Caixa';
-                return;
-            }
-
-            // Atalho ALT + H (Histórico) - PodeVerFinanceiro (só Dono)
-            if (window.LOJA_ACESSO.financeiro && e.altKey && (e.key.toLowerCase() === 'h')) {
-                window.location.href = '/Caixa/Historico?periodo=hoje';
-            }
-
-            // Atalho ALT + E (Estoque / Home) - PodeOperarPDV
-            if (window.LOJA_ACESSO.pdv && e.altKey && (e.key.toLowerCase() === 'e')) {
-                window.location.href = '/Home/Index';
-            }
-
-            // LÓGICA QUANDO O MODAL ESTÁ ABERTO (NÚMEROS 1-6)
-            if (isVisible) {
-                if (e.key >= '1' && e.key <= '7') {
+            // NUMEROS 1..7 com o overlay aberto acionam os MESMOS botoes
+            // (data-key), que chamam as mesmas funcoes de admin-caixa.js.
+            if (overlayAberto && !e.altKey && /^Digit[1-7]$/.test(code)) {
+                const botao = modal.querySelector('[data-key="' + code.slice(5) + '"]');
+                if (botao) {
                     e.preventDefault();
-                    const botao = modalElement.querySelector(`[data-key="${e.key}"]`);
-                    if (botao) {
-                        botao.click();
-                        // Fecha o modal usando a API correta do Bootstrap
-                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                        if (modalInstance) modalInstance.hide();
-                    }
+                    botao.click();
+                    const inst = bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
                     return;
                 }
             }
 
-            // ATALHO ALT + M (Abrir Menu Admin)
-            if (e.altKey && (e.key === 'm' || e.key === 'M')) {
+            // ATALHOS DE NAVEGACAO - mesmas policies de antes (window.LOJA_ACESSO,
+            // gerado pelo Razor a partir de IAuthorizationService). Atalho sem
+            // policy = atalho que nao navega: o Operador nao chega no Historico
+            // por teclado, assim como nao ve o item no menu.
+            if (e.altKey && code === 'KeyC' && A.pdv) {           // Caixa (Dono e Operador)
                 e.preventDefault();
-                if (modalElement && !isVisible) {
-                    // Tenta pegar instância existente ou cria uma nova
-                    let modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (!modalInstance) {
-                        modalInstance = new bootstrap.Modal(modalElement);
-                    }
-                    modalInstance.show();
+                window.location.href = '/Caixa';
+                return;
+            }
+            if (e.altKey && code === 'KeyH' && A.financeiro) {    // Historico de hoje (so Dono)
+                e.preventDefault();
+                window.location.href = '/Caixa/Historico?periodo=hoje';
+                return;
+            }
+            if (e.altKey && code === 'KeyE' && A.pdv) {           // Estoque / Home
+                e.preventDefault();
+                window.location.href = '/Home/Index';
+                return;
+            }
+
+            // ATALHO ALT + M - abre o menu (administrativo p/ Dono, do caixa p/
+            // Operador). O modal so e renderizado quando temMenuAtalhos; quem nao
+            // tem nenhum item simplesmente nao tem overlay para abrir.
+            if (e.altKey && code === 'KeyM') {
+                e.preventDefault();
+                if (modal && !overlayAberto) {
+                    bootstrap.Modal.getOrCreateInstance(modal).show();
                 }
                 return;
             }
 
-            // LÓGICA DO ESC (Ajuda Global)
-            if (e.key === 'Escape') {
+            // LOGICA DO ESC - com o overlay do menu aberto, Esc o FECHA antes de
+            // qualquer coisa (no PDV o campo de busca recebe foco e, se a limpeza
+            // viesse primeiro, o Esc esvaziaria a busca em vez de fechar o menu).
+            // Sem overlay: limpa a busca se ela esta em foco; senao, fecha o ajuda.
+            if (code === 'Escape' || e.key === 'Escape') {
                 if (window.Swal && Swal.isVisible()) return;
+
+                if (overlayAberto) {
+                    const inst = bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
+                    return;
+                }
 
                 const campoBusca = document.getElementById("campoBusca");
                 if (campoBusca && campoBusca === document.activeElement) {
@@ -514,15 +705,26 @@
                 }
 
                 const modalAjuda = document.getElementById("modalAjudaAtalhos");
-                if (modalAjuda) {
-                    // BUG-35: o overlay dos atalhos e position:fixed/inset:0 e
-                    // hoje esconde por CSS com !important. Alternar
-                    // style.display entre "" e "flex" nao funciona mais (e o
-                    // "" era justamente o que deixava o overlay cobrindo a
-                    // tela inteira). A Classe "aberto" e o caminho unico para
-                    // mostrar, com o mesmo peso do !important.
-                    modalAjuda.classList.toggle("aberto");
+                if (modalAjuda && modalAjuda.classList.contains("aberto")) {
+                    // BUG-35: o overlay dos atalhos esconde por CSS com !important;
+                    // a classe "aberto" e o caminho unico (mesmo peso do !important).
+                    modalAjuda.classList.remove("aberto");
                 }
+            }
+        });
+
+        // Clique FORA (no backdrop ou fora do dialog) fecha o overlay do menu.
+        // Em clique real o Bootstrap ja fecha (data-bs-backdrop padrao); este
+        // handler cobre tambem o clique sintetico dos testes, que nao dispara o
+        // mousedown que o Bootstrap observa.
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('modalAtalhos');
+            if (!modal || !modal.classList.contains('show')) return;
+            const noBackdrop = e.target && e.target.classList && e.target.classList.contains('modal-backdrop');
+            const dentroDoDialog = e.target && e.target.closest && e.target.closest('#modalAtalhos .modal-dialog');
+            if (noBackdrop || !dentroDoDialog) {
+                const inst = bootstrap.Modal.getInstance(modal);
+                if (inst) inst.hide();
             }
         });
 

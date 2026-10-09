@@ -370,10 +370,14 @@ Write-Titulo '6) MENU POR PAPEL (commit 4) - HTML renderizado'
 
 $hDono = (Chama $dono 'GET' '/Caixa/Index' $null $null $false).Body
 Write-Host '  -- Dono: menu completo --'
-TemTexto 'Dono: navbar mostra o nome' $hDono '>Dono Teste</b>'
+# AJUSTE DE SHELL: o nome agora mora em <span class="app-usuario__nome">
+# (era <b>...</b> na navbar antiga) e o link do Historico leva a query
+# ?periodo=hoje gerada pelo asp-route-periodo. So mudou o SELETOR - as
+# regras de autorizacao (200/403/302) continuam as mesmas de sempre.
+TemTexto 'Dono: navbar mostra o nome' $hDono '>Dono Teste</span>'
 TemTexto 'Dono: navbar mostra o papel' $hDono '>Dono</span>'
 TemTexto 'Dono: link /Usuarios na navbar' $hDono 'href="/Usuarios"'
-TemTexto 'Dono: link do Historico na navbar' $hDono 'href="/Caixa/Historico"'
+TemTexto 'Dono: link do Historico na navbar' $hDono 'href="/Caixa/Historico?periodo=hoje"'
 TemTexto 'Dono: item 1 (SANGRIA) no menu Alt+M' $hDono 'data-key="1"'
 TemTexto 'Dono: item 2 (SUPRIMENTO) no menu Alt+M' $hDono 'data-key="2"'
 TemTexto 'Dono: item 3 (CAIXA) no menu Alt+M' $hDono 'data-key="3"'
@@ -387,7 +391,7 @@ TemTexto 'Dono: JS libera a gestao de vendedores' $hDono 'vendedores: true'
 
 $hOp = (Chama $jar 'GET' '/Caixa/Index' $null $null $false).Body
 Write-Host '  -- Operador: so o que ele pode usar --'
-TemTexto 'Operador: navbar mostra o nome' $hOp '>Operador Teste</b>'
+TemTexto 'Operador: navbar mostra o nome' $hOp '>Operador Teste</span>'
 TemTexto 'Operador: navbar mostra o papel' $hOp '>Operador</span>'
 TemTexto 'Operador: botao Sair na navbar' $hOp '>Sair</button>'
 TemTexto 'Operador: item 2 (SUPRIMENTO) no menu Alt+M' $hOp 'data-key="2"'

@@ -26,16 +26,15 @@
 }
 
 <div class="main-container dash-container">
-    <div class="dash-cabecalho" style="display:flex; flex-wrap:nowrap; justify-content:space-between; align-items:flex-end; width:100%; gap:1rem;">
+    <div class="dash-cabecalho">
         <div>
             <h1 class="dash-titulo">Dashboard</h1>
-            <p class="dash-subtitulo">@(DateTime.Today.ToString("dd/MM/yyyy", br)) · conferência do dia</p>
         </div>
 
         @* Seletor de JANELA por link GET: sem JS, sem formulario, e a URL
            (?dias=30) continua compartilhavel — quem recebe o link ve a mesma
            janela. O controller so aceita 7 e 30 (regra do painel). *@
-        <nav class="dash-periodo" style="margin-left:auto; flex-shrink:0;" aria-label="Período do gráfico">
+        <nav class="dash-periodo" aria-label="Período do gráfico">
             <a class="dash-periodo-opcao @((!janelaLonga) ? "is-ativo" : null)"
                href="@Url.Action("Index", "Dashboard", new { dias = 7 })"
                aria-current="@((!janelaLonga) ? "page" : null)">7 dias</a>
