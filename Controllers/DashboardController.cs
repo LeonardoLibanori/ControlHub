@@ -1265,6 +1265,10 @@ public class VendaPeriodo
         public DateTime DataVenda { get; set; }
         public string MetodoPagamento { get; set; } = string.Empty;
         public decimal Total { get; set; }
+        public decimal ValorRecebido { get; set; }
+        public decimal ValorTroco { get; set; }
+        public string? CodigoVendedor { get; set; }
+        public bool IsFechado { get; set; }
     }
 
     // =====================================================================
@@ -1328,6 +1332,34 @@ public class VendaPeriodo
         public decimal Valor { get; set; }
         public string Descricao { get; set; } = string.Empty;
         public bool IsFechado { get; set; }
+    }
+
+    /// <summary>Um suprimento para o detalhe do dia.</summary>
+    public class DashboardSuprimentoDetalhe
+    {
+        public DateTime Data { get; set; }
+        public decimal Valor { get; set; }
+        public string Descricao { get; set; } = string.Empty;
+        public bool IsFechado { get; set; }
+    }
+
+    /// <summary>Uma sangria para o detalhe do dia.</summary>
+    public class DashboardSangriaDetalhe
+    {
+        public DateTime Data { get; set; }
+        public decimal Valor { get; set; }
+        public string Descricao { get; set; } = string.Empty;
+        public bool IsFechado { get; set; }
+    }
+
+    /// <summary>Um produto vendido no detalhe do dia.</summary>
+    public class DashboardProdutoDetalhe
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public decimal Quantidade { get; set; }
+        public string Unidade { get; set; } = string.Empty;
+        public decimal Valor { get; set; }
     }
 
     /// <summary>Item de venda para o detalhe expandido.</summary>

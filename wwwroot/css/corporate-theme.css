@@ -3859,3 +3859,883 @@ html, body {
     overflow-x: hidden;
 }
 
+/* ============================================================================
+   AJUSTE 5 - DASHBOARD STOCKPRO (bloco NOVO no final do arquivo)
+   Prefixo: dsh-  |  Tokens: --bg-*, --text*, --line, --c-*, --t-*, --s-*
+   Sem cores fixas, sem JS obrigatório, sem ícones, sem biblioteca externa.
+   ============================================================================ */
+
+/* --- Container principal ------------------------------------------------- */
+.dsh-container {
+    padding-bottom: 3rem;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* --- 1. CABEÇALHO: Saudação + frase de variação + seletor de período ------ */
+.dsh-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+.dsh-boas-vindas {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dsh-saudacao {
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -.01em;
+}
+
+.dsh-frase-variacao {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.dsh-periodo-seletor {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.dsh-periodo-opcao {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    color: var(--text-soft);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.dsh-periodo-opcao:hover {
+    color: var(--text);
+}
+
+.dsh-periodo-opcao.is-ativo {
+    background: var(--bg-card);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+
+/* --- 2. KPI CARDS (grade 12 col, gap 24px) ------------------------------- */
+.dsh-kpi-grade {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1023.98px) {
+    .dsh-kpi-grade {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 599.98px) {
+    .dsh-kpi-grade {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dsh-kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    position: relative;
+}
+
+.dsh-kpi-ponto {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dsh-kpi-rotulo {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-soft);
+    text-transform: none;
+    letter-spacing: .02em;
+}
+
+.dsh-kpi-valor {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.dsh-kpi-variacao {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dsh-kpi-vs {
+    font-size: 11px;
+    color: var(--text-soft);
+    text-transform: none;
+}
+
+.dsh-kpi-saldo-info {
+    font-size: 11px;
+    color: var(--text-soft);
+    text-transform: none;
+}
+
+.dsh-negativo {
+    color: var(--t-coral);
+}
+
+.dsh-positivo {
+    color: var(--t-green);
+}
+
+/* --- 3. GRÁFICO (esquerda 8/12) + ROSCA (direita 4/12) ------------------- */
+.dsh-grafico-rosca {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 1024px) {
+    .dsh-grafico-rosca {
+        grid-template-columns: 8fr 4fr;
+    }
+}
+
+.dsh-grafico-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 0;
+}
+
+.dsh-grafico-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.dsh-grafico-titulo {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.dsh-grafico-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+
+.dsh-legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-soft);
+}
+
+.dsh-legenda-cor {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dsh-grafico-svg-container {
+    position: relative;
+    width: 100%;
+    overflow: visible;
+}
+
+.dsh-grafico-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.dsh-grafico-marcador {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 0 2px var(--c-blue);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+}
+
+.dsh-grafico-ancora {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    outline: none;
+}
+
+.dsh-grafico-ancora:hover .dsh-grafico-marcador,
+.dsh-grafico-ancora:focus-visible .dsh-grafico-marcador,
+.dsh-grafico-ancora.is-selecionado .dsh-grafico-marcador {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+}
+
+.dsh-grafico-ancora:focus-visible {
+    outline: 2px solid var(--c-blue);
+    outline-offset: 2px;
+}
+
+.dsh-grafico-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease, visibility .15s ease;
+    z-index: 20;
+}
+
+.dsh-grafico-ancora:hover .dsh-grafico-tooltip,
+.dsh-grafico-ancora:focus-visible .dsh-grafico-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dsh-grafico-ancora[data-tooltip]::after {
+    content: attr(data-tooltip);
+}
+
+.dsh-grafico-vazio {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-soft);
+    font-size: 14px;
+}
+
+.dsh-grafico-tabela-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.dsh-grafico-tabela-sr caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- ROSCA DE FORMAS DE PAGAMENTO --------------------------------------- */
+.dsh-rosca-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+}
+
+.dsh-rosca-titulo {
+    margin: 0 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    width: 100%;
+    text-align: center;
+}
+
+.dsh-rosca-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.dsh-rosca-svg {
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
+}
+
+.dsh-rosca-legenda {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 240px;
+}
+
+.dsh-rosca-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.dsh-rosca-cor {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dsh-rosca-nome {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dsh-rosca-detalhes {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.dsh-rosca-pct {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.dsh-rosca-val {
+    font-size: 11px;
+    color: var(--text-soft);
+}
+
+/* --- 4. ESTOQUE BAIXO (esquerda) + MAIS VENDIDOS (direita) --------------- */
+.dsh-estoque-mais-vendidos {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 1024px) {
+    .dsh-estoque-mais-vendidos {
+        grid-template-columns: 8fr 4fr;
+    }
+}
+
+.dsh-estoque-wrapper,
+.dsh-mais-vendidos-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 0;
+}
+
+.dsh-secao-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.dsh-secao-titulo {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.dsh-link-ver-todos {
+    font-size: 13px;
+    color: var(--t-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.dsh-link-ver-todos:hover {
+    text-decoration: underline;
+}
+
+/* --- TABELA ESTOQUE BAIXO ---------------------------------------------- */
+.dsh-tabela-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.dsh-tabela-responsiva {
+    overflow-x: auto;
+}
+
+.dsh-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.dsh-tabela th,
+.dsh-tabela td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.dsh-tabela th {
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: none;
+    color: var(--text-soft);
+    font-weight: 600;
+    background: var(--bg-alt);
+}
+
+.dsh-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.dsh-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dsh-linha-zerado {
+    background: color-mix(in srgb, var(--c-coral) 10%, transparent);
+}
+
+.dsh-badge-situacao {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.dsh-situacao-baixo {
+    color: var(--t-amber);
+    background: var(--s-amber-fundo);
+    border-color: var(--s-amber-borda);
+}
+
+.dsh-situacao-zerado {
+    color: var(--t-coral);
+    background: var(--s-coral-fundo);
+    border-color: var(--s-coral-borda);
+}
+
+.dsh-estoque-total {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--text-soft);
+}
+
+/* --- MAIS VENDIDOS ----------------------------------------------------- */
+.dsh-mais-vendidos-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dsh-mais-vendido-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.dsh-mais-vendido-item:hover {
+    background: var(--bg-card);
+    border-color: var(--line);
+}
+
+.dsh-mais-vendido-posicao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--c-blue);
+    color: var(--btn-primary-ink);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.dsh-mais-vendido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dsh-mais-vendido-nome {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dsh-mais-vendido-nome:hover {
+    color: var(--t-blue);
+}
+
+.dsh-mais-vendido-qtd {
+    font-size: 11px;
+    color: var(--text-soft);
+}
+
+.dsh-mais-vendido-valor-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 80px;
+}
+
+.dsh-mais-vendido-valor {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.dsh-barra-relativa {
+    width: 100%;
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dsh-barra-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .4s ease;
+}
+
+/* --- DETALHE DO DIA (entre linhas 3 e 4) --------------------------------- */
+.dsh-detalhe-dia-container {
+    margin: 24px 0;
+    animation: dsh-slide-down .25s ease;
+}
+
+@keyframes dsh-slide-down {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- ESTADOS VAZIOS ------------------------------------------------------ */
+.dsh-vazio {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
+/* --- ALERTAS ------------------------------------------------------------- */
+.dsh-alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+}
+
+.dsh-alert-erro {
+    background: color-mix(in srgb, var(--c-coral) 12%, transparent);
+    border-color: var(--danger);
+    color: var(--t-coral);
+}
+
+/* --- LOADING SPINNER ----------------------------------------------------- */
+.dsh-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--line);
+    border-top-color: var(--c-blue);
+    border-radius: 50%;
+    animation: dsh-spin 1s linear infinite;
+}
+
+@keyframes dsh-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- BADGES -------------------------------------------------------------- */
+.dsh-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: none;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.dsh-badge-fechado {
+    color: var(--t-green);
+    background: var(--s-green-fundo);
+    border-color: var(--s-green-borda);
+}
+
+.dsh-badge-aberto {
+    color: var(--t-blue);
+    background: var(--bg-ativo);
+    border-color: color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
+}
+
+.dsh-badge-fechado-alt {
+    color: var(--t-green);
+    background: var(--s-green-fundo);
+    border-color: var(--s-green-borda);
+}
+
+.dsh-badge-aberto-alt {
+    color: var(--t-blue);
+    background: var(--bg-ativo);
+    border-color: color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
+}
+
+.dsh-linha-fechada {
+    opacity: .6;
+}
+
+.dsh-linha-fechada:hover {
+    background-color: color-mix(in srgb, var(--text) 3%, transparent) !important;
+}
+
+/* --- EXPANDIR BTN -------------------------------------------------------- */
+.dsh-expandir-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.dsh-expandir-btn:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dsh-expandir-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.dsh-expandir-btn svg {
+    transition: transform .15s ease;
+}
+
+.dsh-expandir-btn[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+/* --- ITENS EXPANDIDOS ---------------------------------------------------- */
+.dsh-itens-venda td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.dsh-itens-container {
+    padding: 12px 16px;
+    background: var(--bg-alt);
+    border-top: 1px solid var(--line);
+}
+
+.dsh-tabela-itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.dsh-tabela-itens th,
+.dsh-tabela-itens td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+.dsh-tabela-itens th {
+    font-size: 10px;
+    letter-spacing: .04em;
+    text-transform: none;
+    color: var(--text-soft);
+    font-weight: 600;
+}
+
+.dsh-tabela-itens tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* --- RESPONSIVIDADE ------------------------------------------------------ */
+@media (max-width: 1023.98px) {
+    .dsh-grafico-rosca {
+        grid-template-columns: 1fr;
+    }
+
+    .dsh-estoque-mais-vendidos {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 599.98px) {
+    .dsh-kpi-grade {
+        grid-template-columns: 1fr;
+    }
+
+    .dsh-grafico-wrapper,
+    .dsh-rosca-wrapper,
+    .dsh-estoque-wrapper,
+    .dsh-mais-vendidos-wrapper {
+        padding: 16px;
+    }
+
+    .dsh-kpi-card {
+        padding: 16px;
+    }
+
+    .dsh-kpi-valor {
+        font-size: 22px;
+    }
+
+    .dsh-rosca-svg {
+        width: 140px;
+        height: 140px;
+    }
+
+    .dsh-mais-vendido-item {
+        grid-template-columns: 24px 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "posicao nome"
+            "posicao valor";
+    }
+
+    .dsh-mais-vendido-posicao {
+        grid-area: posicao;
+    }
+
+    .dsh-mais-vendido-info {
+        grid-area: nome;
+    }
+
+    .dsh-mais-vendido-valor-bar {
+        grid-area: valor;
+        align-items: flex-start;
+        width: 100%;
+    }
+}
+
