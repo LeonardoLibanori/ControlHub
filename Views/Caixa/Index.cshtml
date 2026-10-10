@@ -24,18 +24,18 @@
 </style>
 
 <div class="main-container">
-    <h1 class="text-center fw-bold">CAIXA - LOJA</h1>
+    <h1 class="text-center fw-bold">Caixa</h1>
 
     <div class="row">
         <div class="col-md-5">
-            <div class="tabela-card">
+            <div class="tabela-card h-100">
                 <div class="card-header cash-section-header text-center py-2 rounded-top">
-                    <h5 class="mb-0"><i class="bi bi-upc-scan me-2" aria-hidden="true"></i>ENTRADA DE ITENS</h5>
+                    <h5 class="mb-0"><i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Entrada de itens</h5>
                 </div>
 
                 <div class="p-3">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">PRODUTO (Nome ou ID)</label>
+                        <label class="form-label fw-bold">Produto (nome ou ID)</label>
                         <div class="position-relative">
                             <input type="text" id="campoBusca" class="form-control" placeholder="Bipe o código..."
                                    onkeypress="if(event.key === 'Enter') buscarProdutoPorCodigo(this.value)" autocomplete="off" />
@@ -47,17 +47,17 @@
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <div class="modal-header cash-section-header">
-                                    <h5 class="modal-title">Confirmar Item</h5>
+                                    <h5 class="modal-title">Confirmar item</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <input type="hidden" id="produtoIdVenda" />
                                     <h4 id="modalNomeProduto" class="fw-bold">---</h4>
                                     <div class="alert alert-info">
-                                        Estoque Disponível: <strong id="modalEstoqueDisponivel">0</strong>
+                                        Estoque disponível: <strong id="modalEstoqueDisponivel">0</strong>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Quantidade:</label>
+                                        <label class="form-label">Quantidade</label>
                                         <!-- ALTERADO: id distinto para o campo do modal -->
                                         <input type="number" id="modalCampoQtd" class="form-control" value="1">
                                     </div>
@@ -70,14 +70,14 @@
                     </div>
 
                     <div id="painelItem" class="p-3 border rounded bg-light mb-3 text-center">
-                        <h6 class="text-muted small">Item Selecionado</h6>
+                        <h6 class="text-muted small">Item selecionado</h6>
                         <h3 id="displayNome" class="fw-bold text-dark">---</h3>
                         <h2 class="text-success fw-bold" id="exibirPreco">R$ 0,00</h2>
                     </div>
 
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <label id="labelQtd" class="fw-bold">QUANTIDADE</label>
+                            <label id="labelQtd" class="form-label fw-bold">Quantidade</label>
                             <input type="number"
                                    id="campoQtd"
                                    class="form-control form-control-lg"
@@ -88,7 +88,7 @@
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
                             <button type="button" id="btnConfirmar" onclick="confirmarItem()" class="btn btn-primary">
-                                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>CONFIRMAR
+                                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Confirmar
                             </button>
                         </div>
                     </div>
@@ -97,9 +97,9 @@
         </div>
 
         <div class="col-md-7">
-            <div class="tabela-card">
+            <div class="tabela-card h-100">
                 <div class="card-header cash-section-header py-2 rounded-top">
-                    <h5 class="mb-0"><i class="bi bi-receipt me-2" aria-hidden="true"></i>LISTA DE COMPRAS</h5>
+                    <h5 class="mb-0"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Lista de compras</h5>
                 </div>
 
                 <div class="p-0">
@@ -119,13 +119,13 @@
                     </div>
 
                     <div class="cart-total-bar p-3 d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">TOTAL</h3>
+                        <h3 class="mb-0">Total</h3>
                         <h2 id="displayTotal" class="mb-0 fw-bold">R$ 0,00</h2>
                     </div>
 
                     <div class="p-3 bg-light border-top">
                         <button type="button" class="btn btn-primary btn-lg w-100 fw-bold py-3" onclick="abrirModalPagamento()">
-                            <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>FINALIZAR VENDA
+                            <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>Finalizar venda
                         </button>
                     </div>
 
@@ -164,10 +164,10 @@
     <div class="modal-box payment-modal">
 
         <div id="secaoPagamento">
-            <h3 class="fw-bold mb-4 payment-title">PAGAMENTO</h3>
+            <h3 class="fw-bold mb-4 payment-title">Pagamento</h3>
             <div class="d-grid gap-2 mb-4">
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Crédito')"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i>Cartão Crédito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão Débito')"><i class="bi bi-credit-card" aria-hidden="true"></i>Cartão Débito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de crédito')"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i>Cartão de crédito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de débito')"><i class="bi bi-credit-card" aria-hidden="true"></i>Cartão de débito</button>
                 <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')"><i class="bi bi-qr-code" aria-hidden="true"></i>PIX</button>
                 <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')"><i class="bi bi-ticket-perforated" aria-hidden="true"></i>Voucher</button>
                 <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')"><i class="bi bi-cash-stack" aria-hidden="true"></i>Dinheiro</button>
@@ -177,8 +177,8 @@
                    o valor recebido nem participa da decisao (so o servidor valida
                    quando metodo = Dinheiro). calcularTroco() o reavalia a cada
                    digitacao/troca de metodo e poe disabled + aria-disabled aqui. *@
-                <button type="button" id="btnConfirmarPagamento" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>CONFIRMAR</button>
-                <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="fecharModal()">CANCELAR</button>
+                <button type="button" id="btnConfirmarPagamento" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Confirmar</button>
+                <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="fecharModal()">Cancelar</button>
             </div>
         </div>
 
@@ -188,7 +188,7 @@
         <div id="secaoTroco" class="p-3 border rounded bg-white shadow-sm mb-4" style="display: none;">
             <div class="row align-items-center">
                 <div class="col-6">
-                    <label class="form-label fw-bold mb-1">Valor Recebido</label>
+                    <label class="form-label fw-bold mb-1">Valor recebido</label>
                     <div class="input-group">
                         <span class="input-group-text">R$</span>
                         @* BUG-30: o Enter no campo NAO confirma nem envia nada - a tecla
@@ -211,7 +211,7 @@
         </div>
 
         <div id="secaoCPF" style="display: none;">
-            <h4 class="fw-bold mb-3 payment-title">CPF NA NOTA?</h4>
+            <h4 class="fw-bold mb-3 payment-title">CPF na nota?</h4>
             <p class="text-muted small">Opcional. Deixe em branco se não desejar.</p>
             <input type="text" id="cpfClienteInput" class="form-control form-control-lg text-center mb-4" placeholder="000.000.000-00" maxlength="14">
 
@@ -220,13 +220,13 @@
                que o operador clica so quando a empresa usa essa recompensa. *@
             <div class="d-grid mb-3">
                 <button type="button" id="btnCupomVendedor" class="btn btn-outline-secondary py-2 fw-bold" onclick="gerenciarCupomVendedor()">
-                    <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i><span id="btnCupomVendedorTexto">CUPOM DO VENDEDOR (opcional)</span>
+                    <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i><span id="btnCupomVendedorTexto">Cupom do vendedor (opcional)</span>
                 </button>
             </div>
 
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()"><i class="bi bi-printer me-2" aria-hidden="true"></i>FINALIZAR E IMPRIMIR</button>
-                <button type="button" class="btn btn-outline-secondary" onclick="voltarParaPagamento()">VOLTAR</button>
+                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()"><i class="bi bi-printer me-2" aria-hidden="true"></i>Finalizar e imprimir</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="voltarParaPagamento()">Voltar</button>
             </div>
         </div>
 

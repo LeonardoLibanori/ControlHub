@@ -2,46 +2,48 @@
 @using ControleEstoqueLoja.Models
 
 <div class="product-form-panel">
-    
-    <h2 style="text-align: center; margin-bottom: 25px;">Editar Produto</h2>
+
+    <h2 class="mb-4 text-center">Editar produto</h2>
 
     <form method="post" action="/Home/Editar">
         @Html.AntiForgeryToken()
         <input type="hidden" name="id" value="@Model.Id" />
 
-        <label style="font-weight: bold;">Nome do produto:</label><br />
-        <input type="text" name="nome" value="@Model.Nome" class="form-control mb-3" required />
-
-        <label style="font-weight: bold;">Vendido por:</label><br />
-        @* So dois valores na tela. Os `value` continuam os nomes do enum (o JS
-           atualizarRotuloPreco e o servidor dependem deles). "Peso (kg)" fica
-           selecionado so quando o Tipo ATUAL e PorPeso; qualquer outro (Prateleira,
-           Geladeira, Freezer) cai em "Unidade" - igual ao fallback do servidor. *@
-        <select name="tipo" id="tipoProduto" onchange="atualizarRotuloPreco()" class="form-select mb-3" required>
-            @if (Model.Tipo == TipoProduto.PorPeso) { <option value="Prateleira">Unidade</option> <option value="PorPeso" selected>Peso (kg)</option> }
-            else { <option value="Prateleira" selected>Unidade</option> <option value="PorPeso">Peso (kg)</option> }
-        </select>
-
-        <label id="labelPreco" style="font-weight: bold;">Preço por kg (R$/kg):</label><br />
-        <div class="input-group mb-3">
-            <span class="input-group-text">R$</span>
-            <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" oninput="formatarMoeda(this)" class="form-control" required />
-        </div>
-        <input type="hidden" name="preco" id="precoReal" value="@((Model.Preco * 100).ToString("0"))">
-
-        @* <label id="labelQuantidade" style="font-weight: bold;">Quantidade:</label><br />
-        <input type="text" id="quantidadeVisual" oninput="atualizarQuantidade()" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 4px;" required />
-        <input type="hidden" name="quantidade" id="quantidadeReal" value="@Model.Quantidade.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
- *@
-        <label style="font-weight: bold;">Estoque mínimo (alerta):</label><br />
-        <div class="input-group mb-3">
-            <input type="number" name="estoqueMinimo" value="@(Model.EstoqueMinimo?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "")" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
-            <span class="input-group-text">@(Model.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nome do produto</label>
+            <input type="text" name="nome" value="@Model.Nome" class="form-control" required />
         </div>
 
-        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
-            <i class="bi bi-check2 me-2" aria-hidden="true"></i>SALVAR ALTERAÇÕES
-        </button>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Vendido por</label>
+            @* So dois valores na tela. Os `value` continuam os nomes do enum (o JS
+               atualizarRotuloPreco e o servidor dependem deles). "Peso (kg)" fica
+               selecionado so quando o Tipo ATUAL e PorPeso; qualquer outro (Prateleira,
+               Geladeira, Freezer) cai em "Unidade" - igual ao fallback do servidor. *@
+            <select name="tipo" id="tipoProduto" onchange="atualizarRotuloPreco()" class="form-select" required>
+                @if (Model.Tipo == TipoProduto.PorPeso) { <option value="Prateleira">Unidade</option> <option value="PorPeso" selected>Peso (kg)</option> }
+                else { <option value="Prateleira" selected>Unidade</option> <option value="PorPeso">Peso (kg)</option> }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label id="labelPreco" class="form-label fw-bold">Preço por kg (R$/kg)</label>
+            <div class="input-group">
+                <span class="input-group-text">R$</span>
+                <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" oninput="formatarMoeda(this)" class="form-control" required />
+            </div>
+            <input type="hidden" name="preco" id="precoReal" value="@((Model.Preco * 100).ToString("0"))">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Estoque mínimo (alerta)</label>
+            <div class="input-group">
+                <input type="number" name="estoqueMinimo" value="@(Model.EstoqueMinimo?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "")" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
+                <span class="input-group-text">@(Model.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Salvar alterações</button>
     </form>
 
     <div class="text-center mt-3">

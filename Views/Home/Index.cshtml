@@ -30,7 +30,7 @@
 @* QUADRÃO PRINCIPAL (O EXTERNO) *@
 <div class="main-container">
 
-    <h1 class="fw-bold"><i class="bi bi-boxes me-2" aria-hidden="true"></i>ESTOQUE</h1>
+    <h1 class="fw-bold"><i class="bi bi-boxes me-2" aria-hidden="true"></i>Estoque</h1>
 
     <div class="busca-container">
         <form method="get" asp-controller="Home" asp-action="Index" class="busca-form">
@@ -53,14 +53,14 @@
                asp-route-busca="@buscaAtual"
                class="btn-exportar"
                title="Baixar o que está na tela (respeita a busca) em Excel (.xlsx)">
-                <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>Exportar Excel
+                 <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>Exportar Excel
             </a>
         </div>
     }
 
     @* QUADRADO DA TABELA (ESTE FICA DENTRO DO MAIN-CONTAINER) *@
     <div class="tabela-card">
-        <table class="table mb-0">
+        <table class="table mb-0 tabela-responsiva tabela-responsiva--estoque">
             <thead>
                 <tr>
                     <th>Produto</th>

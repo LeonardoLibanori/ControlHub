@@ -2836,6 +2836,177 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     transition: color .15s ease, border-color .15s ease;
 }
 
+
+/* =====================================================================
+   AJUSTE 1 - TABELAS RESPONSIVEIS (Estoque, Historico, Usuarios)
+   ---------------------------------------------------------------------
+   SINTOMA: na tela de Estoque, um nome de produto longo SEM espacos
+   (dado de teste, ex.: 120 caracteres colados) esticava a primeira
+   coluna e empurrava "Vendido por", "Estoque" e "Acoes" para fora do
+   card. Os botoes existiam no DOM, mas ninguem os via sem rolar.
+
+   CAUSA: a tabela usava o table-layout AUTOMATICO do Bootstrap - a
+   coluna do nome crescia pelo conteudo e as outras encolhiam a ponto
+   de sair da area visivel do contêiner.
+
+   CORRECAO: classe compartilhada .tabela-responsiva (mesmas regras
+   para as tres telas, sem copiar CSS):
+     - contêiner com overflow-x:auto (o .tabela-card ja tem; o
+       .table-responsive do Bootstrap tambem) + table-layout:fixed +
+       width:100%: as colunas param de seguir o conteudo;
+     - >= 768px: larguras fixas por coluna (definidas por tela nos
+       modificadores --estoque/--historico/--usuarios) - no Estoque:
+       Vendido por 140px, Estoque 200px, Acoes 190px e Produto com o
+       resto (min 200px);
+     - a celula do nome quebra QUALQUER string (overflow-wrap:anywhere
+       + word-break:break-word) e mostra o nome inteiro, sem reticencias;
+     - < 768px: a rolagem horizontal e PROPRIa do contêiner (a pagina
+       nunca rola) e a coluna Acoes fica position:sticky; right:0 com
+       fundo opaco igual ao da linha e borda esquerda sutil, para os
+       botoes ficarem sempre visiveis;
+     - Editar e Excluir: mesma altura (32px), inline-flex, gap 8px,
+       centralizados na celula.
+   ===================================================================== */
+
+.tabela-responsiva {
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* a celula de nome (1a coluna, em todas as tres telas) quebra qualquer
+   string e mostra o nome inteiro - sem reticencias, sem esticar a coluna */
+.tabela-responsiva th:first-child,
+.tabela-responsiva td:first-child {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* --- Editar e Excluir: mesma altura, centralizados na celula ---------- */
+.tabela-responsiva .acoes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tabela-responsiva .acoes .btn-editar,
+.tabela-responsiva .acoes .btn-excluir {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 .65rem;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+.tabela-responsiva td .acoes {
+    text-align: center;
+}
+
+/* --- larguras fixas por tela (>= 768px) ------------------------------- */
+@media (min-width: 768px) {
+    /* Estoque: Produto (resto, min 200px), Vendido por 140, Estoque 200,
+       Acoes 190 */
+    .tabela-responsiva--estoque th:nth-child(1) {
+        min-width: 200px;
+    }
+
+    .tabela-responsiva--estoque th:nth-child(2),
+    .tabela-responsiva--estoque td:nth-child(2) {
+        width: 140px;
+    }
+
+    .tabela-responsiva--estoque th:nth-child(3),
+    .tabela-responsiva--estoque td:nth-child(3) {
+        width: 200px;
+    }
+
+    .tabela-responsiva--estoque th:nth-child(4),
+    .tabela-responsiva--estoque td:nth-child(4) {
+        width: 190px;
+    }
+
+    /* Historico: ID 90, Data 170, Total 130, Pagamento 160, Acoes 150 */
+    .tabela-responsiva--historico th:nth-child(1),
+    .tabela-responsiva--historico td:nth-child(1) {
+        width: 90px;
+    }
+
+    .tabela-responsiva--historico th:nth-child(2),
+    .tabela-responsiva--historico td:nth-child(2) {
+        width: 170px;
+    }
+
+    .tabela-responsiva--historico th:nth-child(3),
+    .tabela-responsiva--historico td:nth-child(3) {
+        width: 130px;
+    }
+
+    .tabela-responsiva--historico th:nth-child(4),
+    .tabela-responsiva--historico td:nth-child(4) {
+        width: 160px;
+    }
+
+    .tabela-responsiva--historico th:nth-child(5),
+    .tabela-responsiva--historico td:nth-child(5) {
+        width: 150px;
+    }
+
+    /* Usuarios: Nome (resto, min 160px), E-mail 220, Papel 120,
+       Situacao 170, Acoes 130 */
+    .tabela-responsiva--usuarios th:nth-child(1) {
+        min-width: 160px;
+    }
+
+    .tabela-responsiva--usuarios th:nth-child(2),
+    .tabela-responsiva--usuarios td:nth-child(2) {
+        width: 220px;
+    }
+
+    .tabela-responsiva--usuarios th:nth-child(3),
+    .tabela-responsiva--usuarios td:nth-child(3) {
+        width: 120px;
+    }
+
+    .tabela-responsiva--usuarios th:nth-child(4),
+    .tabela-responsiva--usuarios td:nth-child(4) {
+        width: 170px;
+    }
+
+    .tabela-responsiva--usuarios th:nth-child(5),
+    .tabela-responsiva--usuarios td:nth-child(5) {
+        width: 130px;
+    }
+}
+
+/* --- < 768px: rolagem propria do contêiner + Acoes sempre visivel ----- */
+@media (max-width: 767.98px) {
+    /* a coluna Acoes (ultima) gruda na direita enquanto o restante da
+       linha rola por baixo. Fundo opaco igual ao da linha: a cor do
+       card (--surface-1) em tema escuro e branco no claro, tirada do
+       tema para nunca “vazar” o conteudo que passa por tras. */
+    .tabela-responsiva th:last-child,
+    .tabela-responsiva td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--surface-1);
+        border-left: 1px solid var(--border);
+    }
+
+    /* o cabeçalho sticky usa o mesmo fundo do thead (--surface-2) */
+    .tabela-responsiva thead th:last-child {
+        background: var(--surface-2);
+    }
+
+    /* a linha com estoque baixo tem fundo proprio: o sticky precisa
+       cobri-lo com a MESMA cor, senao o conteudo aparece atraves */
+    .tabela-responsiva tbody tr.linha-estoque-baixo td:last-child {
+        background: var(--surface-1);
+    }
+}
+
 .app-header__theme:hover {
     color: var(--text);
     border-color: var(--c-blue);
@@ -3303,5 +3474,388 @@ body > .modal-backdrop { z-index: 1070; }
     .dash-cabecalho > nav.dash-periodo {
         margin-left: 0;         /* desce alinhado a esquerda, sob o titulo */
     }
+}
+
+/* ============================================================================
+   AJUSTE 2 - CONTROLES, TAMANHOS E ALINHAMENTOS
+   Bloco NOVO no final do arquivo: nao altera regras anteriores, so acrescenta.
+   ============================================================================ */
+
+/* --- 1. Sentence case: remover text-transform:uppercase de botoes, th, h1-h4,
+      labels, rotulos de cartao e selos (excecao: rotulos de grupo da sidebar) --- */
+button, .btn,
+th,
+h1, h2, h3, h4,
+label,
+.card-title,
+.badge,
+.dash-rotulo,
+.dash-titulo-secao,
+.section-eyebrow,
+.modal-title,
+.history-today-total,
+.history-subtitulo,
+.payment-title,
+.dash-detalhe-titulo {
+    text-transform: none !important;
+}
+
+/* Sidebar group labels: podem ficar uppercase */
+.app-sidebar__grupo {
+    text-transform: uppercase !important;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+/* --- 2. Escala de espacos 4/8/12/16/24/32; raio 12 (cartoes) e 8 (controles);
+      fonte base 14px; h1 de pagina 24px semibold; titulo de secao 16px semibold --- */
+:root {
+    --space-4: 4px;
+    --space-8: 8px;
+    --space-12: 12px;
+    --space-16: 16px;
+    --space-24: 24px;
+    --space-32: 32px;
+    --radius-card: 12px;
+    --radius-control: 8px;
+    --font-base: 14px;
+    --font-h1-page: 24px;
+    --font-section-title: 16px;
+}
+
+html {
+    font-size: var(--font-base);
+}
+
+body {
+    font-size: var(--font-base);
+}
+
+/* h1 de pagina */
+.main-container > h1,
+.app-content > h1,
+.container > h1:first-child,
+.dash-detalhe-titulo {
+    font-size: var(--font-h1-page);
+    font-weight: 600;
+}
+
+/* Titulos de secao */
+.dash-titulo-secao,
+.dash-titulo,
+.card-header h5,
+.history-subtitulo,
+.payment-title,
+.section-eyebrow {
+    font-size: var(--font-section-title);
+    font-weight: 600;
+}
+
+/* Cartoes: raio 12px, padding 24px (16px mobile), sem faixa colorida no topo */
+.tabela-card,
+.card,
+.dash-cartao,
+.history-hero,
+.history-metric,
+.modal-box,
+.payment-modal,
+.product-form-panel,
+.auth-shell .card {
+    border-radius: var(--radius-card) !important;
+}
+
+.tabela-card,
+.card > .card-body,
+.dash-cartao,
+.product-form-panel,
+.auth-shell .card-body {
+    padding: var(--space-24) !important;
+}
+
+@media (max-width: 767.98px) {
+    .tabela-card,
+    .card > .card-body,
+    .dash-cartao,
+    .product-form-panel,
+    .auth-shell .card-body {
+        padding: var(--space-16) !important;
+    }
+}
+
+/* Remover faixa colorida no topo dos cartoes */
+.card-header,
+.history-hero,
+.modal-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: var(--radius-card) var(--radius-card) 0 0 !important;
+    padding: var(--space-16) var(--space-24) !important;
+}
+
+.card-header h5,
+.history-hero .section-eyebrow,
+.modal-title {
+    color: var(--text) !important;
+}
+
+/* --- 3. Botoes e campos 40px (pequenos 32px), padding horizontal 16px (pequenos 12px),
+      mesmo raio, texto semibold nos botoes --- */
+.btn,
+button.btn,
+input.form-control,
+select.form-select,
+textarea.form-control,
+.input-group-text {
+    height: 40px;
+    border-radius: var(--radius-control) !important;
+    padding: 0 var(--space-16);
+    font-size: var(--font-base);
+}
+
+.btn-sm,
+.btn-lg,
+.input-group-sm .form-control,
+.input-group-sm .form-select,
+.input-group-sm .input-group-text {
+    height: 32px;
+    padding: 0 var(--space-12);
+}
+
+.btn,
+button.btn {
+    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-8);
+}
+
+/* Linhas de controles: flex, align-items:center, gap 8px, wrap */
+.busca-container .busca-form,
+.mb-4.d-flex.flex-wrap.gap-2,
+.history-filter > .d-flex,
+.d-flex.flex-wrap.gap-2.align-items-end {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-8) !important;
+    flex-wrap: wrap !important;
+}
+
+/* Campo de busca: max-width 420px, botao mesma altura */
+.busca-form input[type="text"],
+.busca-form input[name="busca"] {
+    max-width: 420px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.busca-form button,
+.busca-form .btn {
+    height: 40px;
+    white-space: nowrap;
+}
+
+/* Campo de data: max-width 220px */
+input[type="date"].form-control,
+#historico-data {
+    max-width: 220px;
+    width: auto;
+}
+
+/* --- 4. Hierarquia de botoes unica nos dois temas ---
+      Primario (1 por area), Secundario, Perigo, Discreto (acoes de tabela)
+      Exportar Excel = secundario --- */
+.btn-primary {
+    /* Ja definido no tema - mantem como primario */
+}
+
+.btn-exportar {
+    /* Secundario: outlined, legivel nos dois temas */
+    background-color: transparent !important;
+    color: var(--t-blue) !important;
+    border: 2px solid color-mix(in srgb, var(--c-blue) 70%, var(--bg-card)) !important;
+    border-radius: var(--radius-control) !important;
+    padding: 8px var(--space-16) !important;
+    font-weight: 600 !important;
+    height: 40px;
+    text-transform: none !important;
+}
+
+.btn-exportar:hover {
+    background-color: var(--btn-primary-bg-hover) !important;
+    color: var(--btn-primary-ink) !important;
+}
+
+/* Botoes de tabela (acoes discretas) */
+.btn-editar,
+.btn-excluir,
+.history-action,
+.dash-expandir-btn {
+    height: 32px;
+    padding: 0 var(--space-12);
+    font-size: 0.82rem;
+}
+
+/* --- 5. Cartoes e paineis ja tratados acima --- */
+
+/* --- 6. Formularios: rotulo acima do campo (14px semibold), campo 40px,
+      ajuda e erro 12px, largura maxima 640px alinhada a esquerda,
+      botoes de acao juntos na mesma linha --- */
+.form-label,
+label[asp-for] {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-bottom: var(--space-4) !important;
+    display: block !important;
+    text-transform: none !important;
+}
+
+.form-control,
+.form-select {
+    height: 40px !important;
+    border-radius: var(--radius-control) !important;
+}
+
+.form-text,
+.text-danger.small,
+span[asp-validation-for] {
+    font-size: 12px !important;
+    margin-top: var(--space-4) !important;
+}
+
+form > .mb-3,
+form > .mb-4,
+.form-group {
+    max-width: 640px;
+}
+
+form .d-flex.gap-2,
+form .d-flex.gap-3,
+form > div:last-child .d-flex {
+    gap: var(--space-8) !important;
+    flex-wrap: wrap;
+}
+
+/* Largura maxima do formulario */
+.product-form-panel,
+.auth-shell .card {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* --- 7. PDV: duas colunas mesma altura, busca e qtd/confirmar mesma altura,
+      Finalizar venda 48px largura total, botoes modal pagamento 40px --- */
+@media (min-width: 768px) {
+    .main-container .row > .col-md-5,
+    .main-container .row > .col-md-7 {
+        min-height: calc(100vh - 200px);
+    }
+
+    .tabela-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tabela-card > .p-3,
+    .tabela-card > .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+/* Busca e Quantidade/Confirmar na mesma altura */
+#campoBusca,
+#campoQtd {
+    height: 40px !important;
+}
+
+#btnConfirmar {
+    height: 40px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Finalizar venda: 48px, largura total do cartao */
+#formCaixa ~ .p-3 .btn-primary.btn-lg,
+.p-3.bg-light.border-top .btn-primary.btn-lg {
+    height: 48px !important;
+    width: 100% !important;
+    font-weight: 600 !important;
+}
+
+/* Botoes do modal de pagamento: 40px */
+#modalPagamento .btn-metodo-sel {
+    height: 54px !important; /* ja definido - manter */
+}
+
+#modalPagamento .btn-primary,
+#modalPagamento .btn-outline-secondary {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 var(--space-16) !important;
+    font-weight: 600 !important;
+}
+
+#btnConfirmarPagamento,
+#secaoCPF .btn-primary {
+    height: 48px !important; /* botao principal de confirmacao */
+}
+
+/* Ajustes especificos para Login/Setup */
+.auth-shell .card-body {
+    padding: var(--space-24) !important;
+}
+
+.auth-shell .form-label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+}
+
+.auth-shell .form-control {
+    height: 40px !important;
+}
+
+.auth-shell .btn-primary {
+    height: 40px !important;
+    font-weight: 600 !important;
+}
+
+/* Contraste minimo 4.5:1 para texto de botao contra fundo efetivo */
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.btn-outline-secondary,
+.btn-outline-dark,
+.btn-exportar,
+.btn-novo,
+.btn-editar,
+.btn-excluir,
+.history-action,
+.btn-metodo-sel,
+.btn-ajuste,
+.btn-voltar-borda {
+    /* O tema ja garante contraste via variaveis --btn-*-ink vs fundo */
+}
+
+/* Evitar overflow horizontal */
+html, body {
+    overflow-x: hidden;
+}
+
+.main-container,
+.container,
+.container-fluid {
+    max-width: 100%;
+    overflow-x: hidden;
 }
 

@@ -16,7 +16,7 @@
         <div class="col-12 col-lg-5">
             <section class="history-hero h-100 p-4 history-cartao-link
                               @(periodoAtivo == "hoje" ? "is-ativo" : null)">
-                <div class="section-eyebrow"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>VENDAS DE HOJE</div>
+                <div class="section-eyebrow"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>Vendas de hoje</div>
                 <h1 class="history-today-total mb-0">
                     @(ViewBag.FaturamentoHoje is decimal hojeVal ? hojeVal.ToString("C") : "R$ 0,00")
                 </h1>
@@ -29,7 +29,7 @@
         <div class="col-12 col-md-4 col-lg-2">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "7dias" ? "is-ativo" : null)">
-                <div class="section-eyebrow">ÚLTIMOS 7 DIAS</div>
+                <div class="section-eyebrow">Últimos 7 dias</div>
                 <h3 class="mb-0">@(ViewBag.FaturamentoSemana is decimal sVal ? sVal.ToString("C") : "R$ 0,00")</h3>
                 <a class="stretched-link" asp-controller="Caixa" asp-action="Historico"
                    asp-route-periodo="7dias"
@@ -40,7 +40,7 @@
         <div class="col-12 col-md-4 col-lg-2">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "mes" ? "is-ativo" : null)">
-                <div class="section-eyebrow">ESTE MÊS</div>
+                <div class="section-eyebrow">Este mês</div>
                 <h3 class="mb-0">@(ViewBag.FaturamentoMes is decimal mVal ? mVal.ToString("C") : "R$ 0,00")</h3>
                 <a class="stretched-link" asp-controller="Caixa" asp-action="Historico"
                    asp-route-periodo="mes"
@@ -51,7 +51,7 @@
         <div class="col-12 col-md-4 col-lg-3">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "ano" ? "is-ativo" : null)">
-                <div class="section-eyebrow">ESTE ANO</div>
+                <div class="section-eyebrow">Este ano</div>
                 <h3 class="mb-0">@(ViewBag.FaturamentoAno is decimal aVal ? aVal.ToString("C") : "R$ 0,00")</h3>
                 <a class="stretched-link" asp-controller="Caixa" asp-action="Historico"
                    asp-route-periodo="ano"
@@ -68,11 +68,11 @@
                 <input type="date"
                        id="historico-data"
                        name="data"
-                       class="form-control fw-bold"
+                       class="form-control"
                        value="@(dataFiltro.HasValue ? dataFiltro.Value.ToString("yyyy-MM-dd") : "")"
                        max="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
-            <button type="submit" class="btn btn-primary text-uppercase">
+            <button type="submit" class="btn btn-primary">
                 <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
             </button>
         </form>
@@ -88,7 +88,7 @@
 
     <p class="history-filtro-ativo mb-4">
         Exibindo: <strong>@titulo</strong>
-        <span class="history-filtro-obs">· o Excel e o CSV saem deste mesmo período</span>
+        <span class="history-filtro-obs">· o Excel sai deste mesmo período</span>
     </p>
 </div>
 
@@ -112,7 +112,7 @@
     }
 
     <div class="tabela-card p-0">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 tabela-responsiva tabela-responsiva--historico">
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
@@ -164,14 +164,14 @@
 <div id="modalDetalhes" class="modal-overlay">
     <div class="modal-box history-details-modal">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold mb-0">DETALHES DA VENDA</h4>
+            <h4 class="fw-bold mb-0">Detalhes da venda</h4>
             <button class="btn-close" onclick="fecharDetalhes()"></button>
         </div>
 
         <div id="conteudoDetalhes" class="text-start">
         </div>
 
-        <button class="btn btn-secondary w-100 mt-4" onclick="fecharDetalhes()">FECHAR</button>
+        <button class="btn btn-secondary w-100 mt-4" onclick="fecharDetalhes()">Fechar</button>
     </div>
 </div>
 

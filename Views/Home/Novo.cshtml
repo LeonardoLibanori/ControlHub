@@ -5,17 +5,17 @@
 
 <div class="container mt-4">
     <div class="product-form-panel">
-        <h2 class="mb-4"><i class="bi bi-box-seam" aria-hidden="true"></i> Novo Produto</h2>
+        <h2 class="mb-4"><i class="bi bi-box-seam" aria-hidden="true"></i> Novo produto</h2>
 
         <form method="post" action="/Home/Novo">
             @Html.AntiForgeryToken()
             <div class="mb-3">
-                <label class="fw-bold">Nome do produto:</label>
+                <label class="form-label fw-bold">Nome do produto</label>
                 <input type="text" name="nome" class="form-control" required />
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-bold">CÓDIGO DE BARRAS (BIPE O PRODUTO)</label>
+                <label class="form-label fw-bold">Código de barras (bipe o produto)</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light">
                         <i class="bi bi-upc-scan"></i>
@@ -30,7 +30,7 @@
             </div>
 
             <div class="mb-3">
-                <label class="fw-bold">Vendido por:</label>
+                <label class="form-label fw-bold">Vendido por</label>
                 @* A tela so oferece dois valores. Os `value` continuam sendo os nomes
                    do enum (o JS atualizarQuantidade e o servidor dependem deles).
                    Geladeira e Freezer seguem no enum para os produtos legados, e um
@@ -42,7 +42,7 @@
             </div>
 
             <div class="mb-3">
-                <label id="labelPreco" class="fw-bold">Preço por kg (R$/kg):</label>
+                <label id="labelPreco" class="form-label fw-bold">Preço por kg (R$/kg)</label>
                 <div class="input-group">
                     <span class="input-group-text">R$</span>
                     <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required
@@ -52,7 +52,7 @@
             </div>
 
             <div class="mb-4">
-                <label id="labelQuantidade" class="fw-bold">Quantidade inicial:</label>
+                <label id="labelQuantidade" class="form-label fw-bold">Quantidade inicial</label>
                 <div class="input-group">
                     <input type="number" id="quantidadeVisual" class="form-control" min="0" step="any" required oninput="atualizarQuantidade()" />
                     <span id="unidadeQuantidade" class="input-group-text">kg</span>
@@ -61,7 +61,7 @@
             </div>
 
             <div class="mb-3">
-                <label id="labelEstoqueMinimo" class="fw-bold">Estoque mínimo (alerta):</label>
+                <label id="labelEstoqueMinimo" class="form-label fw-bold">Estoque mínimo (alerta)</label>
                 <div class="input-group">
                     <input type="number" id="estoqueMinimoVisual" class="form-control" min="0" step="any" placeholder="0 = sem alerta" oninput="sincronizarEstoqueMinimo()" />
                     <span id="unidadeEstoqueMinimo" class="input-group-text">un</span>
@@ -70,7 +70,7 @@
                 <small class="text-muted">Zerado ou vazio = este produto nunca avisa "estoque baixo".</small>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 btn-lg"><i class="bi bi-check2 me-2" aria-hidden="true"></i>SALVAR PRODUTO</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Salvar produto</button>
         </form>
 
         <div class="text-center mt-3">

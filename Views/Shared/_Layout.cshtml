@@ -447,7 +447,7 @@ else
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="bi bi-sliders2 me-2" aria-hidden="true"></i>@(podeAcessarAdmin ? "MENU ADMINISTRATIVO" : "MENU DO CAIXA") (ALT + M)</h5>
+                        <h5 class="modal-title"><i class="bi bi-sliders2 me-2" aria-hidden="true"></i>@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa") (ALT + M)</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
@@ -458,7 +458,7 @@ else
                                 <button class="btn btn-danger w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
                                     <span style="width: 30px; text-align: left;">1 -</span>
                                     <i class="bi bi-cash-coin me-2" aria-hidden="true"></i>
-                                    <span>SANGRIA</span>
+                                    <span>Sangria</span>
                                 </button>
                             </div>
                             }
@@ -468,7 +468,7 @@ else
                                 <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
                                     <span style="width: 30px; text-align: left;">2 -</span>
                                     <i class="bi bi-box-arrow-in-down me-2" aria-hidden="true"></i>
-                                    <span>SUPRIMENTO</span>
+                                    <span>Suprimento</span>
                                 </button>
                             </div>
                             }
@@ -478,7 +478,7 @@ else
                                 <button class="btn btn-secondary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
                                     <span style="width: 30px; text-align: left;">3 -</span>
                                     <i class="bi bi-safe me-2" aria-hidden="true"></i>
-                                    <span>CAIXA</span>
+                                    <span>Caixa</span>
                                 </button>
                             </div>
                             }
@@ -488,7 +488,7 @@ else
                                 <button class="btn btn-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
                                     <span style="width: 30px; text-align: left;">4 -</span>
                                     <i class="bi bi-lock me-2" aria-hidden="true"></i>
-                                    <span>FECHAMENTO</span>
+                                    <span>Fechamento</span>
                                 </button>
                             </div>
                             }
@@ -498,7 +498,7 @@ else
                                 <button class="btn btn-info w-100 py-3 fw-bold shadow-sm d-flex align-items-center text-white" data-key="5" onclick="verRelatorioCaixa()">
                                     <span style="width: 30px; text-align: left;">5 -</span>
                                     <i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>
-                                    <span>RELATÓRIO</span>
+                                    <span>Relatório</span>
                                 </button>
                             </div>
                             }
@@ -508,7 +508,7 @@ else
                                 <button class="btn btn-warning w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
                                     <span style="width: 30px; text-align: left;">6 -</span>
                                     <i class="bi bi-printer me-2" aria-hidden="true"></i>
-                                    <span>REIMPRIMIR</span>
+                                    <span>Reimprimir</span>
                                 </button>
                             </div>
                             }
@@ -518,7 +518,7 @@ else
                                 <button class="btn btn-outline-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
                                     <span style="width: 30px; text-align: left;">7 -</span>
                                     <i class="bi bi-person-vcard me-2" aria-hidden="true"></i>
-                                    <span>VENDEDORES</span>
+                                    <span>Vendedores</span>
                                 </button>
                             </div>
                             }
@@ -534,20 +534,20 @@ else
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div id="headerOperacao" class="modal-header text-white">
-                        <h5 class="modal-title" id="tituloOperacao">OPERAÇÃO</h5>
+                        <h5 class="modal-title" id="tituloOperacao">Operação</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
                         <input type="hidden" id="tipoOperacao">
                         <div class="mb-3">
-                            <label class="fw-bold text-muted small">VALOR:</label>
+                            <label class="form-label fw-bold text-muted small">Valor</label>
                             <input type="text" id="valorOperacao" class="form-control" oninput="formatarMoedaParaSweet(this)">
                         </div>
                         <div class="mb-3">
-                            <label class="fw-bold text-muted small">OBSERVAÇÃO:</label>
+                            <label class="form-label fw-bold text-muted small">Observação</label>
                             <textarea id="obsOperacao" class="form-control" rows="2"></textarea>
                         </div>
-                        <button type="button" id="btnConfirmarOperacao" class="btn btn-lg w-100 fw-bold shadow-sm" onclick="salvarMovimentacao()">CONFIRMAR</button>
+                        <button type="button" id="btnConfirmarOperacao" class="btn btn-lg w-100 fw-bold shadow-sm" onclick="salvarMovimentacao()">Confirmar</button>
                     </div>
                 </div>
             </div>
@@ -555,39 +555,39 @@ else
 
         <div id="modalAjudaAtalhos" class="modal-overlay shortcut-help-overlay">
             <div class="shortcut-help-panel">
-                <h3><i class="bi bi-keyboard me-2" aria-hidden="true"></i>ATALHOS DO SISTEMA</h3>
+                <h3><i class="bi bi-keyboard me-2" aria-hidden="true"></i>Atalhos do sistema</h3>
                 <hr>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Ajuda / Atalhos</span>
+                        <span class="fw-bold">Ajuda / atalhos</span>
                         <kbd>ESC</kbd>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">@(podeAcessarAdmin ? "Menu Administrativo" : "Menu do Caixa")</span>
+                        <span class="fw-bold">@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa")</span>
                         <kbd>Alt + M</kbd>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Ir para o Caixa</span>
+                        <span class="fw-bold">Ir para o caixa</span>
                         <kbd>Alt + C</kbd>
                     </div>
 
                     @if (podeVerFinanceiro)
                     {
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Histórico de Vendas</span>
+                        <span class="fw-bold">Histórico de vendas</span>
                         <kbd>Alt + H</kbd>
                     </div>
                     }
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Controle de Estoque</span>
+                        <span class="fw-bold">Controle de estoque</span>
                         <kbd>Alt + E</kbd>
                     </div>
                 </div>
                 <hr>
-                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')"><i class="bi bi-check2 me-2" aria-hidden="true"></i>ENTENDI (ESC)</button>
+                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Entendi (ESC)</button>
             </div>
         </div>
 
@@ -750,11 +750,11 @@ else
             }
 
             Swal.fire({
-                title: 'Gestão de Vendedores',
+                title: 'Gestão de vendedores',
                 icon: 'info',
                 showDenyButton: true,
-                confirmButtonText: 'Cadastrar Novo',
-                denyButtonText: 'Listar Todos',
+                confirmButtonText: 'Cadastrar novo',
+                denyButtonText: 'Listar todos',
                 confirmButtonColor: '#c2a36d',
                 denyButtonColor: '#548f87',
             }).then((result) => {
@@ -815,12 +815,12 @@ else
                 // muda e o botao de confirmar (cadastrar): so o Dono tem
                 // PodeGerenciarVendedores, entao para o Operador a lista e consulta pura.
                 const opcoes = {
-                    title: 'GESTÃO DE VENDEDORES',
+                    title: 'Gestão de vendedores',
                     html: html, // Sua tabela com o botão de excluir
                     showCancelButton: true,
                     showConfirmButton: podeMexer,
-                    confirmButtonText: '<i class="bi bi-plus-lg me-2"></i>NOVO VENDEDOR',
-                    cancelButtonText: 'FECHAR',
+                    confirmButtonText: '<i class="bi bi-plus-lg me-2"></i>Novo vendedor',
+                    cancelButtonText: 'Fechar',
                     confirmButtonColor: '#c2a36d',
                     cancelButtonColor: '#39444a',
                     reverseButtons: true,          // Coloca o cancelar na esquerda e o confirmar na direita
@@ -844,7 +844,7 @@ else
 
                 function confirmarExclusaoVendedor(codigo) {
             Swal.fire({
-                title: 'Excluir Cupom?',
+                title: 'Excluir cupom?',
                 text: `Deseja realmente remover o vendedor com cupom ${codigo}?`,
                 icon: 'warning',
                 showCancelButton: true,
@@ -876,18 +876,18 @@ else
 
                 function abrirFormularioCadastro() {
             Swal.fire({
-                title: 'CADASTRAR VENDEDOR',
+                title: 'Cadastrar vendedor',
                 html: `
                     <div class="text-start">
-                        <label class="form-label">Nome Completo</label>
-                        <input id="nomeV" class="swal2-input m-0 w-100" placeholder="Ex: LEONARDO SILVA">
-                        <label class="form-label mt-3">Cupom (Código)</label>
+                        <label class="form-label">Nome completo</label>
+                        <input id="nomeV" class="swal2-input m-0 w-100" placeholder="Ex: Leonardo Silva">
+                        <label class="form-label mt-3">Cupom (código)</label>
                         <input id="codV" class="swal2-input m-0 w-100" placeholder="Ex: LEO10">
                     </div>
                 `,
                 showCancelButton: true,
-                confirmButtonText: 'SALVAR REGISTRO',
-                cancelButtonText: 'VOLTAR',
+                confirmButtonText: 'Salvar registro',
+                cancelButtonText: 'Voltar',
                 confirmButtonColor: '#c2a36d',
                 cancelButtonColor: '#9d4f55',
                 focusConfirm: false,
