@@ -16,7 +16,7 @@
         <div class="col-12 col-lg-5">
             <section class="history-hero h-100 p-4 history-cartao-link
                               @(periodoAtivo == "hoje" ? "is-ativo" : null)">
-                <div class="section-eyebrow"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>Vendas de hoje</div>
+                <div class="section-eyebrow">Vendas de hoje</div>
                 <h1 class="history-today-total mb-0">
                     @(ViewBag.FaturamentoHoje is decimal hojeVal ? hojeVal.ToString("C") : "R$ 0,00")
                 </h1>
@@ -72,9 +72,7 @@
                        value="@(dataFiltro.HasValue ? dataFiltro.Value.ToString("yyyy-MM-dd") : "")"
                        max="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar
-            </button>
+            <button type="submit" class="btn btn-primary">Buscar</button>
         </form>
 
         <a asp-controller="Caixa" asp-action="ExportarHistoricoExcel"
@@ -82,7 +80,7 @@
            asp-route-periodo="@periodoExport"
            class="btn-exportar"
            title="Baixar em Excel (.xlsx) exatamente o que a tela está mostrando">
-            <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>Exportar Excel
+            Exportar Excel
         </a>
     </div>
 
@@ -104,7 +102,6 @@
     @if (limiteExcedido)
     {
         <div class="alert alert-warning history-aviso-limite d-flex align-items-center mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
             <div>
                 Exibindo as 200 vendas mais recentes de um total de <strong>@quantidadeTotal</strong> vendas deste período.
             </div>
@@ -137,13 +134,13 @@
                                     <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="verDetalhes(@venda.Id)"
                                             title="Ver detalhes" aria-label="Ver detalhes da venda @venda.Id">
-                                        <i class="bi bi-search" aria-hidden="true"></i>
+                                        Detalhes
                                     </button>
 
                                     <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="reimprimirVenda(@venda.Id)"
                                             title="Reimprimir cupom" aria-label="Reimprimir venda @venda.Id">
-                                        <i class="bi bi-printer" aria-hidden="true"></i>
+                                        Imprimir
                                     </button>
                                 </div>
                             </td>
@@ -204,13 +201,21 @@
                         </div>
                         ${itensHtml}
                     `,
-                    icon: 'info',
+                    customClass: {
+                        popup: 'swal-info'
+                    },
                     width: '500px'
                 });
             })
             .catch(err => {
                 console.error(err);
-                Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Não foi possível carregar os detalhes.',
+                    customClass: {
+                        popup: 'swal-error'
+                    }
+                });
             });
     }
 </script>

@@ -5,7 +5,7 @@
 
 <div class="container mt-4">
     <div class="product-form-panel">
-        <h2 class="mb-4"><i class="bi bi-box-seam" aria-hidden="true"></i> Novo produto</h2>
+        <h2 class="mb-4">Novo produto</h2>
 
         <form method="post" action="/Home/Novo">
             @Html.AntiForgeryToken()
@@ -17,9 +17,7 @@
             <div class="mb-3">
                 <label class="form-label fw-bold">Código de barras (bipe o produto)</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light">
-                        <i class="bi bi-upc-scan"></i>
-                    </span>
+                    <span class="input-group-text bg-light"></span>
                     <input type="text"
                            name="codigoBarras"
                            id="inputCodigo"
@@ -70,7 +68,7 @@
                 <small class="text-muted">Zerado ou vazio = este produto nunca avisa "estoque baixo".</small>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Salvar produto</button>
+            <button type="submit" class="btn btn-primary w-100">Salvar produto</button>
         </form>
 
         <div class="text-center mt-3">

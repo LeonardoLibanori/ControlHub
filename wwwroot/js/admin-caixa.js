@@ -92,20 +92,28 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
             const dados = await response.json();
 
             Swal.fire({
-                title: 'CONFERÊNCIA DE CAIXA',
+                title: 'Conferência de caixa',
                 html: `
                     <div style="text-align: left;">
                         <p><b>(+) Suprimento (Abertura):</b> R$ ${dados.suprimento.toFixed(2)}</p>
                         <p><b>(+) Total Vendas:</b> R$ ${dados.vendas.toFixed(2)}</p>
                         <p><b>(-) Total Sangrias:</b> <span class="cash-negative">R$ ${dados.sangrias.toFixed(2)}</span></p>
                         <hr>
-                        <h3 class="cash-positive"><b>SALDO EM GAVETA: R$ ${dados.saldo.toFixed(2)}</b></h3>
+                        <h3 class="cash-positive"><b>Saldo em gaveta: R$ ${dados.saldo.toFixed(2)}</b></h3>
                     </div>
                 `,
-                icon: 'info'
+                customClass: {
+                    popup: 'swal-info'
+                }
             });
         } catch (e) {
-            Swal.fire('Erro', 'Não foi possível consultar o saldo.', 'error');
+            Swal.fire({
+                title: 'Erro',
+                text: 'Não foi possível consultar o saldo.',
+                customClass: {
+                    popup: 'swal-error'
+                }
+            });
         }
     }
 
@@ -165,15 +173,23 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
             tabelaHtml += `</tbody></table></div>`;
 
             Swal.fire({
-                title: 'RELATÓRIO DE MOVIMENTAÇÕES',
-                icon: 'info',
+                title: 'Relatório de movimentações',
+                customClass: {
+                    popup: 'swal-info'
+                },
                 html: tabelaHtml,
                 width: '600px',
-                confirmButtonText: 'FECHAR'
+                confirmButtonText: 'Fechar'
             });
 
         } catch (e) {
-            Swal.fire('Erro', 'Falha ao carregar relatório: ' + e.message, 'error');
+            Swal.fire({
+                title: 'Erro',
+                text: 'Falha ao carregar relatório: ' + e.message,
+                customClass: {
+                    popup: 'swal-error'
+                }
+            });
         }
     } // <--- FECHAMENTO FINAL DA FUNÇÃO
 
@@ -192,8 +208,10 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         if (modalAtalhos) modalAtalhos.hide();
 
         const { value: opcao } = await Swal.fire({
-            title: 'IMPRESSÃO',
-            icon: 'info',
+            title: 'Impressão',
+            customClass: {
+                popup: 'swal-info'
+            },
             html: `
                 <div style="text-align: left; margin-bottom: 10px;">
                     <b>1</b> - Última Venda<br>
@@ -212,7 +230,13 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
             if (id && id !== "") {
                 reimprimirVenda(id);
             } else {
-                Swal.fire('Aviso', 'Nenhuma venda encontrada hoje.', 'info');
+                Swal.fire({
+                    title: 'Aviso',
+                    text: 'Nenhuma venda encontrada hoje.',
+                    customClass: {
+                        popup: 'swal-info'
+                    }
+                });
             }
         } else if (opcao === "2") {
             const { value: idBusca } = await Swal.fire({ title: 'Digite o ID:', input: 'number', showCancelButton: true });
@@ -228,8 +252,10 @@ function prepararSangria() { abrirModalOperacao('Sangria'); }
         if (modalAtalhos) modalAtalhos.hide();
 
         const { value: opcao } = await Swal.fire({
-            title: 'IMPRESSÃO',
-            icon: 'info',
+            title: 'Impressão',
+            customClass: {
+                popup: 'swal-info'
+            },
             html: `
             <div style="text-align: left; margin-bottom: 10px;">
                 <b>1</b> - Última Venda<br>
@@ -274,8 +300,10 @@ async function realizarFechamento() {
         `).join('');
 
         Swal.fire({
-            title: 'AUDITORIA E FECHAMENTO',
-            icon: 'info',
+            title: 'Auditoria e fechamento',
+            customClass: {
+                popup: 'swal-info'
+            },
             html: `
                 <div class="text-start" style="font-size: 13px;">
                     <h6 class="fw-bold">1. Saídas de Estoque</h6>
@@ -294,14 +322,14 @@ async function realizarFechamento() {
                         <div class="d-flex justify-content-between text-danger"><span>(-) Sangrias:</span> <span>R$ ${d.sangrias.toFixed(2)}</span></div>
                         <hr class="my-1">
                         <div class="d-flex justify-content-between fw-bold text-dark fs-5">
-                            <span>TOTAL EM GAVETA:</span> <span>R$ ${d.saldoFinal.toFixed(2)}</span>
+                            <span>Total em gaveta:</span> <span>R$ ${d.saldoFinal.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
             `,
             width: '650px',
             showCancelButton: true,
-            confirmButtonText: '<i class="bi bi-check2-circle me-2"></i>TUDO OK, ZERAR DIA',
+            confirmButtonText: 'Tudo ok, zerar dia',
             confirmButtonColor: '#c2a36d'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -309,7 +337,13 @@ async function realizarFechamento() {
             }
         });
     } catch (e) {
-        Swal.fire('Erro', 'Erro ao carregar dados.', 'error');
+        Swal.fire({
+            title: 'Erro',
+            text: 'Erro ao carregar dados.',
+            customClass: {
+                popup: 'swal-error'
+            }
+        });
     }
 }
 
@@ -318,9 +352,21 @@ async function confirmarZeramentoFinal() {
     const data = await res.json();
 
     if (data.success) {
-        Swal.fire('Sucesso', 'Caixa encerrado e zerado!', 'success').then(() => location.reload());
+        Swal.fire({
+            title: 'Sucesso',
+            text: 'Caixa encerrado e zerado!',
+            customClass: {
+                popup: 'swal-success'
+            }
+        }).then(() => location.reload());
     } else {
-        Swal.fire('Erro', 'Não foi possível zerar: ' + data.message, 'error');
+        Swal.fire({
+            title: 'Erro',
+            text: 'Não foi possível zerar: ' + data.message,
+            customClass: {
+                popup: 'swal-error'
+            }
+        });
     }
 }
 
@@ -565,7 +611,13 @@ if (typeof removerItem === 'undefined') {
 // Substitua a função que abre o modal de pagamento para garantir que backdrops do Bootstrap não bloqueiem os botões
 function abrirModalPagamento() {
     if (carrinho.length === 0) {
-        Swal.fire('Aviso', 'O carrinho está vazio!', 'info');
+        Swal.fire({
+            title: 'Aviso',
+            text: 'O carrinho está vazio!',
+            customClass: {
+                popup: 'swal-info'
+            }
+        });
         return;
     }
 
@@ -584,7 +636,9 @@ function abrirModalPagamento() {
         Swal.fire({
             title: 'Indisponibilidade de Estoque',
             html: `<div style="text-align: center;">${errosEstoque.join('<br><hr>')}</div>`,
-            icon: 'warning',
+            customClass: {
+                popup: 'swal-warning'
+            },
             confirmButtonColor: '#d33'
         });
         return;
@@ -853,11 +907,13 @@ async function enviarVendaDeVez() {
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
 
-            // Abre SweetAlert garantindo z-index acima do modal
+// Abre SweetAlert garantindo z-index acima do modal
             Swal.fire({
-                title: 'Venda Finalizada!',
+                title: 'Venda finalizada!',
                 text: 'Sucesso ao processar a venda.',
-                icon: 'success',
+                customClass: {
+                    popup: 'swal-success'
+                },
                 confirmButtonText: 'OK',
                 allowOutsideClick: false,
                 didOpen: () => {
@@ -882,7 +938,9 @@ async function enviarVendaDeVez() {
                 // e aparece abaixo; o titulo agora so diz que a venda nao saiu.
                 title: 'Venda não concluída',
                 html: (res.message || 'Não foi possível concluir a venda.').replace(/\n/g, '<br>'),
-                icon: 'error',
+                customClass: {
+                    popup: 'swal-error'
+                },
                 confirmButtonColor: '#d33',
                 didOpen: () => {
                     const c = document.querySelector('.swal2-container');

@@ -362,11 +362,10 @@ else
                            dispararia). O papel fica DENTRO do menu: no balcao o PC e
                            compartilhado e saber quem entrou evita vender no cupom
                            errado, sem poluir a barra. *@
-                        <div class="dropdown">
+<div class="dropdown">
                             <button class="btn d-flex align-items-center gap-2 px-2 text-dark user-session-trigger"
                                     type="button" id="btnMenuPerfil" data-bs-toggle="dropdown"
                                     aria-expanded="false" aria-label="Menu do perfil">
-                                <i class="bi bi-person-circle fs-4" aria-hidden="true"></i>
                                 <span class="small fw-semibold">Olá, <b class="text-dark">@nomeExibido</b></span>
                                 <i class="bi bi-chevron-down small" aria-hidden="true"></i>
                             </button>
@@ -380,14 +379,14 @@ else
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <span class="dropdown-item-text small text-muted">
-                                        <i class="bi bi-palette me-2" aria-hidden="true"></i>Tema
+                                        Tema
                                     </span>
                                 </li>
                                 <li>
                                     <button type="button" class="dropdown-item" data-tema-opcao="auto"
                                             role="menuitemradio" aria-checked="true"
                                             onclick="aplicarTema('auto')">
-                                        <i class="bi bi-circle-half me-2" aria-hidden="true"></i>Automático
+                                        Automático
                                     </button>
                                 </li>
                                 <li>
@@ -407,16 +406,16 @@ else
                                 <li><hr class="dropdown-divider"></li>
                                 @if (podeGerenciarUsuarios)
                                 {
-                                    <li>
-                                        <a class="dropdown-item" asp-controller="Usuarios" asp-action="Index">
-                                            <i class="bi bi-people me-2" aria-hidden="true"></i>Usuários
-                                        </a>
-                                    </li>
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Usuarios" asp-action="Index">
+                                        Usuários
+                                    </a>
+                                </li>
                                 }
                                 <li>
                                     <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Sair</button>
+                                        <button type="submit" class="dropdown-item text-danger">Sair</button>
                                     </form>
                                 </li>
                             </ul>
@@ -447,7 +446,7 @@ else
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="bi bi-sliders2 me-2" aria-hidden="true"></i>@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa") (ALT + M)</h5>
+                        <h5 class="modal-title">@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa") (ALT + M)</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
@@ -457,7 +456,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-danger w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
                                     <span style="width: 30px; text-align: left;">1 -</span>
-                                    <i class="bi bi-cash-coin me-2" aria-hidden="true"></i>
                                     <span>Sangria</span>
                                 </button>
                             </div>
@@ -467,7 +465,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
                                     <span style="width: 30px; text-align: left;">2 -</span>
-                                    <i class="bi bi-box-arrow-in-down me-2" aria-hidden="true"></i>
                                     <span>Suprimento</span>
                                 </button>
                             </div>
@@ -477,7 +474,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-secondary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
                                     <span style="width: 30px; text-align: left;">3 -</span>
-                                    <i class="bi bi-safe me-2" aria-hidden="true"></i>
                                     <span>Caixa</span>
                                 </button>
                             </div>
@@ -487,7 +483,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
                                     <span style="width: 30px; text-align: left;">4 -</span>
-                                    <i class="bi bi-lock me-2" aria-hidden="true"></i>
                                     <span>Fechamento</span>
                                 </button>
                             </div>
@@ -497,7 +492,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-info w-100 py-3 fw-bold shadow-sm d-flex align-items-center text-white" data-key="5" onclick="verRelatorioCaixa()">
                                     <span style="width: 30px; text-align: left;">5 -</span>
-                                    <i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>
                                     <span>Relatório</span>
                                 </button>
                             </div>
@@ -507,7 +501,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-warning w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
                                     <span style="width: 30px; text-align: left;">6 -</span>
-                                    <i class="bi bi-printer me-2" aria-hidden="true"></i>
                                     <span>Reimprimir</span>
                                 </button>
                             </div>
@@ -517,7 +510,6 @@ else
                             <div class="col-6">
                                 <button class="btn btn-outline-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
                                     <span style="width: 30px; text-align: left;">7 -</span>
-                                    <i class="bi bi-person-vcard me-2" aria-hidden="true"></i>
                                     <span>Vendedores</span>
                                 </button>
                             </div>
@@ -555,7 +547,7 @@ else
 
         <div id="modalAjudaAtalhos" class="modal-overlay shortcut-help-overlay">
             <div class="shortcut-help-panel">
-                <h3><i class="bi bi-keyboard me-2" aria-hidden="true"></i>Atalhos do sistema</h3>
+                <h3>Atalhos do sistema</h3>
                 <hr>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -587,7 +579,7 @@ else
                     </div>
                 </div>
                 <hr>
-                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Entendi (ESC)</button>
+                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')">Entendi (ESC)</button>
             </div>
         </div>
 
@@ -801,7 +793,7 @@ else
                         <td><b>${v.codigo}</b></td>
                         ${podeMexer ? `<td class="text-end">
                             <button class="btn btn-sm btn-danger" title="Desativar vendedor" aria-label="Desativar vendedor ${v.nome}" onclick="confirmarExclusaoVendedor('${v.codigo}')">
-                                <i class="bi bi-person-x" aria-hidden="true"></i>
+                                Desativar
                             </button>
                         </td>` : ''}
                     </tr>
@@ -819,12 +811,15 @@ else
                     html: html, // Sua tabela com o botão de excluir
                     showCancelButton: true,
                     showConfirmButton: podeMexer,
-                    confirmButtonText: '<i class="bi bi-plus-lg me-2"></i>Novo vendedor',
+                    confirmButtonText: 'Novo vendedor',
                     cancelButtonText: 'Fechar',
                     confirmButtonColor: '#c2a36d',
                     cancelButtonColor: '#39444a',
                     reverseButtons: true,          // Coloca o cancelar na esquerda e o confirmar na direita
-                    width: '600px'
+                    width: '600px',
+                    customClass: {
+                        popup: 'swal-info'
+                    }
                 };
 
                 // O ".then" tem de estar NA MESMA expressao do Swal.fire: aqui ele
@@ -838,7 +833,13 @@ else
                 });
 
             } catch (e) {
-                Swal.fire('Erro', 'Não foi possível buscar os dados.', 'error');
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Não foi possível buscar os dados.',
+                    customClass: {
+                        popup: 'swal-error'
+                    }
+                });
             }
         }
 
@@ -846,7 +847,9 @@ else
             Swal.fire({
                 title: 'Excluir cupom?',
                 text: `Deseja realmente remover o vendedor com cupom ${codigo}?`,
-                icon: 'warning',
+                customClass: {
+                    popup: 'swal-warning'
+                },
                 showCancelButton: true,
                 confirmButtonColor: '#9d4f55',
                 cancelButtonColor: '#39444a',
@@ -864,10 +867,22 @@ else
                     const res = await resp.json();
 
                     if (res.success) {
-                        Swal.fire('Removido!', 'O cupom foi desativado.', 'success')
+                        Swal.fire({
+                            title: 'Removido!',
+                            text: 'O cupom foi desativado.',
+                            customClass: {
+                                popup: 'swal-success'
+                            }
+                        })
                             .then(() => abrirListagemVendedores()); // Recarrega a lista atualizada
                     } else {
-                        Swal.fire('Erro', res.message, 'error');
+                        Swal.fire({
+                            title: 'Erro',
+                            text: res.message,
+                            customClass: {
+                                popup: 'swal-error'
+                            }
+                        });
                     }
                 }
             });
@@ -918,10 +933,22 @@ else
             const res = await resp.json();
 
             if (res.success) {
-                Swal.fire('Sucesso!', 'Vendedor cadastrado com sucesso.', 'success')
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Vendedor cadastrado com sucesso.',
+                    customClass: {
+                        popup: 'swal-success'
+                    }
+                })
                     .then(() => abrirListagemVendedores()); // Recarrega a lista
             } else {
-                Swal.fire('Erro', res.message, 'error');
+                Swal.fire({
+                    title: 'Erro',
+                    text: res.message,
+                    customClass: {
+                        popup: 'swal-error'
+                    }
+                });
             }
         }
 

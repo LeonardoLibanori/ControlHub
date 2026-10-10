@@ -30,7 +30,7 @@
         <div class="col-md-5">
             <div class="tabela-card h-100">
                 <div class="card-header cash-section-header text-center py-2 rounded-top">
-                    <h5 class="mb-0"><i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Entrada de itens</h5>
+                    <h5 class="mb-0">Entrada de itens</h5>
                 </div>
 
                 <div class="p-3">
@@ -63,7 +63,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-primary" onclick="confirmarItem()"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Confirmar</button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmarItem()">Confirmar</button>
                                 </div>
                             </div>
                         </div>
@@ -87,9 +87,7 @@
                                    onfocus="this.select()" />
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
-                            <button type="button" id="btnConfirmar" onclick="confirmarItem()" class="btn btn-primary">
-                                <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Confirmar
-                            </button>
+                            <button type="button" id="btnConfirmar" onclick="confirmarItem()" class="btn btn-primary">Confirmar</button>
                         </div>
                     </div>
                 </div>
@@ -99,7 +97,7 @@
         <div class="col-md-7">
             <div class="tabela-card h-100">
                 <div class="card-header cash-section-header py-2 rounded-top">
-                    <h5 class="mb-0"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Lista de compras</h5>
+                    <h5 class="mb-0">Lista de compras</h5>
                 </div>
 
                 <div class="p-0">
@@ -125,7 +123,7 @@
 
                     <div class="p-3 bg-light border-top">
                         <button type="button" class="btn btn-primary btn-lg w-100 fw-bold py-3" onclick="abrirModalPagamento()">
-                            <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>Finalizar venda
+                            Finalizar venda
                         </button>
                     </div>
 
@@ -166,18 +164,18 @@
         <div id="secaoPagamento">
             <h3 class="fw-bold mb-4 payment-title">Pagamento</h3>
             <div class="d-grid gap-2 mb-4">
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de crédito')"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i>Cartão de crédito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de débito')"><i class="bi bi-credit-card" aria-hidden="true"></i>Cartão de débito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')"><i class="bi bi-qr-code" aria-hidden="true"></i>PIX</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')"><i class="bi bi-ticket-perforated" aria-hidden="true"></i>Voucher</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')"><i class="bi bi-cash-stack" aria-hidden="true"></i>Dinheiro</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de crédito')">Cartão de crédito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de débito')">Cartão de débito</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')">PIX</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')">Voucher</button>
+                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')">Dinheiro</button>
             </div>
             <div class="d-flex gap-2">
                 @* BUG-30: o CONFIRMAR comeca habilitado porque, sem metodo escolhido,
                    o valor recebido nem participa da decisao (so o servidor valida
                    quando metodo = Dinheiro). calcularTroco() o reavalia a cada
                    digitacao/troca de metodo e poe disabled + aria-disabled aqui. *@
-                <button type="button" id="btnConfirmarPagamento" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Confirmar</button>
+                <button type="button" id="btnConfirmarPagamento" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="irParaCPF()">Confirmar</button>
                 <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="fecharModal()">Cancelar</button>
             </div>
         </div>
@@ -220,12 +218,12 @@
                que o operador clica so quando a empresa usa essa recompensa. *@
             <div class="d-grid mb-3">
                 <button type="button" id="btnCupomVendedor" class="btn btn-outline-secondary py-2 fw-bold" onclick="gerenciarCupomVendedor()">
-                    <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i><span id="btnCupomVendedorTexto">Cupom do vendedor (opcional)</span>
+                    Cupom do vendedor (opcional)
                 </button>
             </div>
 
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()"><i class="bi bi-printer me-2" aria-hidden="true"></i>Finalizar e imprimir</button>
+                <button type="button" class="btn btn-primary flex-grow-1 py-3 fw-bold" onclick="enviarVendaDeVez()">Finalizar e imprimir</button>
                 <button type="button" class="btn btn-outline-secondary" onclick="voltarParaPagamento()">Voltar</button>
             </div>
         </div>

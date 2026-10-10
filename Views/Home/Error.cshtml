@@ -7,11 +7,11 @@
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6 text-center">
 
-            <h1 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> ERRO INESPERADO</h1>
+            <h1 class="fw-bold text-danger">Erro inesperado</h1>
 
             <p class="fs-5 text-muted mt-3">
-                Ocorreu um problema ao processar sua solicita&ccedil;&atilde;o.
-                A opera&ccedil;&atilde;o n&atilde;o foi conclu&iacute;da.
+                Ocorreu um problema ao processar sua solicitação.
+                A operação não foi concluída.
             </p>
 
             @*
@@ -22,16 +22,16 @@
             @if (Model != null && Model.ShowRequestId)
             {
                 <p class="mt-4">
-                    <strong>C&oacute;digo da requisi&ccedil;&atilde;o:</strong>
+                    <strong>Código da requisição:</strong>
                     <code class="user-select-all">@Model.RequestId</code>
                 </p>
                 <p class="small text-muted">
-                    Guarde este c&oacute;digo e informe ao suporte.
+                    Guarde este código e informe ao suporte.
                 </p>
             }
 
             <a asp-controller="Home" asp-action="Index" class="btn btn-success btn-lg mt-3">
-                VOLTAR AO ESTOQUE
+                Voltar ao estoque
             </a>
 
         </div>
