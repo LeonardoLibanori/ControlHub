@@ -274,7 +274,7 @@ else
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach (var item in vendaComItens?.Itens)
+                                                        @foreach (var item in vendaComItens?.Itens ?? Enumerable.Empty<ControleEstoqueLoja.Controllers.DashboardItemVendaDetalhe>())
                                                         {
                                                             <tr>
                                                                 <td>

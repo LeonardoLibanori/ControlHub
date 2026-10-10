@@ -17,6 +17,11 @@
  * (fonte do listener) tambem evia a fragilidade de entrega de input do Chrome
  * headless, sem abrir mao de exercitar o handler real.
  *
+ * Cria a conta de Operador automaticamente via UI (sem preparo manual):
+ *   - Faz login como Dono (criado em /Account/Setup)
+ *   - Vai em /Usuarios/Criar e cadastra o Operador
+ *   - Depois roda os testes para ambos os perfis
+ *
  * Credenciais SO por ambiente (nunca gravadas aqui). Sem a app no ar, falha.
  *   node qa/nav-smoke.mjs --base http://localhost:5311
  */
@@ -34,6 +39,38 @@ function check(desc, cond, det) {
     else { falhas++; console.log('  [FALHA] ' + desc + (det !== undefined ? ' | ' + det : '')); }
 }
 const espera = ms => new Promise(r => setTimeout(r, ms));
+
+/* Cria conta de Operador via UI (tela /Usuarios/Criar) */
+async function criarOperadorSeNaoExiste(api) {
+    await api.ir(BASE + '/Usuarios/Criar');
+    await espera(800);
+    const jaExiste = await api.avaliar(`(() => {
+        const f = document.querySelector('form');
+        if (!f) return false;
+        // Verifica se ja existe operador@teste.com na lista
+        return false; // Sempre tenta criar; se der erro de duplicado, ignora
+    })()`);
+    if (jaExiste) return;
+
+    await api.avaliar(`(() => {
+        const f = document.querySelector('form');
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        const n = f.querySelector('input[name="Nome"]');
+        const e = f.querySelector('input[name="Email"]');
+        const s = f.querySelector('input[name="Senha"]');
+        const cs = f.querySelector('input[name="ConfirmarSenha"]');
+        const p = f.querySelector('select[name="Papeis"]');
+        set.call(n, ${JSON.stringify('Operador QA')}); n.dispatchEvent(new Event('input', { bubbles: true }));
+        set.call(e, ${JSON.stringify(OPER.email)}); e.dispatchEvent(new Event('input', { bubbles: true }));
+        set.call(s, ${JSON.stringify(OPER.senha)}); s.dispatchEvent(new Event('input', { bubbles: true }));
+        set.call(cs, ${JSON.stringify(OPER.senha)}); cs.dispatchEvent(new Event('input', { bubbles: true }));
+        // Papel "Operador"
+        if (p) { p.value = 'Operador'; p.dispatchEvent(new Event('change', { bubbles: true })); }
+        f.submit(); return 'ok';
+    })()`);
+    await espera(2000);
+    // Se falhou (ex.: email duplicado), ignora - o login vai funcionar se ja existir
+}
 
 function coletor(api) {
     const ev = [];
@@ -179,6 +216,12 @@ async function main() {
     const api = await conectar(9460);
     await api.cmd('Network.enable'); await api.cmd('Log.enable'); await api.cmd('Runtime.enable');
     try {
+        // Cria Operador via UI se nao existir (precisa estar logado como Dono)
+        console.log('\n=== CRIANDO OPERADOR (se nao existir) ===');
+        await login(api, BASE, DONO.email, DONO.senha);
+        await criarOperadorSeNaoExiste(api);
+        await sair(api);
+
         for (const tema of ['escuro', 'claro']) {
             console.log(`\n===== DONO / tema ${tema} =====`);
             await login(api, BASE, DONO.email, DONO.senha);
