@@ -3,6 +3,7 @@ using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace ControleEstoqueLoja.Controllers
 {
@@ -49,59 +50,88 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? dias = null, DateTime? data = null)
+        public async Task<IActionResult> Index(int? dias = null, DateTime? data = null, string? periodo = null)
         {
-            // So 7 e 30 valem. Tudo mais (vazio, 0, -1, 15, 999) volta para 7.
-            var janela = NormalizarDias(dias);
-
             var inicioHoje = DateTime.Today;
             var fimHoje = inicioHoje.AddDays(1);
 
-            // ---- Vendas de hoje (qualquer forma de pagamento, fechadas inclusive) ----
-            var vendasHoje = await _context.Vendas
+            // ---- Determinar período (periodo prevalece sobre dias) ----
+            var (periodoInicio, periodoFim, periodoAnteriorInicio, periodoAnteriorFim, periodoNome, bucketCount, bucketTipo) = ResolverPeriodo(periodo, dias, inicioHoje);
+
+            // ---- Vendas do período ATUAL ----
+            var vendasPeriodo = await _context.Vendas
                 .AsNoTracking()
-                .Where(v => v.DataVenda >= inicioHoje && v.DataVenda < fimHoje)
-                .ToListAsync();
-
-            var totalHoje = vendasHoje.Sum(v => v.TotalVenda);
-            var numeroVendas = vendasHoje.Count;
-            var ticketMedio = numeroVendas == 0
-                ? 0m
-                : Math.Round(totalHoje / numeroVendas, 2, MidpointRounding.AwayFromZero);
-
-            var porMetodo = MontarPorMetodo(vendasHoje);
-
-            // ---- Total da JANELA (7 ou 30 dias), em TotalVenda gravado.
-            // Projecao: so (DataVenda, TotalVenda), nunca os itens da venda.
-            var inicioJanela = inicioHoje.AddDays(-(janela - 1));
-            var vendasDaJanela = await _context.Vendas
-                .AsNoTracking()
-                .Where(v => v.DataVenda >= inicioJanela && v.DataVenda < fimHoje)
+                .Where(v => v.DataVenda >= periodoInicio && v.DataVenda < periodoFim)
                 .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda })
                 .ToListAsync();
 
-            var totalPeriodo = vendasDaJanela.Sum(v => v.Total);
-            var numeroPeriodo = vendasDaJanela.Count;
+            var faturamentoAtual = vendasPeriodo.Sum(v => v.Total);
+            var vendasAtual = vendasPeriodo.Count;
+            var ticketMedioAtual = vendasAtual == 0 ? 0m : Math.Round(faturamentoAtual / vendasAtual, 2, MidpointRounding.AwayFromZero);
 
-            // ---- Gaveta (regra 7) ----
+            // ---- Vendas do período ANTERIOR ----
+            var vendasAnterior = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= periodoAnteriorInicio && v.DataVenda < periodoAnteriorFim)
+                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda })
+                .ToListAsync();
+
+            var faturamentoAnterior = vendasAnterior.Sum(v => v.Total);
+            var vendasAnteriorCount = vendasAnterior.Count;
+            var ticketMedioAnterior = vendasAnteriorCount == 0 ? 0m : Math.Round(faturamentoAnterior / vendasAnteriorCount, 2, MidpointRounding.AwayFromZero);
+
+            // ---- Variação % ----
+            decimal? variacaoPercentual = null;
+            string estadoVariacao = "SemBase";
+            if (faturamentoAnterior > 0m)
+            {
+                variacaoPercentual = Math.Round((faturamentoAtual - faturamentoAnterior) / faturamentoAnterior * 100m, 1, MidpointRounding.AwayFromZero);
+                if (variacaoPercentual > 0m) estadoVariacao = "Subiu";
+                else if (variacaoPercentual < 0m) estadoVariacao = "Caiu";
+                else estadoVariacao = "Estavel";
+            }
+
+            // ---- Frase do cabeçalho ----
+            string fraseCabecalho;
+            if (faturamentoAtual == 0m && faturamentoAnterior == 0m)
+                fraseCabecalho = "Sem vendas no período.";
+            else if (faturamentoAnterior == 0m)
+                fraseCabecalho = "Ainda não há vendas no período anterior para comparar.";
+            else if (estadoVariacao == "Subiu")
+                fraseCabecalho = $"As vendas subiram {variacaoPercentual.Value.ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+            else if (estadoVariacao == "Caiu")
+                fraseCabecalho = $"As vendas caíram {Math.Abs(variacaoPercentual.Value).ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+            else
+                fraseCabecalho = "As vendas ficaram estáveis em relação ao período anterior.";
+
+            // ---- Saudação ----
+            var hora = DateTime.Now.Hour;
+            string saudacaoPrefixo = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
+            string nomeUsuario = ObterNomeExibidoDoUsuario();
+            string saudacao = $"{saudacaoPrefixo}, {nomeUsuario}";
+
+            // ---- Gaveta (regra 7) - SEMPRE baseada em HOJE, não muda com período ----
             var movimentosHoje = await _context.CaixaMovimentacoes
                 .AsNoTracking()
                 .Where(m => m.Data >= inicioHoje && m.Data < fimHoje && !m.IsFechado)
                 .ToListAsync();
 
-            var vendasDinheiro = vendasHoje
-                .Where(v => !v.IsFechado
+            var vendasHojeGaveta = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= inicioHoje && v.DataVenda < fimHoje
+                            && !v.IsFechado
                             && v.MetodoPagamento == CaixaController.MetodoPagamentoDinheiro)
-                .Sum(v => v.TotalVenda);
+                .ToListAsync();
 
+            var vendasDinheiro = vendasHojeGaveta.Sum(v => v.TotalVenda);
             var suprimentos = movimentosHoje.Where(m => m.Tipo == "Suprimento").Sum(m => m.Valor);
             var sangrias = movimentosHoje.Where(m => m.Tipo == "Sangria").Sum(m => m.Valor);
-
-            // Fonte UNICA da formula: nao duplicar, senao os dois numeros divergem.
             var saldoGaveta = CaixaController.CalcularSaldoEmGaveta(vendasDinheiro, suprimentos, sangrias);
 
+            // ---- Estoque baixo ----
             var (estoqueBaixo, totalEstoqueBaixo) = await MontarEstoqueBaixoAsync();
 
+            // ---- Últimas vendas ----
             var ultimasVendas = await _context.Vendas
                 .AsNoTracking()
                 .OrderByDescending(v => v.DataVenda)
@@ -116,14 +146,44 @@ namespace ControleEstoqueLoja.Controllers
                 })
                 .ToListAsync();
 
-            var serie = MontarSerie(vendasDaJanela, inicioHoje, janela);
+            // ---- Série ATUAL (buckets) ----
+            var serieAtual = MontarSerieBuckets(vendasPeriodo, periodoInicio, periodoFim, bucketCount, bucketTipo);
 
-            // ---- VENDAS DE UM DIA (?data= = clique numa barra do grafico) ----
-            // O clique leva para o PROPRIO painel: a lista do dia aparece logo
-            // abaixo do grafico, sem abrir a tela Dia. data nula, invalida ou
-            // posterior a HOJE nao seleciona nada - nao ha venda no futuro
-            // (mesma regra da tela Dia). A comparacao com inicioHoje vem ANTES
-            // do AddDays, entao o passo nunca passa de DateTime.MaxValue.
+            // ---- Série ANTERIOR (buckets) ----
+            var serieAnterior = MontarSerieBuckets(vendasAnterior, periodoAnteriorInicio, periodoAnteriorFim, bucketCount, bucketTipo);
+            PreencherSerieAnterior(serieAtual, vendasAnterior, periodoAnteriorInicio, bucketCount, bucketTipo);
+
+            // ---- Top 5 mais vendidos (por valor) ----
+            var maisVendidos = await MontarMaisVendidosAsync(periodoInicio, periodoFim);
+
+            // ---- Formas de pagamento (período atual) ----
+            var formasPagamento = MontarFormasPagamento(vendasPeriodo);
+
+            // ---- Vendas de hoje (para TotalVendasHoje, NumeroVendasHoje, TicketMedio) ----
+            var vendasHoje = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= inicioHoje && v.DataVenda < fimHoje)
+                .ToListAsync();
+
+            var totalHoje = vendasHoje.Sum(v => v.TotalVenda);
+            var numeroVendasHoje = vendasHoje.Count;
+            var ticketMedioHoje = numeroVendasHoje == 0 ? 0m : Math.Round(totalHoje / numeroVendasHoje, 2, MidpointRounding.AwayFromZero);
+            var porMetodoHoje = MontarPorMetodo(vendasHoje);
+
+            // ---- Total da janela legada (7 ou 30 dias) para compatibilidade ----
+            var janelaLegada = NormalizarDias(dias);
+            var inicioJanelaLegada = inicioHoje.AddDays(-(janelaLegada - 1));
+            var vendasJanelaLegada = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.DataVenda >= inicioJanelaLegada && v.DataVenda < fimHoje)
+                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda })
+                .ToListAsync();
+
+            var totalPeriodoLegado = vendasJanelaLegada.Sum(v => v.Total);
+            var numeroPeriodoLegado = vendasJanelaLegada.Count;
+            var serieLegada = MontarSerie(vendasJanelaLegada, inicioHoje, janelaLegada);
+
+            // ---- Vendas do dia selecionado (?data=) ----
             DateTime? diaSelecionado = null;
             var vendasDoDia = new List<DashboardVendaRecente>();
             var totalDiaSelecionado = 0m;
@@ -153,23 +213,44 @@ namespace ControleEstoqueLoja.Controllers
 
             return View(new DashboardViewModel
             {
+                // Legados
                 TotalVendasHoje = totalHoje,
-                NumeroVendasHoje = numeroVendas,
-                TicketMedio = ticketMedio,
-                TotalPorMetodo = porMetodo,
+                NumeroVendasHoje = numeroVendasHoje,
+                TicketMedio = ticketMedioHoje,
+                TotalPorMetodo = porMetodoHoje,
                 SaldoGaveta = saldoGaveta,
-                SerieUltimos7Dias = serie,
+                SerieUltimos7Dias = serieLegada,
                 EstoqueBaixo = estoqueBaixo,
                 TotalEstoqueBaixo = totalEstoqueBaixo,
                 UltimasVendas = ultimasVendas,
-                TotalVendasPeriodo = totalPeriodo,
-                NumeroVendasPeriodo = numeroPeriodo,
+                TotalVendasPeriodo = totalPeriodoLegado,
+                NumeroVendasPeriodo = numeroPeriodoLegado,
                 DiaSelecionado = diaSelecionado,
                 VendasDoDia = vendasDoDia,
                 TotalDiaSelecionado = totalDiaSelecionado,
                 NumeroVendasDia = vendasDoDia.Count,
+                Dias = janelaLegada,
 
-                Dias = janela,
+                // Novos (Ajuste 4)
+                Periodo = periodoNome,
+                PeriodoInicio = periodoInicio,
+                PeriodoFim = periodoFim,
+                PeriodoAnteriorInicio = periodoAnteriorInicio,
+                PeriodoAnteriorFim = periodoAnteriorFim,
+                FaturamentoAtual = faturamentoAtual,
+                VendasAtual = vendasAtual,
+                TicketMedioAtual = ticketMedioAtual,
+                FaturamentoAnterior = faturamentoAnterior,
+                VendasAnterior = vendasAnteriorCount,
+                TicketMedioAnterior = ticketMedioAnterior,
+                VariacaoPercentual = variacaoPercentual,
+                EstadoVariacao = estadoVariacao,
+                FraseCabecalho = fraseCabecalho,
+                Saudacao = saudacao,
+                SerieAtual = serieAtual,
+                SerieAnterior = serieAnterior,
+                MaisVendidos = maisVendidos,
+                FormasPagamento = formasPagamento,
             });
         }
 
@@ -568,6 +649,393 @@ return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
                 TotalSuprimentos = suprimentos.Sum(s => s.Valor),
                 TotalSangrias = Math.Abs(sangrias.Sum(s => s.Valor))
 });
+}
+
+        // =====================================================================
+        // HELPERS AJUSTE 4 - PERÍODOS, SÉRIES, TOP PRODUTOS, FORMAS PAGAMENTO
+        // =====================================================================
+
+        /// <summary>
+        /// Resolve o período a partir do parâmetro string (hoje, ontem, 7dias, 30dias, mes, ano).
+        /// Retorna: (inicioAtual, fimAtual, inicioAnterior, fimAnterior, nomePeriodo, bucketCount, bucketTipo).
+        /// bucketTipo: "hora", "dia", "mes".
+        /// Inválido ou ausente = hoje; só dias (7 ou 30) = 7dias ou 30dias; periodo prevalece.
+        /// </summary>
+        private static (DateTime inicioAtual, DateTime fimAtual, DateTime inicioAnterior, DateTime fimAnterior, string nomePeriodo, int bucketCount, string bucketTipo) ResolverPeriodo(string? periodo, int? dias, DateTime hoje)
+        {
+            var H = hoje.Date; // hoje às 00:00
+            var fimAtualBase = H.AddDays(1); // exclusivo
+
+            string p = (periodo ?? "").Trim().ToLowerInvariant();
+
+            // Se periodo não informado ou inválido, verifica dias (legado)
+            if (string.IsNullOrEmpty(p))
+            {
+                var janela = NormalizarDias(dias);
+                if (janela == 30) p = "30dias";
+                else p = "7dias"; // 7 ou qualquer outro vira 7
+            }
+            else if (p == "7" || p == "30")
+            {
+                // dias legado sem "dias"
+                p = p + "dias";
+            }
+
+            DateTime inicioAtual, fimAtual, inicioAnterior, fimAnterior;
+            string nomePeriodo;
+            int bucketCount;
+            string bucketTipo;
+
+            switch (p)
+            {
+                case "hoje":
+                    inicioAtual = H;
+                    fimAtual = fimAtualBase;
+                    inicioAnterior = H.AddDays(-1);
+                    fimAnterior = H;
+                    nomePeriodo = "hoje";
+                    bucketCount = 24;
+                    bucketTipo = "hora";
+                    break;
+
+                case "ontem":
+                    inicioAtual = H.AddDays(-1);
+                    fimAtual = H;
+                    inicioAnterior = H.AddDays(-2);
+                    fimAnterior = H.AddDays(-1);
+                    nomePeriodo = "ontem";
+                    bucketCount = 24;
+                    bucketTipo = "hora";
+                    break;
+
+                case "7dias":
+                    inicioAtual = H.AddDays(-6);
+                    fimAtual = fimAtualBase;
+                    inicioAnterior = H.AddDays(-13);
+                    fimAnterior = H.AddDays(-6);
+                    nomePeriodo = "7dias";
+                    bucketCount = 7;
+                    bucketTipo = "dia";
+                    break;
+
+                case "30dias":
+                    inicioAtual = H.AddDays(-29);
+                    fimAtual = fimAtualBase;
+                    inicioAnterior = H.AddDays(-59);
+                    fimAnterior = H.AddDays(-29);
+                    nomePeriodo = "30dias";
+                    bucketCount = 30;
+                    bucketTipo = "dia";
+                    break;
+
+                case "mes":
+                    var primeiroMesAtual = new DateTime(H.Year, H.Month, 1);
+                    inicioAtual = primeiroMesAtual;
+                    fimAtual = fimAtualBase;
+                    var primeiroMesAnterior = primeiroMesAtual.AddMonths(-1);
+                    var ultimoDiaMesAnterior = primeiroMesAtual.AddDays(-1).Day;
+                    var N = Math.Min(H.Day, ultimoDiaMesAnterior);
+                    inicioAnterior = primeiroMesAnterior;
+                    fimAnterior = new DateTime(primeiroMesAnterior.Year, primeiroMesAnterior.Month, N).AddDays(1);
+                    nomePeriodo = "mes";
+                    bucketCount = H.Day; // dias do mês até hoje
+                    bucketTipo = "dia";
+                    break;
+
+                case "ano":
+                    var primeiroAnoAtual = new DateTime(H.Year, 1, 1);
+                    inicioAtual = primeiroAnoAtual;
+                    fimAtual = fimAtualBase;
+                    var primeiroAnoAnterior = new DateTime(H.Year - 1, 1, 1);
+                    // 29/02 vira 28/02 no ano anterior se ano bissexto
+                    int diaAno = H.DayOfYear;
+                    DateTime fimAnteriorAno;
+                    try
+                    {
+                        fimAnteriorAno = new DateTime(H.Year - 1, H.Month, H.Day).AddDays(1);
+                    }
+                    catch
+                    {
+                        // 29/02 em ano não bissexto
+                        fimAnteriorAno = new DateTime(H.Year - 1, 2, 28).AddDays(1);
+                    }
+                    inicioAnterior = primeiroAnoAnterior;
+                    fimAnterior = fimAnteriorAno;
+                    nomePeriodo = "ano";
+                    bucketCount = H.Month; // meses até o atual
+                    bucketTipo = "mes";
+                    break;
+
+                default:
+                    // Inválido -> hoje
+                    goto case "hoje";
+            }
+
+            return (inicioAtual, fimAtual, inicioAnterior, fimAnterior, nomePeriodo, bucketCount, bucketTipo);
+        }
+
+        /// <summary>
+        /// Monta série de buckets (horas, dias ou meses) para o gráfico.
+        /// Retorna lista com ValorAtual e ValorAnterior (null = sem dado no anterior).
+        /// Rótulos: horas "00h".."23h", dias "dd/MM", meses "jan".."dez".
+        /// Valor futuro (horas depois de agora em "hoje") = null.
+        /// Valor inexistente na série anterior (mês anterior menor) = null.
+        /// Soma dos buckets atuais = faturamento do período.
+        /// </summary>
+        private static List<DashboardBucketSerie> MontarSerieBuckets(
+            List<VendaPeriodo> vendas, DateTime inicio, DateTime fim, int bucketCount, string bucketTipo)
+        {
+            var resultado = new List<DashboardBucketSerie>(bucketCount);
+            var agora = DateTime.Now;
+
+            // Agrupar vendas por bucket
+            Dictionary<int, decimal> somaPorBucket = new();
+
+            foreach (var v in vendas)
+            {
+                int indice;
+                if (bucketTipo == "hora")
+                {
+                    indice = v.Data.Hour;
+                }
+                else if (bucketTipo == "dia")
+                {
+                    indice = (v.Data.Date - inicio.Date).Days;
+                }
+                else // mes
+                {
+                    indice = v.Data.Month - 1; // 0-based
+                }
+
+                if (indice >= 0 && indice < bucketCount)
+                {
+                    if (somaPorBucket.TryGetValue(indice, out var existente))
+                        somaPorBucket[indice] = existente + v.Total;
+                    else
+                        somaPorBucket[indice] = v.Total;
+                }
+            }
+
+            for (int i = 0; i < bucketCount; i++)
+            {
+                string rotulo;
+                if (bucketTipo == "hora")
+                    rotulo = $"{i:00}h";
+                else if (bucketTipo == "dia")
+                    rotulo = inicio.AddDays(i).ToString("dd/MM");
+                else // mes
+                    rotulo = new DateTime(2000, i + 1, 1).ToString("MMM", CultureInfo.InvariantCulture).ToLowerInvariant(); // "jan", "fev"...
+
+                decimal? valorAtual = null;
+                if (somaPorBucket.TryGetValue(i, out var valor))
+                    valorAtual = valor;
+
+                // Futuro: horas depois de agora em "hoje"
+                if (bucketTipo == "hora" && i > agora.Hour && inicio.Date == DateTime.Today)
+                    valorAtual = null;
+
+                resultado.Add(new DashboardBucketSerie
+                {
+                    Indice = i,
+                    Rotulo = rotulo,
+                    ValorAtual = valorAtual,
+                    ValorAnterior = null // será preenchido depois
+                });
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Preenche a série anterior nos buckets já criados.
+        /// </summary>
+        private static void PreencherSerieAnterior(List<DashboardBucketSerie> serieAtual, List<VendaPeriodo> vendasAnterior, DateTime inicioAnterior, int bucketCount, string bucketTipo)
+        {
+            Dictionary<int, decimal> somaPorBucket = new();
+
+            foreach (var v in vendasAnterior)
+            {
+                int indice;
+                if (bucketTipo == "hora")
+                {
+                    indice = v.Data.Hour;
+                }
+                else if (bucketTipo == "dia")
+                {
+                    indice = (v.Data.Date - inicioAnterior.Date).Days;
+                }
+                else // mes
+                {
+                    indice = v.Data.Month - 1;
+                }
+
+                if (indice >= 0 && indice < bucketCount)
+                {
+                    if (somaPorBucket.TryGetValue(indice, out var existente))
+                        somaPorBucket[indice] = existente + v.Total;
+                    else
+                        somaPorBucket[indice] = v.Total;
+                }
+            }
+
+            for (int i = 0; i < serieAtual.Count; i++)
+            {
+                if (somaPorBucket.TryGetValue(i, out var valor))
+                    serieAtual[i].ValorAnterior = valor;
+                else
+                    serieAtual[i].ValorAnterior = null;
+            }
+        }
+
+        /// <summary>
+        /// Monta Top 5 produtos mais vendidos por VALOR no período.
+        /// Quantidade somada EM C# (kg/un), arredondamento só no fim.
+        /// Inclui inativos e vendas fechadas.
+        /// Desempate por nome.
+        /// </summary>
+        private async Task<List<DashboardTopProduto>> MontarMaisVendidosAsync(DateTime inicio, DateTime fim)
+        {
+            var itens = await _context.VendaItens
+                .AsNoTracking()
+                .Include(i => i.Produto)
+                .Where(i => i.Venda.DataVenda >= inicio && i.Venda.DataVenda < fim)
+                .Select(i => new
+                {
+                    i.ProdutoId,
+                    Nome = i.Produto.Nome,
+                    Tipo = i.Produto.Tipo,
+                    i.Quantidade,
+                    i.PrecoUnitario,
+                })
+                .ToListAsync();
+
+            var agrupados = itens
+                .GroupBy(i => i.ProdutoId)
+                .Select(g =>
+                {
+                    var quantidade = g.Sum(i => i.Quantidade);
+                    var valor = Math.Round(g.Sum(i => i.PrecoUnitario * i.Quantidade), 2, MidpointRounding.AwayFromZero);
+                    var tipo = g.First().Tipo;
+                    return new
+                    {
+                        ProdutoId = g.Key,
+                        Nome = g.First().Nome,
+                        Quantidade = quantidade,
+                        Valor = valor,
+                        Unidade = tipo == TipoProduto.PorPeso ? "kg" : "un",
+                    };
+                })
+                .OrderByDescending(x => x.Valor)
+                .ThenBy(x => x.Nome, StringComparer.Ordinal)
+                .Take(5)
+                .ToList();
+
+            var maior = agrupados.Count > 0 ? agrupados.Max(x => x.Valor) : 0m;
+
+            return agrupados.Select(x => new DashboardTopProduto
+            {
+                ProdutoId = x.ProdutoId,
+                Nome = x.Nome,
+                Quantidade = x.Quantidade,
+                Unidade = x.Unidade,
+                Valor = x.Valor,
+                BarraRelativa = maior > 0m ? Math.Round(x.Valor / maior * 100m, 1, MidpointRounding.AwayFromZero) : 0m,
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Monta formas de pagamento do período atual para a rosca.
+        /// Agrupa sem diferenciar maiúsculas; valor, % (1 casa; último absorve arredondamento);
+        /// cor por forma (Dinheiro green, Pix cyan, Crédito violet, Débito blue, Voucher amber, demais slate).
+        /// Segmentos: círculo r=40, circunferência 2*PI*40; dasharray e offset calculados.
+        /// Ordenado por valor desc.
+        /// </summary>
+        private static List<DashboardFormaPagamento> MontarFormasPagamento(List<VendaPeriodo> vendasPeriodo)
+        {
+            // Agrupar por método (case-insensitive) mantendo o primeiro nome original
+            var grupos = vendasPeriodo
+                .GroupBy(v => v.MetodoPagamento, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new
+                {
+                    Metodo = g.First().MetodoPagamento,
+                    Total = g.Sum(v => v.Total)
+                })
+                .OrderByDescending(x => x.Total)
+                .ToList();
+
+            var totalGeral = grupos.Sum(x => x.Total);
+            if (totalGeral == 0m) return new List<DashboardFormaPagamento>();
+
+            var cores = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Dinheiro", "green" },
+                { "Pix", "cyan" },
+                { "Credito", "violet" },
+                { "Debito", "blue" },
+                { "Voucher", "amber" },
+            };
+
+            const decimal raio = 40m;
+            const decimal circunferencia = 2m * (decimal)Math.PI * raio;
+
+            var resultado = new List<DashboardFormaPagamento>();
+            decimal acumuladoPercentual = 0m;
+
+            for (int i = 0; i < grupos.Count; i++)
+            {
+                var g = grupos[i];
+                var percentual = totalGeral > 0m ? g.Total / totalGeral * 100m : 0m;
+
+                // Último segmento absorve o arredondamento para somar 100,0
+                if (i == grupos.Count - 1)
+                    percentual = 100m - acumuladoPercentual;
+                else
+                    percentual = Math.Round(percentual, 1, MidpointRounding.AwayFromZero);
+
+                acumuladoPercentual += percentual;
+
+                var cor = cores.TryGetValue(g.Metodo, out var c) ? c : "slate";
+
+                var dashArray = circunferencia * percentual / 100m;
+                var dashOffset = circunferencia * (100m - acumuladoPercentual) / 100m;
+
+                resultado.Add(new DashboardFormaPagamento
+                {
+                    Metodo = g.Metodo,
+                    Valor = g.Total,
+                    Percentual = percentual,
+                    Cor = cor,
+                    DashArray = Math.Round(dashArray, 2, MidpointRounding.AwayFromZero),
+                    DashOffset = Math.Round(dashOffset, 2, MidpointRounding.AwayFromZero),
+                });
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Obtém o nome exibido do usuário logado (mesmo do botão da sidebar).
+        /// Nunca o e-mail, nunca contém "@". Fallback "Dono".
+        /// </summary>
+        private string ObterNomeExibidoDoUsuario()
+        {
+            // O _Layout usa User.Identity.Name para o e-mail e busca o NomeExibicao no banco
+            // Aqui fazemos o mesmo: pega o email do Identity e busca o nome
+            var email = User?.Identity?.Name;
+            if (!string.IsNullOrEmpty(email))
+            {
+                try
+                {
+                    var usuario = _context?.Users.AsNoTracking().FirstOrDefault(u => u.Email == email);
+                    if (usuario != null && !string.IsNullOrEmpty(usuario.NomeExibicao))
+                        return usuario.NomeExibicao;
+                }
+                catch
+                {
+                    // Se falhar (ex.: banco não inicializado em testes), usa fallback
+                }
+            }
+            return "Dono";
         }
     }
 
@@ -584,6 +1052,7 @@ public class VendaPeriodo
 {
     public DateTime Data { get; set; }
     public decimal Total { get; set; }
+    public string MetodoPagamento { get; set; } = string.Empty;
 }
 
 // =====================================================================
@@ -655,6 +1124,64 @@ public class VendaPeriodo
 
         /// <summary>Quantas vendas o dia escolhido teve (0 = dia sem venda).</summary>
         public int NumeroVendasDia { get; set; }
+
+        // ===== NOVOS CAMPOS AJUSTE 4 =====
+        /// <summary>Período selecionado: hoje, ontem, 7dias, 30dias, mes, ano.</summary>
+        public string Periodo { get; set; } = "hoje";
+
+        /// <summary>Início do período atual (inclusivo).</summary>
+        public DateTime PeriodoInicio { get; set; }
+
+        /// <summary>Fim do período atual (exclusivo).</summary>
+        public DateTime PeriodoFim { get; set; }
+
+        /// <summary>Início do período anterior (inclusivo).</summary>
+        public DateTime PeriodoAnteriorInicio { get; set; }
+
+        /// <summary>Fim do período anterior (exclusivo).</summary>
+        public DateTime PeriodoAnteriorFim { get; set; }
+
+        /// <summary>Faturamento do período atual.</summary>
+        public decimal FaturamentoAtual { get; set; }
+
+        /// <summary>Vendas (contagem) do período atual.</summary>
+        public int VendasAtual { get; set; }
+
+        /// <summary>Ticket médio do período atual.</summary>
+        public decimal TicketMedioAtual { get; set; }
+
+        /// <summary>Faturamento do período anterior.</summary>
+        public decimal FaturamentoAnterior { get; set; }
+
+        /// <summary>Vendas (contagem) do período anterior.</summary>
+        public int VendasAnterior { get; set; }
+
+        /// <summary>Ticket médio do período anterior.</summary>
+        public decimal TicketMedioAnterior { get; set; }
+
+        /// <summary>Variação percentual do faturamento (1 casa, AwayFromZero). Nulo se anterior = 0.</summary>
+        public decimal? VariacaoPercentual { get; set; }
+
+        /// <summary>Estado da variação: Subiu, Caiu, Estavel, SemBase.</summary>
+        public string EstadoVariacao { get; set; } = "SemBase";
+
+        /// <summary>Frase do cabeçalho comparando com período anterior.</summary>
+        public string FraseCabecalho { get; set; } = string.Empty;
+
+        /// <summary>Saudação: Bom dia / Boa tarde / Boa noite + nome do usuário.</summary>
+        public string Saudacao { get; set; } = string.Empty;
+
+        /// <summary>Série do gráfico do período ATUAL (faturamento por bucket).</summary>
+        public List<DashboardBucketSerie> SerieAtual { get; set; } = new();
+
+        /// <summary>Série do gráfico do período ANTERIOR (faturamento por bucket). Nulos = sem dado.</summary>
+        public List<DashboardBucketSerie> SerieAnterior { get; set; } = new();
+
+        /// <summary>Top 5 produtos mais vendidos por valor no período atual.</summary>
+        public List<DashboardTopProduto> MaisVendidos { get; set; } = new();
+
+        /// <summary>Formas de pagamento do período atual (valor, %, cor, dasharray/offset).</summary>
+        public List<DashboardFormaPagamento> FormasPagamento { get; set; } = new();
     }
 
     /// <summary>Um dia da serie (7 ou 30 dias) da janela do painel.</summary>
@@ -823,5 +1350,36 @@ public class VendaPeriodo
         public string MetodoPagamento { get; set; } = string.Empty;
         public decimal Total { get; set; }
         public List<DashboardItemVendaDetalhe> Itens { get; set; } = new();
+    }
+
+    /// <summary>Um bucket da série do gráfico (pode ser hora, dia ou mês).</summary>
+    public class DashboardBucketSerie
+    {
+        public int Indice { get; set; }
+        public string Rotulo { get; set; } = string.Empty;
+        public decimal? ValorAtual { get; set; }
+        public decimal? ValorAnterior { get; set; }
+    }
+
+    /// <summary>Top produto mais vendido no período.</summary>
+    public class DashboardTopProduto
+    {
+        public int ProdutoId { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public decimal Quantidade { get; set; }
+        public string Unidade { get; set; } = string.Empty;
+        public decimal Valor { get; set; }
+        public decimal BarraRelativa { get; set; } // 0..100 relativo ao maior
+    }
+
+    /// <summary>Forma de pagamento para a rosca.</summary>
+    public class DashboardFormaPagamento
+    {
+        public string Metodo { get; set; } = string.Empty;
+        public decimal Valor { get; set; }
+        public decimal Percentual { get; set; } // 1 casa, soma 100.0
+        public string Cor { get; set; } = string.Empty;
+        public decimal DashArray { get; set; } // circunferência * percentual / 100
+        public decimal DashOffset { get; set; } // acumulado anterior
     }
 }
