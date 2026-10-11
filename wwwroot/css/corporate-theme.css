@@ -3397,12 +3397,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
 
-.app-footer {
-    padding: 1rem 1.4rem;
-    color: var(--text-soft);
-    font-size: .82rem;
-    border-top: 1px solid var(--line);
-}
+.app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
 
 /* cortina da gaveta (mobile) */
 .cortina-sidebar {

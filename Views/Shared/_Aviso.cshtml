@@ -18,8 +18,10 @@
                 Swal.fire({
                     title: 'Atenção!',
                     text: msg,
-                    icon: 'warning',
-                    confirmButtonText: 'ENTENDI',
+                    customClass: {
+                        popup: 'swal-warning'
+                    },
+                    confirmButtonText: 'Entendi',
                     confirmButtonColor: '#c2a36d'
                 });
             });
