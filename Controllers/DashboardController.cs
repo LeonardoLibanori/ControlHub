@@ -44,9 +44,13 @@ namespace ControleEstoqueLoja.Controllers
         private const int DiasPadrao = 7;
         private const int DiasLongo = 30;
 
-        public DashboardController(ApplicationDbContext context)
+        /// <summary>Relógio opcional para testes (usa DateTime.Now quando nulo).</summary>
+        private readonly Func<DateTime> _relogio;
+
+        public DashboardController(ApplicationDbContext context, Func<DateTime>? relogio = null)
         {
             _context = context;
+            _relogio = relogio ?? (() => DateTime.Now);
         }
 
         [HttpGet]
@@ -105,7 +109,7 @@ namespace ControleEstoqueLoja.Controllers
                 fraseCabecalho = "As vendas ficaram estáveis em relação ao período anterior.";
 
             // ---- Saudação ----
-            var hora = DateTime.Now.Hour;
+            var hora = _relogio().Hour;
             string saudacaoPrefixo = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
             string nomeUsuario = ObterNomeExibidoDoUsuario();
             string saudacao = $"{saudacaoPrefixo}, {nomeUsuario}";
@@ -147,10 +151,10 @@ namespace ControleEstoqueLoja.Controllers
                 .ToListAsync();
 
             // ---- Série ATUAL (buckets) ----
-            var serieAtual = MontarSerieBuckets(vendasPeriodo, periodoInicio, periodoFim, bucketCount, bucketTipo);
+            var serieAtual = MontarSerieBuckets(vendasPeriodo, periodoInicio, periodoFim, bucketCount, bucketTipo, _relogio());
 
             // ---- Série ANTERIOR (buckets) ----
-            var serieAnterior = MontarSerieBuckets(vendasAnterior, periodoAnteriorInicio, periodoAnteriorFim, bucketCount, bucketTipo);
+            var serieAnterior = MontarSerieBuckets(vendasAnterior, periodoAnteriorInicio, periodoAnteriorFim, bucketCount, bucketTipo, _relogio());
             PreencherSerieAnterior(serieAtual, vendasAnterior, periodoAnteriorInicio, bucketCount, bucketTipo);
 
             // ---- Top 5 mais vendidos (por valor) ----
@@ -783,10 +787,9 @@ return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
         /// Soma dos buckets atuais = faturamento do período.
         /// </summary>
         private static List<DashboardBucketSerie> MontarSerieBuckets(
-            List<VendaPeriodo> vendas, DateTime inicio, DateTime fim, int bucketCount, string bucketTipo)
+            List<VendaPeriodo> vendas, DateTime inicio, DateTime fim, int bucketCount, string bucketTipo, DateTime agora)
         {
             var resultado = new List<DashboardBucketSerie>(bucketCount);
-            var agora = DateTime.Now;
 
             // Agrupar vendas por bucket
             Dictionary<int, decimal> somaPorBucket = new();

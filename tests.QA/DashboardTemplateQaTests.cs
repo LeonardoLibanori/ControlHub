@@ -32,87 +32,192 @@ public class DashboardTemplateQaTests
     // 1. JANELAS E FRONTEIRAS DE CADA PERÍODO
     // =====================================================================
 
+    private static (DateTime inicioAtual, DateTime fimAtual, DateTime inicioAnterior, DateTime fimAnterior, string nomePeriodo, int bucketCount, string bucketTipo) ResolverPeriodoViaReflection(string periodo, int? dias, DateTime hoje)
+    {
+        var method = typeof(DashboardController).GetMethod("ResolverPeriodo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        return ((DateTime, DateTime, DateTime, DateTime, string, int, string))method.Invoke(null, new object[] { periodo, dias, hoje });
+    }
+
     [Fact]
     public void Periodos_Hoje_IntervaloFechadoAberto_HInclusivo()
     {
         // hoje = [H, H+1)  onde H = hoje às 00:00
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("hoje", null, hoje);
+        Assert.Equal("hoje", nome);
+        Assert.Equal(hoje, ini);           // H inclusivo
+        Assert.Equal(hoje.AddDays(1), fim); // H+1 exclusivo
+        Assert.Equal(hoje.AddDays(-1), iniAnt); // ontem
+        Assert.Equal(hoje, fimAnt);         // H
+        Assert.Equal(24, buckets);
+        Assert.Equal("hora", tipo);
     }
 
     [Fact]
     public void Periodos_Ontem_IntervaloFechadoAberto()
     {
         // ontem = [H-1, H)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("ontem", null, hoje);
+        Assert.Equal("ontem", nome);
+        Assert.Equal(hoje.AddDays(-1), ini);
+        Assert.Equal(hoje, fim);
+        Assert.Equal(hoje.AddDays(-2), iniAnt);
+        Assert.Equal(hoje.AddDays(-1), fimAnt);
+        Assert.Equal(24, buckets);
+        Assert.Equal("hora", tipo);
     }
 
     [Fact]
     public void Periodos_7dias_Intervalo6DiasAtrasAteHoje()
     {
         // 7dias = [H-6, H+1)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("7dias", null, hoje);
+        Assert.Equal("7dias", nome);
+        Assert.Equal(hoje.AddDays(-6), ini);
+        Assert.Equal(hoje.AddDays(1), fim);
+        Assert.Equal(hoje.AddDays(-13), iniAnt);
+        Assert.Equal(hoje.AddDays(-6), fimAnt);
+        Assert.Equal(7, buckets);
+        Assert.Equal("dia", tipo);
     }
 
     [Fact]
     public void Periodos_30dias_Intervalo29DiasAtrasAteHoje()
     {
         // 30dias = [H-29, H+1)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("30dias", null, hoje);
+        Assert.Equal("30dias", nome);
+        Assert.Equal(hoje.AddDays(-29), ini);
+        Assert.Equal(hoje.AddDays(1), fim);
+        Assert.Equal(hoje.AddDays(-59), iniAnt);
+        Assert.Equal(hoje.AddDays(-29), fimAnt);
+        Assert.Equal(30, buckets);
+        Assert.Equal("dia", tipo);
     }
 
     [Fact]
     public void Periodos_Mes_PrimeiroDiaMesAteHoje()
     {
         // mes = [1º do mês, H+1)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("mes", null, hoje);
+        var primeiroMes = new DateTime(hoje.Year, hoje.Month, 1);
+        Assert.Equal("mes", nome);
+        Assert.Equal(primeiroMes, ini);
+        Assert.Equal(hoje.AddDays(1), fim);
+        
+        var primeiroMesAnterior = primeiroMes.AddMonths(-1);
+        var ultimoDiaMesAnterior = primeiroMes.AddDays(-1).Day;
+        var n = Math.Min(hoje.Day, ultimoDiaMesAnterior);
+        var fimAntEsperado = new DateTime(primeiroMesAnterior.Year, primeiroMesAnterior.Month, n).AddDays(1);
+        
+        Assert.Equal(primeiroMesAnterior, iniAnt);
+        Assert.Equal(fimAntEsperado, fimAnt);
+        Assert.Equal(hoje.Day, buckets); // dias do mês até hoje
+        Assert.Equal("dia", tipo);
     }
 
     [Fact]
     public void Periodos_Ano_PrimeiroJanAteHoje()
     {
         // ano = [1º de janeiro, H+1)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (ini, fim, iniAnt, fimAnt, nome, buckets, tipo) = ResolverPeriodoViaReflection("ano", null, hoje);
+        var primeiroAno = new DateTime(hoje.Year, 1, 1);
+        Assert.Equal("ano", nome);
+        Assert.Equal(primeiroAno, ini);
+        Assert.Equal(hoje.AddDays(1), fim);
+        
+        var primeiroAnoAnterior = new DateTime(hoje.Year - 1, 1, 1);
+        DateTime fimAntEsperado;
+        try {
+            fimAntEsperado = new DateTime(hoje.Year - 1, hoje.Month, hoje.Day).AddDays(1);
+        } catch {
+            fimAntEsperado = new DateTime(hoje.Year - 1, 2, 28).AddDays(1);
+        }
+        
+        Assert.Equal(primeiroAnoAnterior, iniAnt);
+        Assert.Equal(fimAntEsperado, fimAnt);
+        Assert.Equal(hoje.Month, buckets); // meses até o atual
+        Assert.Equal("mes", tipo);
     }
 
     [Fact]
     public void Periodos_Anterior_HojeViraOntem()
     {
         // anterior de hoje = ontem
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("hoje", null, hoje);
+        Assert.Equal(hoje.AddDays(-1), iniAnt);
+        Assert.Equal(hoje, fimAnt);
     }
 
     [Fact]
     public void Periodos_Anterior_OntemViraAnteontem()
     {
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("ontem", null, hoje);
+        Assert.Equal(hoje.AddDays(-2), iniAnt);
+        Assert.Equal(hoje.AddDays(-1), fimAnt);
     }
 
     [Fact]
     public void Periodos_Anterior_7dias_Vira13a6DiasAtras()
     {
         // anterior de 7dias = [H-13, H-6)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("7dias", null, hoje);
+        Assert.Equal(hoje.AddDays(-13), iniAnt);
+        Assert.Equal(hoje.AddDays(-6), fimAnt);
     }
 
     [Fact]
     public void Periodos_Anterior_30dias_Vira59a29DiasAtras()
     {
         // anterior de 30dias = [H-59, H-29)
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("30dias", null, hoje);
+        Assert.Equal(hoje.AddDays(-59), iniAnt);
+        Assert.Equal(hoje.AddDays(-29), fimAnt);
     }
 
     [Fact]
     public void Periodos_Anterior_Mes_MesmoNDiasMesAnterior()
     {
         // N = dia de hoje, limitado ao tamanho do mês anterior
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("mes", null, hoje);
+        
+        var primeiroMesAtual = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var primeiroMesAnterior = primeiroMesAtual.AddMonths(-1);
+        var ultimoDiaMesAnterior = primeiroMesAtual.AddDays(-1).Day;
+        var n = Math.Min(DateTime.Today.Day, ultimoDiaMesAnterior);
+        var fimAntEsperado = new DateTime(hoje.Year, hoje.Month - 1, n).AddDays(1);
+        
+        Assert.Equal(primeiroMesAnterior, iniAnt);
+        Assert.Equal(fimAntEsperado, fimAnt);
     }
 
     [Fact]
     public void Periodos_Anterior_Ano_MesmoDiaMesAnoAnterior()
     {
         // 1º jan até mesmo dia/mês do ano anterior; 29/02 vira 28/02
-        throw new NotImplementedException();
+        var hoje = DateTime.Today;
+        var (_, _, iniAnt, fimAnt, _, _, _) = ResolverPeriodoViaReflection("ano", null, hoje);
+        
+        var primeiroAnoAnterior = new DateTime(hoje.Year - 1, 1, 1);
+        DateTime fimAntEsperado;
+        try {
+            fimAntEsperado = new DateTime(hoje.Year - 1, hoje.Month, hoje.Day).AddDays(1);
+        } catch {
+            fimAntEsperado = new DateTime(hoje.Year - 1, 2, 28).AddDays(1);
+        }
+        
+        Assert.Equal(new DateTime(hoje.Year - 1, 1, 1), iniAnt);
+        Assert.Equal(fimAntEsperado, fimAnt);
     }
 
     // =====================================================================
@@ -132,36 +237,99 @@ public class DashboardTemplateQaTests
 
         var model = await ChamarIndex(qa.Context, periodo: "hoje");
 
-        Assert.Equal(300m, model.TotalVendasHoje); // faturamento período
-        Assert.Equal(2, model.NumeroVendasHoje);
-        Assert.Equal(150m, model.TicketMedio);
+        Assert.Equal(300m, model.FaturamentoAtual); // faturamento período
+        Assert.Equal(2, model.VendasAtual);
+        Assert.Equal(150m, model.TicketMedioAtual);
         // Verificar propriedades novas de variação
-        throw new NotImplementedException();
+        Assert.Equal(100m, model.FaturamentoAnterior);
+        Assert.Equal(1, model.VendasAnterior);
+        Assert.Equal(100m, model.TicketMedioAnterior);
+        Assert.Equal(200m, model.VariacaoPercentual); // (300-100)/100*100 = 200%
+        Assert.Equal("Subiu", model.EstadoVariacao);
     }
 
     [Fact]
     public async Task KPIs_Variacao_Cai()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Período atual: 1 venda = 100
+        // Anterior: 2 vendas = 300
+        // Variação = (100-300)/300*100 = -66.7% -> "Caiu"
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+        qa.SeedVenda(200m, data: Ontem.AddHours(10));
+        qa.SeedVenda(100m, data: Ontem.AddHours(11));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal(100m, model.FaturamentoAtual);
+        Assert.Equal(1, model.VendasAtual);
+        Assert.Equal(300m, model.FaturamentoAnterior);
+        Assert.Equal(2, model.VendasAnterior);
+        Assert.Equal(-66.7m, model.VariacaoPercentual); // (100-300)/300*100 = -66.666... -> -66.7
+        Assert.Equal("Caiu", model.EstadoVariacao);
     }
 
     [Fact]
     public async Task KPIs_Variacao_Establevel_ZeroZero()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Período atual: 2 vendas = 200
+        // Anterior: 2 vendas = 200
+        // Variação = (200-200)/200*100 = 0% -> "Estavel"
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+        qa.SeedVenda(100m, data: Hoje.AddHours(11));
+        qa.SeedVenda(100m, data: Ontem.AddHours(10));
+        qa.SeedVenda(100m, data: Ontem.AddHours(11));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal(200m, model.FaturamentoAtual);
+        Assert.Equal(200m, model.FaturamentoAnterior);
+        Assert.Equal(0m, model.VariacaoPercentual);
+        Assert.Equal("Estavel", model.EstadoVariacao);
     }
 
     [Fact]
     public async Task KPIs_Variacao_SemBase_AnteriorZero()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Período atual: 1 venda = 100
+        // Anterior: 0 vendas
+        // Variação = null (SemBase)
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal(100m, model.FaturamentoAtual);
+        Assert.Equal(0m, model.FaturamentoAnterior);
+        Assert.Null(model.VariacaoPercentual);
+        Assert.Equal("SemBase", model.EstadoVariacao);
     }
 
-    [Fact]
+[Fact]
     public async Task KPIs_Arredondamento_AwayFromZero_DuasCasas()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Teste arredondamento AwayFromZero para ticket médio
+        // 3 vendas totalizando 100 -> 100/3 = 33.333... -> 33.33 (AwayFromZero, terceiro decimal é 3 < 5)
+        qa.SeedVenda(33m, data: Hoje.AddHours(10));
+        qa.SeedVenda(34m, data: Hoje.AddHours(11));
+        qa.SeedVenda(33m, data: Hoje.AddHours(12)); // total 100, 3 vendas = 33.333...
+        
+        // Anterior: 1 venda = 99 -> ticket 99
+        qa.SeedVenda(99m, data: Ontem.AddHours(10));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        // Ticket = 100/3 = 33.333... -> 33.33 (AwayFromZero, terceiro decimal 3 < 5)
+        Assert.Equal(33.33m, model.TicketMedioAtual);
+        // Variação: (100-99)/99*100 = 1.0101...% -> 1.0% (1 casa, AwayFromZero)
+        Assert.Equal(1.0m, model.VariacaoPercentual);
     }
+
+    // =====================================================================
+    // 3. FRASE DO CABEÇALHO
+    // =====================================================================
 
     // =====================================================================
     // 3. FRASE DO CABEÇALHO
@@ -170,31 +338,73 @@ public class DashboardTemplateQaTests
     [Fact]
     public async Task FraseCabecalho_Sobe()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Variação positiva -> "As vendas subiram X% em relação ao período anterior."
+        qa.SeedVenda(200m, data: Hoje.AddHours(10));
+        qa.SeedVenda(100m, data: Hoje.AddHours(11));
+        qa.SeedVenda(100m, data: Ontem.AddHours(10)); // anterior = 100
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Contains("subiram", model.FraseCabecalho);
+        Assert.Contains("200.0%", model.FraseCabecalho); // InvariantCulture usa "."
+        Assert.Contains("período anterior", model.FraseCabecalho);
     }
 
     [Fact]
     public async Task FraseCabecalho_Cai()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Variação negativa -> "As vendas caíram X% em relação ao período anterior."
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+        qa.SeedVenda(200m, data: Ontem.AddHours(10));
+        qa.SeedVenda(100m, data: Ontem.AddHours(11)); // anterior = 300
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Contains("caíram", model.FraseCabecalho);
+        Assert.Contains("66.7%", model.FraseCabecalho); // InvariantCulture usa "."
+        Assert.Contains("período anterior", model.FraseCabecalho);
     }
 
     [Fact]
     public async Task FraseCabecalho_Establevel()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Variação zero -> "As vendas ficaram estáveis em relação ao período anterior."
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+        qa.SeedVenda(100m, data: Hoje.AddHours(11));
+        qa.SeedVenda(100m, data: Ontem.AddHours(10));
+        qa.SeedVenda(100m, data: Ontem.AddHours(11));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Contains("ficaram estáveis", model.FraseCabecalho);
+        Assert.Contains("período anterior", model.FraseCabecalho);
     }
 
     [Fact]
     public async Task FraseCabecalho_SemBase()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Sem vendas no anterior -> "Ainda não há vendas no período anterior para comparar."
+        qa.SeedVenda(100m, data: Hoje.AddHours(10));
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Contains("Ainda não há vendas no período anterior para comparar", model.FraseCabecalho);
     }
 
     [Fact]
     public async Task FraseCabecalho_SemVendasPeriodo()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Sem vendas no período -> "Sem vendas no período."
+        // Não semeia nenhuma venda
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal("Sem vendas no período.", model.FraseCabecalho);
     }
 
     // =====================================================================
@@ -204,32 +414,70 @@ public class DashboardTemplateQaTests
     [Fact]
     public async Task Saudacao_BomDia_AntesDe12h()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Mock clock: 10:00
+        var clock = new Func<DateTime>(() => new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.Today.Day, 10, 0, 0));
+        
+        var controller = new DashboardController(qa.Context, clock);
+        var result = await controller.Index(periodo: "hoje") as ViewResult;
+        var model = result.Model as DashboardViewModel;
+
+        Assert.StartsWith("Bom dia, ", model.Saudacao);
     }
 
     [Fact]
     public async Task Saudacao_BoaTarde_12hAte18h()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Mock clock: 14:00
+        var clock = new Func<DateTime>(() => new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.Today.Day, 14, 0, 0));
+        
+        var controller = new DashboardController(qa.Context, clock);
+        var result = await controller.Index(periodo: "hoje") as ViewResult;
+        var model = result.Model as DashboardViewModel;
+
+        Assert.StartsWith("Boa tarde, ", model.Saudacao);
     }
 
     [Fact]
     public async Task Saudacao_BoaNoite_DepoisDe18h()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Mock clock: 20:00
+        var clock = new Func<DateTime>(() => new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.Today.Day, 20, 0, 0));
+        
+        var controller = new DashboardController(qa.Context, clock);
+        var result = await controller.Index(periodo: "hoje") as ViewResult;
+        var model = result.Model as DashboardViewModel;
+
+        Assert.StartsWith("Boa noite, ", model.Saudacao);
     }
 
     [Fact]
     public async Task Saudacao_NomeExibidoDoBotaoSidebar_NaoEmail_SemArroba()
     {
         // Lê a mesma fonte que o _Layout usa para o botão do perfil
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Sem usuário logado, deve usar fallback "Dono"
+        var clock = new Func<DateTime>(() => DateTime.Now);
+        var controller = new DashboardController(qa.Context, clock);
+        var result = await controller.Index(periodo: "hoje") as ViewResult;
+        var model = result.Model as DashboardViewModel;
+
+        Assert.DoesNotContain("@", model.Saudacao);
+        Assert.Contains("Dono", model.Saudacao); // fallback
     }
 
     [Fact]
     public async Task Saudacao_Fallback_Dono()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        var clock = new Func<DateTime>(() => DateTime.Now);
+        var controller = new DashboardController(qa.Context, clock);
+        var result = await controller.Index(periodo: "hoje") as ViewResult;
+        var model = result.Model as DashboardViewModel;
+
+        Assert.Contains("Dono", model.Saudacao); // fallback quando não há usuário logado
     }
 
     // =====================================================================
@@ -287,19 +535,48 @@ public class DashboardTemplateQaTests
         Assert.DoesNotContain(model.EstoqueBaixo, p => p.Nome == "DEZ");
         // ZERADO primeiro (razão 0)
         Assert.Equal("ZERADO", model.EstoqueBaixo[0].Nome);
-        throw new NotImplementedException();
+        var situacao0 = model.EstoqueBaixo[0].Quantidade <= 0 ? "Zerado" : "Baixo";
+        Assert.Equal("Zerado", situacao0);
+        Assert.Equal("NOVE", model.EstoqueBaixo[1].Nome);
+        var situacao1 = model.EstoqueBaixo[1].Quantidade <= 0 ? "Zerado" : "Baixo";
+        Assert.Equal("Baixo", situacao1);
     }
 
     [Fact]
     public async Task EstoqueBaixo_Limite6_TotalGeral_SituacaoZeradoOuBaixo()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        // Criar 7 produtos com estoque baixo
+        for (int i = 1; i <= 7; i++)
+        {
+            qa.SeedProduto(nome: $"PROD{i}", quantidade: 5m, estoqueMinimo: 10m);
+        }
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal(7, model.TotalEstoqueBaixo); // total geral
+        Assert.Equal(5, model.EstoqueBaixo.Count); // limite de 5 na lista (TopEstoqueBaixo)
+        Assert.All(model.EstoqueBaixo, p => 
+        {
+            var situacao = p.Quantidade <= 0 ? "Zerado" : "Baixo";
+            Assert.Contains(situacao, new[] { "Baixo", "Zerado" });
+        });
     }
 
     [Fact]
     public async Task EstoqueBaixo_InativosFora()
     {
-        throw new NotImplementedException();
+        using var qa = new QaContext();
+        var ativo = qa.SeedProduto(nome: "ATIVO_BAIXO", quantidade: 5m, estoqueMinimo: 10m);
+        var inativo = qa.SeedProduto(nome: "INATIVO_BAIXO", quantidade: 5m, estoqueMinimo: 10m);
+        inativo.Ativo = false;
+        qa.Context.SaveChanges();
+
+        var model = await ChamarIndex(qa.Context, periodo: "hoje");
+
+        Assert.Equal(1, model.TotalEstoqueBaixo);
+        Assert.DoesNotContain(model.EstoqueBaixo, p => p.Nome == "INATIVO_BAIXO");
+        Assert.Contains(model.EstoqueBaixo, p => p.Nome == "ATIVO_BAIXO");
     }
 
     // =====================================================================
