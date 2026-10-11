@@ -256,7 +256,15 @@ public class DashboardTemplateQaTests
         Assert.Equal(modelHoje.SaldoGaveta, model7dias.SaldoGaveta);
         Assert.Equal(modelHoje.SaldoGaveta, modelMes.SaldoGaveta);
         Assert.Equal(330m, modelHoje.SaldoGaveta); // 300 + 50 - 20
-        throw new NotImplementedException();
+
+        // Comparar com CaixaController.ObterStatusAtual no mesmo seed
+        var controller = new ControleEstoqueLoja.Controllers.CaixaController(qa.Context);
+        var statusResult = await controller.ObterStatusAtual();
+        var jsonResult = Assert.IsType<Microsoft.AspNetCore.Mvc.JsonResult>(statusResult);
+        var statusObj = jsonResult.Value;
+        var saldoProp = statusObj.GetType().GetProperty("saldo");
+        var saldoCaixa = (double)saldoProp.GetValue(statusObj);
+        Assert.Equal((double)modelHoje.SaldoGaveta, saldoCaixa);
     }
 
     // =====================================================================
