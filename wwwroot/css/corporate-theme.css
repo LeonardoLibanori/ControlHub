@@ -88,10 +88,6 @@
     /* anel de foco comum (inputs e gatilho do menu de perfil) */
     --foco-anel: color-mix(in srgb, var(--c-blue) 22%, transparent);
 
-    /* --- Layout tokens (FASE 2) --- */
-    --topbar-h: 56px;
-    --footer-h: 44px;
-
     /* botao colorido: nos DOIS temas = tinta de serie (selo) sobre o cartao */
     --btn-success-bg: color-mix(in srgb, var(--c-green) 14%, var(--bg-card));
     --btn-success-bd: color-mix(in srgb, var(--c-green) 55%, var(--bg-card));
@@ -2593,15 +2589,13 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .app-shell {
     display: grid;
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 260px 1fr;
     min-height: 100vh;
-    min-height: 100dvh;
     background: var(--bg-page);
 }
 
 .app-sidebar {
     grid-column: 1;
-    flex: 0 0 240px;
     display: flex;
     flex-direction: column;
     background: var(--bg-sidebar);
@@ -2781,8 +2775,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     display: flex;
     align-items: center;
     gap: 1rem;
-    height: var(--topbar-h);
-    padding: 0 1.2rem;
+    padding: .7rem 1.2rem;
     background: color-mix(in srgb, var(--bg-sidebar) 88%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--line);
@@ -2881,12 +2874,9 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 /* a celula de nome (1a coluna, em todas as tres telas) quebra qualquer
-   string e mostra o nome inteiro - sem reticencias, sem esticar a coluna.
-   Vale para TODAS as celulas (nao so a primeira): assim nenhuma estoura o
-   contêiner em >= 768px (ex.: "Bloqueado (tentativas erradas)" na coluna
-   Situacao de Usuarios). */
-.tabela-responsiva th,
-.tabela-responsiva td {
+   string e mostra o nome inteiro - sem reticencias, sem esticar a coluna */
+.tabela-responsiva th:first-child,
+.tabela-responsiva td:first-child {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
@@ -2963,35 +2953,30 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
         width: 150px;
     }
 
-    /* Usuarios: percentuais em vez de px. Em 768px a tabela util tem ~668px;
-       as larguras fixas antigas (220+120+170+130 = 640px) espremiam a coluna
-       Nome ate 4px de conteudo - e o min-width no th e IGNORADO pelo
-       table-layout:fixed. Os percentuais somam 100% e cabem em qualquer
-       largura util; a quebra (overflow-wrap) resolve o resto.
-       Badge "Operador" (~70px) cabe em 16% (~83px de conteudo em 768px). */
-    .tabela-responsiva--usuarios th:nth-child(1),
-    .tabela-responsiva--usuarios td:nth-child(1) {
-        width: 24%;
+    /* Usuarios: Nome (resto, min 160px), E-mail 220, Papel 120,
+       Situacao 170, Acoes 130 */
+    .tabela-responsiva--usuarios th:nth-child(1) {
+        min-width: 160px;
     }
 
     .tabela-responsiva--usuarios th:nth-child(2),
     .tabela-responsiva--usuarios td:nth-child(2) {
-        width: 28%;
+        width: 220px;
     }
 
     .tabela-responsiva--usuarios th:nth-child(3),
     .tabela-responsiva--usuarios td:nth-child(3) {
-        width: 16%;
+        width: 120px;
     }
 
     .tabela-responsiva--usuarios th:nth-child(4),
     .tabela-responsiva--usuarios td:nth-child(4) {
-        width: 17%;
+        width: 170px;
     }
 
     .tabela-responsiva--usuarios th:nth-child(5),
     .tabela-responsiva--usuarios td:nth-child(5) {
-        width: 15%;
+        width: 130px;
     }
 }
 
@@ -3062,12 +3047,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .app-footer {
-    height: var(--footer-h);
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 1.5rem;
+    padding: 1rem 1.5rem;
     color: var(--text-soft);
     font-size: .82rem;
     border-top: 1px solid var(--line);
@@ -3397,7 +3377,12 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
 
-.app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
+.app-footer {
+    padding: 1rem 1.4rem;
+    color: var(--text-soft);
+    font-size: .82rem;
+    border-top: 1px solid var(--line);
+}
 
 /* cortina da gaveta (mobile) */
 .cortina-sidebar {
@@ -4752,167 +4737,5 @@ html, body {
         align-items: flex-start;
         width: 100%;
     }
-}
-
-/* --- APP CHEVRON (CSS-only chevron down) --------------------------------- */
-.app-chevron {
-    display: inline-block;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid currentColor;
-    margin-left: 4px;
-    vertical-align: middle;
-    transition: transform 0.2s ease;
-}
-
-.app-chevron[aria-expanded="true"] {
-    transform: rotate(180deg);
-}
-
-/* --- APP THEME SWITCH (CSS-only sun/moon toggle) ------------------------- */
-.app-theme {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    background: var(--bg-card);
-    color: var(--text);
-    cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.app-theme:hover {
-    background: var(--surface-2);
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-.app-theme:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-.app-theme-ico {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.app-theme-ico svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-html[data-theme="light"] .app-theme-moon {
-    opacity: 0;
-    transform: rotate(-90deg) scale(0.5);
-}
-
-html[data-theme="light"] .app-theme-sun {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
-}
-
-html[data-theme="dark"] .app-theme-moon {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
-}
-
-html[data-theme="dark"] .app-theme-sun {
-    opacity: 0;
-    transform: rotate(90deg) scale(0.5);
-}
-
-/* --- APP HAMBURGER (CSS-only hamburger menu) ----------------------------- */
-.app-hamburguer {
-    display: inline-flex;
-    flex-direction: column;
-    justify-content: space-between;
-    width: 24px;
-    height: 18px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-}
-
-.app-hamburguer__barra {
-    display: block;
-    width: 100%;
-    height: 2px;
-    background: currentColor;
-    border-radius: 1px;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
-}
-
-html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(2) {
-    opacity: 0;
-}
-
-html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
-}
-
-/* --- SWAL CUSTOM CLASSES (for SweetAlert2 without icon:) ----------------- */
-.swal-success {
-    border-left: 4px solid var(--c-green) !important;
-}
-
-.swal-success .swal2-title {
-    color: var(--t-green) !important;
-}
-
-.swal-error {
-    border-left: 4px solid var(--c-coral) !important;
-}
-
-.swal-error .swal2-title {
-    color: var(--t-coral) !important;
-}
-
-.swal-warning {
-    border-left: 4px solid var(--c-amber) !important;
-}
-
-.swal-warning .swal2-title {
-    color: var(--t-amber) !important;
-}
-
-.swal-info {
-    border-left: 4px solid var(--c-blue) !important;
-}
-
-.swal-info .swal2-title {
-    color: var(--t-blue) !important;
-}
-
-/* --- APP CHEVRON (CSS-only chevron down) --------------------------------- */
-.app-chevron {
-    display: inline-block;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid currentColor;
-    margin-left: 4px;
-    vertical-align: middle;
-    transition: transform 0.2s ease;
-}
-
-.app-chevron[aria-expanded="true"] {
-    transform: rotate(180deg);
-}
 }
 

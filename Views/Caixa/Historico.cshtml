@@ -26,12 +26,7 @@
                    title="Ver as vendas de hoje"></a>
             </section>
         </div>
-        @* Mobile: as metricas vao 2 por linha (col-6) em vez de 4 empilhadas.
-           Com 4 cards de altura cheia + filtro, a primeira linha da tabela
-           nascia abaixo da dobra (botoes Detalhes/Imprimir em y~895 num
-           viewport de 900). Duas linhas de cards sobem a tabela ~120px e os
-           botoes ficam visiveis sem rolar. *@
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-12 col-md-4 col-lg-2">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "7dias" ? "is-ativo" : null)">
                 <div class="section-eyebrow">Últimos 7 dias</div>
@@ -42,7 +37,7 @@
                    title="Ver as vendas dos últimos 7 dias"></a>
             </section>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-12 col-md-4 col-lg-2">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "mes" ? "is-ativo" : null)">
                 <div class="section-eyebrow">Este mês</div>
@@ -53,7 +48,7 @@
                    title="Ver as vendas deste mês"></a>
             </section>
         </div>
-        <div class="col-6 col-md-4 col-lg-3">
+        <div class="col-12 col-md-4 col-lg-3">
             <section class="history-metric h-100 p-3 history-cartao-link
                               @(periodoAtivo == "ano" ? "is-ativo" : null)">
                 <div class="section-eyebrow">Este ano</div>
@@ -66,8 +61,8 @@
         </div>
     </div>
 
-    <div class="history-filter d-flex flex-wrap gap-2 align-items-center mb-4">
-        <form method="get" class="d-flex flex-grow-1 flex-wrap gap-2 align-items-center">
+    <div class="history-filter d-flex flex-wrap gap-3 align-items-end mb-4">
+        <form method="get" class="d-flex flex-grow-1 flex-wrap gap-3 align-items-end">
             <div class="flex-grow-1">
                 <label class="form-label fw-semibold" for="historico-data">Filtrar por dia</label>
                 <input type="date"
@@ -77,14 +72,13 @@
                        value="@(dataFiltro.HasValue ? dataFiltro.Value.ToString("yyyy-MM-dd") : "")"
                        max="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
-            <button type="submit" class="btn btn-primary" style="height: 40px;">Buscar</button>
+            <button type="submit" class="btn btn-primary">Buscar</button>
         </form>
 
         <a asp-controller="Caixa" asp-action="ExportarHistoricoExcel"
            asp-route-data="@dataExport"
            asp-route-periodo="@periodoExport"
            class="btn-exportar"
-           style="height: 40px;"
            title="Baixar em Excel (.xlsx) exatamente o que a tela está mostrando">
             Exportar Excel
         </a>
