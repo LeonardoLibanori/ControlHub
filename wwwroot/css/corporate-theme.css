@@ -88,6 +88,10 @@
     /* anel de foco comum (inputs e gatilho do menu de perfil) */
     --foco-anel: color-mix(in srgb, var(--c-blue) 22%, transparent);
 
+    /* --- Layout tokens (FASE 2) --- */
+    --topbar-h: 56px;
+    --footer-h: 44px;
+
     /* botao colorido: nos DOIS temas = tinta de serie (selo) sobre o cartao */
     --btn-success-bg: color-mix(in srgb, var(--c-green) 14%, var(--bg-card));
     --btn-success-bd: color-mix(in srgb, var(--c-green) 55%, var(--bg-card));
@@ -401,6 +405,7 @@ a:hover {
     padding: 1rem;
     margin-top: .75rem;
     overflow-x: auto;
+    overflow-y: clip;
 }
 
 .card-header,
@@ -919,8 +924,9 @@ textarea.form-control {
 }
 
 .cart-table-window {
-    height: 300px;
-    overflow: auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
     background: var(--surface-1) !important;
 }
 
@@ -1185,11 +1191,20 @@ footer .container {
 }
 
 .history-action {
-    display: inline-grid;
-    width: 38px;
-    height: 36px;
-    place-items: center;
-    padding: 0;
+    display: inline-flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    height: 32px;
+    padding: 0 12px;
+}
+
+.history-action button {
+    width: auto;
+    min-width: max-content;
+    white-space: nowrap;
+    height: 32px;
+    padding: 0 12px;
 }
 
 .history-details-modal {
@@ -2589,13 +2604,15 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .app-shell {
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 240px 1fr;
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--bg-page);
 }
 
 .app-sidebar {
     grid-column: 1;
+    flex: 0 0 240px;
     display: flex;
     flex-direction: column;
     background: var(--bg-sidebar);
@@ -2775,7 +2792,8 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: .7rem 1.2rem;
+    height: var(--topbar-h);
+    padding: 0 1.2rem;
     background: color-mix(in srgb, var(--bg-sidebar) 88%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--line);
@@ -2874,9 +2892,12 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 /* a celula de nome (1a coluna, em todas as tres telas) quebra qualquer
-   string e mostra o nome inteiro - sem reticencias, sem esticar a coluna */
-.tabela-responsiva th:first-child,
-.tabela-responsiva td:first-child {
+   string e mostra o nome inteiro - sem reticencias, sem esticar a coluna.
+   Vale para TODAS as celulas (nao so a primeira): assim nenhuma estoura o
+   contêiner em >= 768px (ex.: "Bloqueado (tentativas erradas)" na coluna
+   Situacao de Usuarios). */
+.tabela-responsiva th,
+.tabela-responsiva td {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
@@ -2953,30 +2974,35 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
         width: 150px;
     }
 
-    /* Usuarios: Nome (resto, min 160px), E-mail 220, Papel 120,
-       Situacao 170, Acoes 130 */
-    .tabela-responsiva--usuarios th:nth-child(1) {
-        min-width: 160px;
+    /* Usuarios: percentuais em vez de px. Em 768px a tabela util tem ~668px;
+       as larguras fixas antigas (220+120+170+130 = 640px) espremiam a coluna
+       Nome ate 4px de conteudo - e o min-width no th e IGNORADO pelo
+       table-layout:fixed. Os percentuais somam 100% e cabem em qualquer
+       largura util; a quebra (overflow-wrap) resolve o resto.
+       Badge "Operador" (~70px) cabe em 16% (~83px de conteudo em 768px). */
+    .tabela-responsiva--usuarios th:nth-child(1),
+    .tabela-responsiva--usuarios td:nth-child(1) {
+        width: 24%;
     }
 
     .tabela-responsiva--usuarios th:nth-child(2),
     .tabela-responsiva--usuarios td:nth-child(2) {
-        width: 220px;
+        width: 28%;
     }
 
     .tabela-responsiva--usuarios th:nth-child(3),
     .tabela-responsiva--usuarios td:nth-child(3) {
-        width: 120px;
+        width: 16%;
     }
 
     .tabela-responsiva--usuarios th:nth-child(4),
     .tabela-responsiva--usuarios td:nth-child(4) {
-        width: 170px;
+        width: 17%;
     }
 
     .tabela-responsiva--usuarios th:nth-child(5),
     .tabela-responsiva--usuarios td:nth-child(5) {
-        width: 130px;
+        width: 15%;
     }
 }
 
@@ -3047,7 +3073,12 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .app-footer {
-    padding: 1rem 1.5rem;
+    height: var(--footer-h);
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1.5rem;
     color: var(--text-soft);
     font-size: .82rem;
     border-top: 1px solid var(--line);
@@ -3377,12 +3408,7 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 
 .app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
 
-.app-footer {
-    padding: 1rem 1.4rem;
-    color: var(--text-soft);
-    font-size: .82rem;
-    border-top: 1px solid var(--line);
-}
+.app-content { flex: 1 1 auto; padding: 1.4rem; min-width: 0; }
 
 /* cortina da gaveta (mobile) */
 .cortina-sidebar {
@@ -3751,18 +3777,19 @@ form > div:last-child .d-flex {
 @media (min-width: 768px) {
     .main-container .row > .col-md-5,
     .main-container .row > .col-md-7 {
-        min-height: calc(100vh - 200px);
+        min-height: 0;
     }
 
     .tabela-card {
-        height: 100%;
+        height: auto;
         display: flex;
         flex-direction: column;
+        overflow: visible;
     }
 
     .tabela-card > .p-3,
     .tabela-card > .card-body {
-        flex: 1;
+        flex: 0 1 auto;
         display: flex;
         flex-direction: column;
     }
@@ -3847,7 +3874,8 @@ form > div:last-child .d-flex {
     /* O tema ja garante contraste via variaveis --btn-*-ink vs fundo */
 }
 
-/* Evitar overflow horizontal */
+/* Evitar overflow horizontal na página. NÃO usar overflow-x:hidden nos
+   cartões: o CSS promove overflow-y para auto e cria rolagem interna. */
 html, body {
     overflow-x: hidden;
 }
@@ -3856,7 +3884,7 @@ html, body {
 .container,
 .container-fluid {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: visible;
 }
 
 /* ============================================================================
@@ -4739,3 +4767,506 @@ html, body {
     }
 }
 
+/* --- APP CHEVRON (CSS-only chevron down) --------------------------------- */
+.app-chevron {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid currentColor;
+    margin-left: 4px;
+    vertical-align: middle;
+    transition: transform 0.2s ease;
+}
+
+.app-chevron[aria-expanded="true"] {
+    transform: rotate(180deg);
+}
+
+/* --- APP THEME SWITCH: pílula 64x32, ícones DENTRO do knob --------------- */
+.app-theme {
+    position: relative;
+    display: inline-block;
+    width: 64px;
+    height: 32px;
+    min-width: 64px;
+    min-height: 32px;
+    padding: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--line-input);
+    border-radius: 16px;
+    background: var(--bg-alt);
+    line-height: 0;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.app-theme:hover {
+    background: var(--bg-alt);
+    border-color: var(--line-input);
+    color: inherit;
+}
+
+.app-theme:focus-visible {
+    outline: 2px solid var(--c-blue);
+    outline-offset: 2px;
+}
+
+.app-theme-ico {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    height: auto;
+    display: grid;
+    place-items: center;
+    z-index: 1;
+    pointer-events: none;
+    color: var(--text-soft);
+    opacity: 1;
+    transform: none;
+}
+
+.app-theme-ico svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+html[data-theme="light"] .app-theme-moon,
+html[data-theme="light"] .app-theme-sun,
+html[data-theme="dark"] .app-theme-moon,
+html[data-theme="dark"] .app-theme-sun {
+    opacity: 1;
+    transform: none;
+}
+
+/* --- APP HAMBURGER: sempre 3 traços (aberto e fechado) ------------------- */
+.app-hamburguer {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    color: var(--text);
+}
+
+.app-hamburguer__barra {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 1px;
+    opacity: 1;
+    transform: none;
+}
+
+html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(1),
+html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(2),
+html[data-sidebar="fechada"] .app-hamburguer__barra:nth-child(3),
+.app-sidebar.aberto ~ * .app-hamburguer__barra,
+.app-hamburguer[aria-expanded="true"] .app-hamburguer__barra,
+.app-hamburguer[aria-expanded="false"] .app-hamburguer__barra {
+    transform: none;
+    opacity: 1;
+}
+
+/* --- SWAL CUSTOM CLASSES (for SweetAlert2 without icon:) ----------------- */
+.swal-success {
+    border-left: 4px solid var(--c-green) !important;
+}
+
+.swal-success .swal2-title {
+    color: var(--t-green) !important;
+}
+
+.swal-error {
+    border-left: 4px solid var(--c-coral) !important;
+}
+
+.swal-error .swal2-title {
+    color: var(--t-coral) !important;
+}
+
+.swal-warning {
+    border-left: 4px solid var(--c-amber) !important;
+}
+
+.swal-warning .swal2-title {
+    color: var(--t-amber) !important;
+}
+
+.swal-info {
+    border-left: 4px solid var(--c-blue) !important;
+}
+
+.swal-info .swal2-title {
+    color: var(--t-blue) !important;
+}
+
+
+
+/* HISTÓRICO: campo de data fixo em 200px e alinhamento do filtro */
+.history-filter .form-control {
+    width: 200px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 767.98px) {
+    .history-filter .form-control {
+        width: 100%;
+    }
+}
+/* Shell: faixa e rodapé fixos; só o conteúdo rola. Hambúrguer = 3 traços. */
+:root { --knob-ink: #0B1220; }
+:root[data-theme="light"] { --knob-ink: #FFFFFF; }
+
+html:has(.app-shell),
+body:has(.app-shell) {
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+.app-shell {
+    display: flex !important;
+    height: 100% !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+}
+
+.app-sidebar {
+    flex: 0 0 240px !important;
+    width: 240px !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.app-sidebar nav {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+.app-main {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.app-header {
+    flex: 0 0 auto !important;
+}
+
+.app-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+.app-footer {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: var(--footer-h) !important;
+    box-sizing: border-box !important;
+    padding: 0.5rem 1.5rem !important;
+}
+
+@media (min-width: 1024px) {
+    .app-sidebar {
+        position: static !important;
+        transform: none !important;
+    }
+
+    html[data-sidebar="fechada"] .app-sidebar {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1023.98px) {
+    .app-shell {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .app-main {
+        grid-column: 1 !important;
+        height: 100% !important;
+    }
+
+    .app-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100% !important;
+        transform: translateX(-100%) !important;
+        z-index: 1040 !important;
+    }
+
+    .app-sidebar.aberto {
+        transform: translateX(0) !important;
+    }
+}
+
+.app-sidebar .app-theme {
+    position: relative !important;
+    display: inline-block !important;
+    overflow: hidden !important;
+    flex: 0 0 64px !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    border: 1px solid var(--line-input) !important;
+    border-radius: 16px !important;
+    background: var(--bg-alt) !important;
+    line-height: 0 !important;
+    cursor: pointer;
+}
+
+.app-sidebar .app-theme-knob {
+    position: absolute !important;
+    top: 3px !important;
+    left: 3px !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+    background: var(--c-blue) !important;
+    z-index: 0 !important;
+    transition: transform .15s;
+}
+
+.app-sidebar .app-theme[aria-checked="false"] .app-theme-knob {
+    transform: translateX(32px) !important;
+}
+
+.app-sidebar .app-theme-ico {
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 32px !important;
+    height: auto !important;
+    display: grid !important;
+    place-items: center !important;
+    z-index: 1 !important;
+    pointer-events: none;
+    color: var(--text-soft);
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+.app-sidebar .app-theme-moon { left: 0 !important; }
+.app-sidebar .app-theme-sun { right: 0 !important; }
+
+.app-sidebar .app-theme[aria-checked="true"] .app-theme-moon,
+.app-sidebar .app-theme[aria-checked="false"] .app-theme-sun {
+    color: var(--knob-ink);
+}
+
+.app-sidebar .app-theme svg {
+    width: 14px !important;
+    height: 14px !important;
+    display: block !important;
+}
+
+.app-hamburguer {
+    width: 40px !important;
+    height: 40px !important;
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.app-hamburguer__barra,
+.app-hamburguer[aria-expanded="true"] .app-hamburguer__barra,
+.app-hamburguer[aria-expanded="false"] .app-hamburguer__barra,
+html[data-sidebar="fechada"] .app-hamburguer__barra {
+    width: 18px !important;
+    height: 2px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    background: var(--text) !important;
+}
+
+.main-container .row .tabela-card {
+    overflow: visible !important;
+}
+
+/* ===== Historico: filtro em uma linha (campo + Buscar + Exportar) ===== */
+
+.history-filter .history-filter__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
+.history-filter .history-filter__campo {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.history-filter .history-filter__campo .form-label {
+  display: block;
+  margin: 0 0 6px;
+}
+
+.history-filter .history-filter__campo .form-label.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.history-filter #historico-data {
+  box-sizing: border-box;
+  width: 200px;
+  max-width: 100%;
+  height: 40px;
+  margin: 0;
+}
+
+.history-filter .history-filter__btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 40px;
+  margin: 0;
+  padding: 0 16px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.history-filter #btn-buscar {
+  min-width: 80px;
+}
+
+.history-filter #btn-exportar {
+  min-width: 124px;
+}
+
+.history-filtro-ativo {
+  margin-top: 12px;
+}
+
+@media (max-width: 575.98px) {
+  .history-filter .history-filter__campo:first-child {
+    flex: 1 1 100%;
+  }
+
+  .history-filter #historico-data {
+    width: 100%;
+  }
+}
+
+
+/* Alinhamento definitivo do filtro do histórico */
+.history-filter .history-filter__form {
+    display: flex !important;
+    align-items: flex-end !important;
+    flex-wrap: wrap;
+    gap: 8px !important;
+}
+
+.history-filter .history-filter__campo {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+
+/* Campo de data */
+.history-filter .history-filter__campo:first-child .form-label {
+    margin-bottom: 6px !important;
+    line-height: 18px;
+}
+
+.history-filter #historico-data {
+    height: 40px !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+}
+
+/* Blocos dos botões: eliminam a influência dos labels ocultos */
+.history-filter .history-filter__campo:has(#btn-buscar),
+.history-filter .history-filter__campo:has(#btn-exportar) {
+    justify-content: flex-end;
+}
+
+/* Botões */
+.history-filter #btn-buscar,
+.history-filter #btn-exportar {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 40px !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    white-space: nowrap;
+    line-height: normal;
+}
+
+.history-filter #btn-buscar {
+    min-width: 80px;
+}
+
+.history-filter #btn-exportar {
+    min-width: 124px;
+}
+
+@media (max-width: 575.98px) {
+    .history-filter .history-filter__campo:first-child {
+        flex: 1 1 100%;
+    }
+
+    .history-filter #historico-data {
+        width: 100%;
+    }
+}
+
+
+/* SweetAlert2: nunca alterar a altura nem o padding do documento */
+html.swal2-height-auto,
+body.swal2-height-auto { height: 100% !important; }
+body.swal2-shown { padding-right: 0 !important; }

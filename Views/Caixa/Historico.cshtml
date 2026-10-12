@@ -61,28 +61,42 @@
         </div>
     </div>
 
-    <div class="history-filter d-flex flex-wrap gap-3 align-items-end mb-4">
-        <form method="get" class="d-flex flex-grow-1 flex-wrap gap-3 align-items-end">
-            <div class="flex-grow-1">
-                <label class="form-label fw-semibold" for="historico-data">Filtrar por dia</label>
-                <input type="date"
-                       id="historico-data"
-                       name="data"
-                       class="form-control"
-                       value="@(dataFiltro.HasValue ? dataFiltro.Value.ToString("yyyy-MM-dd") : "")"
-                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-            </div>
-            <button type="submit" class="btn btn-primary">Buscar</button>
-        </form>
+            
+<div class="history-filter">
+    <form method="get" class="history-filter__form">
 
-        <a asp-controller="Caixa" asp-action="ExportarHistoricoExcel"
+        <div class="history-filter__campo history-filter__campo--data">
+            <label class="form-label fw-semibold" for="historico-data">
+                Filtrar por dia
+            </label>
+
+            <input type="date"
+                   id="historico-data"
+                   name="data"
+                   class="form-control"
+                   value="@(dataFiltro.HasValue ? dataFiltro.Value.ToString("yyyy-MM-dd") : "")"
+                   max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+        </div>
+
+        <button type="submit"
+                id="btn-buscar"
+                class="btn btn-primary history-filter__btn">
+            Buscar
+        </button>
+
+        <a id="btn-exportar"
+           asp-controller="Caixa"
+           asp-action="ExportarHistoricoExcel"
            asp-route-data="@dataExport"
            asp-route-periodo="@periodoExport"
-           class="btn-exportar"
+           class="btn-exportar history-filter__btn"
            title="Baixar em Excel (.xlsx) exatamente o que a tela está mostrando">
             Exportar Excel
         </a>
-    </div>
+
+    </form>
+</div>
+
 
     <p class="history-filtro-ativo mb-4">
         Exibindo: <strong>@titulo</strong>
@@ -130,7 +144,7 @@
                             <td>@venda.TotalVenda.ToString("C")</td>
                             <td>@venda.MetodoPagamento</td>
                             <td class="text-center" style="vertical-align: middle;">
-                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                <div class="d-flex flex-wrap justify-content-center align-items-center gap-1 gap-md-2">
                                     <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="verDetalhes(@venda.Id)"
                                             title="Ver detalhes" aria-label="Ver detalhes da venda @venda.Id">

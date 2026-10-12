@@ -169,3 +169,18 @@
     };
 })();
 
+/* SweetAlert2 nao pode mexer no layout do shell: sem height:auto no html/body
+   e sem padding-right de "scrollbar". Vale para todos os Swal.fire do sistema. */
+(function () {
+    function ajustar() {
+        if (!window.Swal || window.Swal.__controlhub) { return; }
+        var ajustado = window.Swal.mixin({ heightAuto: false, scrollbarPadding: false });
+        ajustado.__controlhub = true;
+        window.Swal = ajustado;
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ajustar);
+    } else {
+        ajustar();
+    }
+})();

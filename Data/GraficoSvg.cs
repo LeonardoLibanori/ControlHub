@@ -128,13 +128,16 @@ namespace ControleEstoqueLoja.Data
             var pontos = new List<(decimal x, decimal y)>();
             int n = valores.Count;
             int index = 0;
+            var baseY = MargemTopo + PlotAltura;
 
             foreach (var valor in valores)
             {
                 if (!valor.HasValue) break;
                 var v = valor.Value;
                 decimal x = MargemEsq + (index / (decimal)(n - 1)) * PlotLargura;
-                decimal y = MargemTopo + PlotAltura - (v / maxY) * PlotAltura;
+                decimal y = maxY > 0m 
+                    ? MargemTopo + PlotAltura - (v / maxY) * PlotAltura
+                    : baseY;
                 pontos.Add((x, y));
                 index++;
             }
@@ -182,13 +185,16 @@ namespace ControleEstoqueLoja.Data
             var pontos = new List<(decimal x, decimal y)>();
             int n = valores.Count;
             int index = 0;
+            var baseY = MargemTopo + PlotAltura;
 
             foreach (var valor in valores)
             {
                 if (!valor.HasValue) break;
                 var v = valor.Value;
                 decimal x = MargemEsq + (index / (decimal)(n - 1)) * PlotLargura;
-                decimal y = MargemTopo + PlotAltura - (v / maxY) * PlotAltura;
+                decimal y = maxY > 0m
+                    ? MargemTopo + PlotAltura - (v / maxY) * PlotAltura
+                    : baseY;
                 pontos.Add((x, y));
                 index++;
             }
@@ -196,7 +202,6 @@ namespace ControleEstoqueLoja.Data
             if (pontos.Count == 0) return "";
 
             var path = new System.Text.StringBuilder();
-            var baseY = MargemTopo + PlotAltura; // y = 0 no eixo
 
             path.Append($"M {Fmt(pontos[0].x)} {Fmt(baseY)}");
             path.Append($" L {Fmt(pontos[0].x)} {Fmt(pontos[0].y)}");
