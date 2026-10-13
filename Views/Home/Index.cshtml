@@ -113,8 +113,17 @@
                         @if (podeGerenciarEstoque)
                         {
                             <td>
-                                <div class="acoes">
+                                <div class="acoes acoes-com-repor">
                                     <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar">Editar</a>
+                                    <button type="button" class="btn-repor"
+                                            data-repor
+                                            data-id="@item.Id"
+                                            data-nome="@item.Nome"
+                                            data-estoque="@item.Quantidade.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-unidade="@(item.Tipo == TipoProduto.PorPeso ? "kg" : "un")"
+                                            data-fracionado="@(item.Tipo == TipoProduto.PorPeso ? "true" : "false")">
+                                        Repor
+                                    </button>
                                     <form method="post" asp-controller="Home" asp-action="Excluir" style="display:inline;" onsubmit="return confirmarExclusao(event, this);">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@item.Id" />
@@ -139,3 +148,34 @@
         }
     }
 </script>
+
+@* ===== MODAL REPOR ESTOQUE (uma vez por página) ===== *@
+<div class="repor-overlay" id="modalRepor" hidden role="dialog" aria-modal="true" aria-labelledby="reporTitulo">
+    <div class="repor-modal">
+        <div class="repor-modal__header">
+            <h2 class="repor-modal__title" id="reporTitulo">Repor estoque</h2>
+            <button type="button" class="repor-modal__close" id="reporFechar" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="repor-modal__body">
+            <div class="repor-modal__info">
+                <strong id="reporNomeProduto"></strong>
+                <span id="reporEstoqueAtual">Estoque atual: —</span>
+            </div>
+            <label class="repor-modal__label">
+                Quantidade a adicionar
+                <input type="text" id="reporInput" inputmode="decimal" autocomplete="off" />
+            </label>
+            <div class="repor-modal__preview" id="reporPreview">Novo estoque: —</div>
+            <div class="repor-modal__alert" id="reporAlerta" hidden role="alert"></div>
+        </div>
+        <div class="repor-modal__actions">
+            <button type="button" class="repor-modal__btn repor-modal__btn--secondary" id="reporCancelar">Cancelar</button>
+            <button type="button" class="repor-modal__btn repor-modal__btn--primary" id="reporConfirmar">Repor</button>
+        </div>
+        @Html.AntiForgeryToken()
+    </div>
+</div>
+
+@* ===== ARQUIVOS ESPECÍFICOS DO REPOR (não carregados em layout compartilhado) ===== *@
+<link rel="stylesheet" href="~/css/repor.css" asp-append-version="true" />
+<script src="~/js/repor-estoque.js" asp-append-version="true"></script>

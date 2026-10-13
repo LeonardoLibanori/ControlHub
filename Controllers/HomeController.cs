@@ -4,6 +4,7 @@ using ControleEstoqueLoja;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -541,6 +542,87 @@ namespace ControleEstoqueLoja.Controllers
 
             await _context.SaveChangesAsync();
             return RedirectToAction("Produto", new { id = id });
+        }
+
+        /// <summary>
+        /// Repõe (soma) quantidade ao estoque do produto.
+        /// Recebe a quantidade como STRING (o servidor faz o parse, independente da cultura).
+        /// Retorna JSON com success, novoEstoque e unidade.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = Policies.PodeGerenciarEstoque)]
+        public async Task<IActionResult> Repor(int id, string quantidade)
+        {
+            try
+            {
+                // 1. Normalizar entrada: trim + trocar vírgula por ponto
+                var qStr = quantidade?.Trim().Replace(",", ".") ?? string.Empty;
+
+                // 1a. String vazia -> mensagem de "maior que zero" (conforme testes)
+                if (string.IsNullOrEmpty(qStr))
+                {
+                    return Json(new { success = false, mensagem = "Informe uma quantidade maior que zero." });
+                }
+
+                // 2. Parse estrito: apenas ponto decimal, sem separador de milhar, sem notação científica
+                // AllowLeadingSign para aceitar "-" no início (ex: "-1")
+                if (!decimal.TryParse(qStr, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out decimal qtd))
+                {
+                    return Json(new { success = false, mensagem = "Quantidade inválida. Use apenas números." });
+                }
+
+                // 3. Maior que zero (inclui "-" que vira 0 ou falha no parse, mas aqui só chega se parse ok)
+                if (qtd <= 0m)
+                {
+                    return Json(new { success = false, mensagem = "Informe uma quantidade maior que zero." });
+                }
+
+                // 4. Máximo 1.000.000
+                if (qtd > 1_000_000m)
+                {
+                    return Json(new { success = false, mensagem = "A quantidade máxima por reposição é 1.000.000." });
+                }
+
+                // 5. No máximo 3 casas decimais (sem arredondar)
+                if (decimal.Round(qtd, 3) != qtd)
+                {
+                    return Json(new { success = false, mensagem = "Use no máximo 3 casas decimais." });
+                }
+
+                // 6. Buscar produto ativo
+                var produto = await _context.Produtos.FirstOrDefaultAsync<Produto>(p => p.Id == id && p.Ativo);
+                if (produto == null)
+                {
+                    return Json(new { success = false, mensagem = "Produto não encontrado." });
+                }
+
+                // 7. Se não for por peso, exigir inteiro
+                if (produto.Tipo != TipoProduto.PorPeso && qtd != Math.Truncate(qtd))
+                {
+                    return Json(new { success = false, mensagem = "Este produto é vendido por unidade: informe um número inteiro." });
+                }
+
+                // 8. Releitura no momento da escrita + soma em decimal + único SaveChangesAsync
+                var produtoDb = await _context.Produtos.FirstAsync<Produto>(p => p.Id == id && p.Ativo);
+                produtoDb.Quantidade += qtd;
+                await _context.SaveChangesAsync();
+
+                var unidade = produtoDb.Tipo == TipoProduto.PorPeso ? "kg" : "un";
+
+                return Json(new
+                {
+                    success = true,
+                    mensagem = string.Empty,
+                    novoEstoque = produtoDb.Quantidade,
+                    unidade = unidade
+                });
+            }
+            catch (Exception ex)
+            {
+                LogarExcecao(nameof(Repor), ex);
+                return Json(new { success = false, mensagem = "Não foi possível repor o estoque. Tente novamente." });
+            }
         }
     }
 }
