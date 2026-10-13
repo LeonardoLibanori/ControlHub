@@ -1007,3 +1007,45 @@ regressão da feature de modais.
 
 
 
+## 19. MODAIS (4 DE 4) — "EDITAR CONTA" EM MODAL (13/10/2026)
+
+Continuação da feature de 4 commits (`pre-modais` â†’ `ad63132` â†’ COMMIT 2 â†’ COMMIT 3 â†’ **COMMIT 4**). Escopo deste commit (4 de 4): a tela de ediÃ§Ã£o de conta (`/Usuarios/Editar`) abre num modal a partir de `/Usuarios/Index`, reaproveitando a mesma rota GET/POST (inclusive o token antiforgery) e o mesmo `modal-form.js`. **Nenhum controller muda.**
+
+### O que mudou
+- **`Views/Usuarios/Index.cshtml`**: o botÃ£o "Editar" vira gatilho de modal (`data-modal-form data-modal-titulo="Editar conta"`); o modal carrega `app-modal.css` + `modal-form.js` (sem `produto-form.js` â€” nÃ£o hÃ¡ formulÃ¡rio de produto aqui).
+- **`Views/Usuarios/Editar.cshtml`**: o bloco `validaÃ§Ã£o-summary + form + Cancelar` Ã© envoltÃ³rio em `[data-modal-conteudo]`; o botÃ£o "Cancelar" ganha `data-modal-fechar` (fecha o modal no contexto de modal, navega normalmente na tela cheia). O `<h2>Editar conta</h2>` fica **fora** â€” o tÃ­tulo do modal vem do `data-modal-titulo` do gatilho.
+- **`qa/modal-check.mjs`**: nova funÃ§Ã£o `editarContaChecks(api, tema)` + chamada no fluxo principal. Fecha o modal `Editar conta` em 13 checagens por tema (Dono escuro+claro): abre sem navegar, conta certa, validaÃ§Ã£o vazia â†’ erro do servidor dentro do modal, Esc fecha, foco devolvido ao gatilho, duplo clique Salvar = 1 POST, renomeaÃ§Ã£o + TempData, restauraÃ§Ã£o, GET em tela cheia com o form.
+
+### Estrutura do modal (regra aplicada)
+- Gatilho `data-modal-form` + `data-modal-titulo` â†’ `modal-form.js` injeta o conteÃºdo da view apontada (`/Usuarios/Editar/{id}`) no `[data-modal-conteudo]` e repÃ´e os botÃµes no `form`.
+- TÃ­tulo do modal vem do `data-modal-titulo` do gatilho; o body repasse o `data-modal-fechar` no botÃ£o Cancelar.
+- Nenhum controller tocado â€” POST retorna 302/200 e o client trata (3xx â†’ `fechar(false); location.reload()`; 200 â†’ re-injeÃ§Ã£o do `[data-modal-conteudo]`).
+
+### Resultados de QA
+- **Guard `qa/modal-check.mjs` (instÃ¢ncia :5311, DB de teste)**
+  - `editconta/escuro` + `editconta/claro`: **13/13** aprovadas (abre sem navegar; conta certa; validaÃ§Ã£o vazia com erro no modal; Esc fecha; foco ao gatilho; duplo clique = 1 POST; renomeaÃ§Ã£o; TempData; restauraÃ§Ã£o; tela cheia).
+  - Guard global: **96/100 aprovadas / 4 falhas** â€” as 4 estÃ£o no fluxo `conta/... (2)` (COMMIT 3, `Nova conta`), **fora do escopo do COMMIT 4**.
+- **E2E nÃ£o destrutivo no PROD :5236** (`qa/e2e-editar-conta-prod.mjs`): login, modal "Editar conta" com tÃ­tulo/email corretos, form dentro de `[data-modal-conteudo]`, erro de validaÃ§Ã£o vazia dentro do modal sem navegaÃ§Ã£o, Esc fecha, ctrl+clique nÃ£o trapaceia, GET direto em tela cheia renderiza h2+form. **Sem salvar nada no DB real.**
+
+### Como executar
+```
+powershell -File trx\setup-test.ps1 -Acao subir    # porta 5311, DB em trx\app-teste.db
+powershell -File trx\setup-test.ps1 -Acao parar
+$env:SHELL_DONO_EMAIL='dono@teste.com'; $env:SHELL_DONO_SENHA='***REMOVIDO***'
+$env:SHELL_OPER_EMAIL='operador@teste.com'; $env:SHELL_OPER_SENHA='Operador@123'
+node ControleEstoqueLoja\qa\modal-check.mjs
+```
+
+### ObservaÃ§Ãµes
+- A instÃ¢ncia de teste :5311 precisa ser reiniciada sempre que o assembly muda;
+  views novas entram em vigor com `dotnet build` + restart (compilaÃ§Ã£o prÃ©-compilada
+  no assembly / Razor runtime do projeto).
+- O app **mue em silÃªncio** (PID desaparece, `.err` vazio, `.out` para no meio de um
+  SELECT) e só reaparece com restart â€” isso nÃ£o Ã© cÃ³digo, Ã© comportamento do host.
+- `controleestoque.db` **nÃ£o versionÃ¡vel** (`.gitignore` jÃ¡ cobre); a Ã¡rvore inicial
+  versionada Ã© `controleestoque.exemplo.db`.
+
+### Escopo do commit
+`Views/Usuarios/Index.cshtml`, `Views/Usuarios/Editar.cshtml`, `qa/modal-check.mjs`,
+`ESTADO-DO-PROJETO.md` (seÃ§Ã£o 19). `.db` fora do `git add`.
+

@@ -1,7 +1,8 @@
 /* ============================================================================
    modal-check.mjs - guarda dos modais de formulario (COMMIT 2 e 3)
    Dono e Operador, dois temas, 1440x900, 1366x768 e 390x844, com 3 produtos.
-   COMMIT 2 (Editar produto) - 15 checagens; COMMIT 3 (Nova conta) - 8.
+   COMMIT 2 (Editar produto) - 15 checagens; COMMIT 3 (Nova conta) - 8;
+   COMMIT 4 (Editar conta de usuario) - 13.
    Credenciais SO por ambiente: SHELL_DONO_EMAIL/SENHA, SHELL_OPER_EMAIL/SENHA.
    Uso: node qa/modal-check.mjs --base http://127.0.0.1:5311 --out "...\prints"
    ============================================================================ */
@@ -199,6 +200,63 @@ async function novaContaChecks(api, tema) {
     check(g + ' (7) duplo clique cria UMA conta', cposts === 1, 'posts=' + cposts);
 }
 
+async function editarContaChecks(api, tema) {
+    const g = 'editconta/' + tema;
+    await ev(api, `location.href = ${JSON.stringify(BASE + '/Usuarios/Index')}`); await espera(800);
+    const gat = await ev(api, `!!document.querySelector('a[data-modal-form][data-modal-titulo="Editar conta"]')`);
+    if (!gat) { pular(g + ' Editar conta ainda nao em modal (COMMIT 4 pendente)'); return; }
+
+    // (1) abre o modal da conta do Operador (linha do seed) sem navegar
+    const href = await ev(api, `(()=>{ const r=[...document.querySelectorAll('.tabela-responsiva--usuarios tbody tr')].find(x=>/operador@teste\\.com/.test(x.innerText)); const a=r&&r.querySelector('a[data-modal-form][data-modal-titulo="Editar conta"]'); if(!a) return null; a.click(); return a.getAttribute('href'); })()`);
+    await espera(1400);
+    let st = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), titulo: (document.querySelector('.app-modal__titulo')||{}).textContent, form: !!document.querySelector('[data-modal-conteudo] form'), email: (document.querySelector('[data-modal-conteudo] input[name=Email]')||{}).value, path: location.pathname }`);
+    check(g + ' (1) modal Editar conta abre sem navegar', !!href && st.overlay === true && st.form === true && st.path.indexOf('/Usuarios/Index') === 0, JSON.stringify(st));
+    check(g + ' (1) titulo "Editar conta"', st.titulo === 'Editar conta', st.titulo);
+    check(g + ' (2) abre a conta certa (operador@teste.com)', st.email === 'operador@teste.com', st.email);
+    await capturar(api, 'dono', tema, 'conta-editar');
+
+    // (3) validacao vazia: erro do servidor DENTRO do modal, sem navegar
+    await setValor(api, '[data-modal-conteudo] input[name=Nome]', '');
+    await ev(api, `(()=>{const f=document.querySelector('[data-modal-conteudo] form'); f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return 'ok';})()`); await espera(2400);
+    let val = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), erro: (document.querySelector('[data-modal-conteudo] .validation-summary-errors, [data-modal-conteudo] .text-danger')||{}).innerText||'', path: location.pathname }`);
+    check(g + ' (3) nome vazio: modal continua aberto', val.overlay === true, JSON.stringify(val));
+    check(g + ' (3) erro do servidor dentro do modal', val.erro.length > 0, val.erro.slice(0, 60));
+    check(g + ' (3) sem navegacao apos erro', val.path.indexOf('/Usuarios/Index') === 0, val.path);
+
+    // (4) Esc fecha e devolve foco ao botao Editar da linha
+    await fecharEsc(api); await espera(400);
+    let fechou = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), foco: document.activeElement && document.activeElement.className }`);
+    check(g + ' (4) Esc fecha', fechou.overlay === false);
+    check(g + ' (4) foco volta ao gatilho', /btn-outline-secondary/.test(fechou.foco || ''), fechou.foco);
+
+    // (5) duplo clique no Salvar renomeia UMA vez (contador de rede CDP)
+    await ev(api, `location.href = ${JSON.stringify(BASE + '/Usuarios/Index')}`); await espera(800);
+    const contEditar = criarContadorRede(api, '/Usuarios/Editar');
+    await ev(api, `(()=>{ const r=[...document.querySelectorAll('.tabela-responsiva--usuarios tbody tr')].find(x=>/operador@teste\\.com/.test(x.innerText)); const a=r&&r.querySelector('a[data-modal-form][data-modal-titulo="Editar conta"]'); if(a) a.click(); return 'ok';})()`);
+    await espera(1400);
+    await setValor(api, '[data-modal-conteudo] input[name=Nome]', 'Operador Teste (QA)');
+    await ev(api, `(()=>{const b=[...document.querySelectorAll('[data-modal-conteudo] button')].find(x=>/Salvar/i.test(x.textContent)); if(b){ b.click(); b.click(); } return 'ok';})()`); await espera(2800);
+    const eposts = lerContador(contEditar);
+    check(g + ' (5) duplo clique Salvar = 1 POST', eposts === 1, 'posts=' + eposts);
+    let salvou = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), tem: document.body.innerText.indexOf('Operador Teste (QA)') >= 0, aviso: /Conta atualizada/.test(document.body.innerText) }`);
+    check(g + ' (5) renomeou e listagem atualizada', salvou.overlay === false && salvou.tem === true, JSON.stringify(salvou));
+    check(g + ' (5) mensagem de sucesso (TempData) exibida', salvou.aviso === true);
+
+    // (6) restaura o nome para nao afetar os demais guards
+    await ev(api, `(()=>{ const r=[...document.querySelectorAll('.tabela-responsiva--usuarios tbody tr')].find(x=>/operador@teste\\.com/.test(x.innerText)); const a=r&&r.querySelector('a[data-modal-form][data-modal-titulo="Editar conta"]'); if(a) a.click(); return 'ok';})()`);
+    await espera(1400);
+    await setValor(api, '[data-modal-conteudo] input[name=Nome]', 'Operador Teste');
+    await ev(api, `(()=>{const b=[...document.querySelectorAll('[data-modal-conteudo] button')].find(x=>/Salvar/i.test(x.textContent)); if(b) b.click(); return 'ok';})()`); await espera(2600);
+    const restaurado = await ev(api, `document.body.innerText.indexOf('Operador Teste (QA)') < 0`);
+    check(g + ' (6) nome restaurado', restaurado === true);
+
+    // (7) a TELA CHEIA continua integra (Ctrl+clique / link direto)
+    await ev(api, `location.href = ${JSON.stringify(BASE + href)}`); await espera(1400);
+    const cheia = await j(api, `{ h2: (document.querySelector('h2')||{}).textContent||'', form: !!document.querySelector('form[action*="/Usuarios/Editar"]'), path: location.pathname }`);
+    check(g + ' (7) tela cheia tem o formulario', cheia.form === true && /Editar conta/.test(cheia.h2), JSON.stringify(cheia));
+}
+
+
 async function operadorChecks(api, tema) {
     const g = 'operador/' + tema;
     await ev(api, `location.href = ${JSON.stringify(BASE + '/Home/Index')}`); await espera(800);
@@ -265,6 +323,7 @@ async function main() {
                 await capturar(api, 'dono', tema, 'conta');
                 await fecharEsc(api); await espera(300);
             }
+            await editarContaChecks(api, tema);
             await itensIntactos(api, tema);
             await ctrlClique(api, tema);
         }

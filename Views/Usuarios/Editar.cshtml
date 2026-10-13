@@ -9,6 +9,9 @@
             <h2 class="text-center mb-1">Editar conta</h2>
             <p class="text-center text-muted mb-4">Atualize os dados de acesso da conta.</p>
 
+            @* [data-modal-conteudo] = o bloco que o modal-form.js injeta no
+               modal (mesmo form da tela cheia). H2/fora fica so na tela cheia. *@
+            <div data-modal-conteudo>
             <div asp-validation-summary="All" class="text-danger small mb-3"></div>
 
             <form method="post" asp-controller="Usuarios" asp-action="Editar">
@@ -52,7 +55,8 @@
             </form>
 
             <div class="text-center mt-3">
-                <a href="/Usuarios/Index" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+                <a href="/Usuarios/Index" class="btn btn-outline-secondary btn-sm" data-modal-fechar>Cancelar</a>
+            </div>
             </div>
         </div>
     </div>

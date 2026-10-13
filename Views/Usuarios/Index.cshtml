@@ -69,7 +69,8 @@
                             </td>
                             <td class="text-end">
                                 <a asp-controller="Usuarios" asp-action="Editar" asp-route-id="@u.Id"
-                                   class="btn btn-outline-secondary btn-sm">Editar</a>
+                                   class="btn btn-outline-secondary btn-sm"
+                                   data-modal-form data-modal-titulo="Editar conta">Editar</a>
                             </td>
                         </tr>
                     }
@@ -79,8 +80,9 @@
     }
 </div>
 
-@* Modal de Nova conta (COMMIT 3): o modal-form.js busca /Usuarios/Criar e
-   injeta o [data-modal-conteudo] de Criar.cshtml. Sem produto-form.js - nao ha
+@* Modais de contas (COMMIT 3 e 4): o modal-form.js busca /Usuarios/Criar ou
+   /Usuarios/Editar/{id} e injeta o [data-modal-conteudo] da view correspondente
+   (titulo vem do data-modal-titulo do gatilho). Sem produto-form.js - nao ha
    formulario de produto aqui. *@
 <link rel="stylesheet" href="~/css/app-modal.css" asp-append-version="true" />
 <script src="~/js/modal-form.js" asp-append-version="true"></script>
