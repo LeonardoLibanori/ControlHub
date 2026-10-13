@@ -12,18 +12,26 @@
         estoqueAtual: 0,
         unidade: 'un',
         fracionado: false,
-        enviando: false
+        enviando: false,
+        step: 1
     };
 
     var overlay = document.getElementById('modalRepor');
+    var form = document.getElementById('formRepor');
     var titulo = document.getElementById('reporTitulo');
     var input = document.getElementById('reporInput');
-    var preview = document.getElementById('reporPreview');
+    var inputUnit = document.getElementById('reporInputUnit');
+    var inputGroup = document.getElementById('reporInputGroup');
+    var novoEstoqueEl = document.getElementById('reporNovoEstoque');
+    var estoqueAtualEl = document.getElementById('reporEstoqueAtual');
+    var hiddenId = document.getElementById('reporHiddenId');
+    var hint = document.getElementById('reporHint');
     var alerta = document.getElementById('reporAlerta');
     var btnConfirmar = document.getElementById('reporConfirmar');
     var btnCancelar = document.getElementById('reporCancelar');
     var btnFechar = document.getElementById('reporFechar');
-    var tokenInput = document.getElementById('reporToken');
+    var btnInc = document.getElementById('reporBtnInc');
+    var btnDec = document.getElementById('reporBtnDec');
 
     // Utilitários
     function $(sel) { return document.querySelector(sel); }
@@ -32,7 +40,6 @@
     function formatarNumeroBR(valor, casas) {
         if (valor === null || valor === undefined || isNaN(valor)) return '—';
         var fixo = Number(valor).toFixed(casas || 3);
-        // Remove zeros à direita desnecessários, mas mantém pelo menos 1 casa se for decimal
         var partes = fixo.split('.');
         var inteiro = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         if (partes.length > 1) {
@@ -51,15 +58,34 @@
         return isNaN(val) ? null : val;
     }
 
+    function toMilesimos(val) {
+        return Math.round(val * 1000);
+    }
+
+    function fromMilesimos(mil) {
+        return mil / 1000;
+    }
+
     function atualizarPreview() {
         var val = parseQuantidade(input.value);
-        if (val === null || val <= 0) {
-            preview.textContent = 'Novo estoque: —';
-            return;
+        var novoEstoque = estado.estoqueAtual;
+        if (val !== null && val > 0) {
+            novoEstoque += val;
         }
-        var novo = estado.estoqueAtual + val;
-        var unidade = estado.unidade;
-        preview.textContent = 'Novo estoque: ' + formatarNumeroBR(novo) + ' ' + unidade;
+        novoEstoqueEl.textContent = formatarNumeroBR(novoEstoque) + ' ' + estado.unidade;
+        if (val !== null && val > 0) {
+            novoEstoqueEl.style.color = 'var(--t-green, #16a34a)';
+        } else {
+            novoEstoqueEl.style.color = 'var(--text-soft, #6b7280)';
+        }
+    }
+
+    function atualizarHint() {
+        if (estado.fracionado) {
+            hint.textContent = 'Aceita vírgula ou ponto. Até 3 casas decimais.';
+        } else {
+            hint.textContent = 'Informe um número inteiro.';
+        }
     }
 
     function validarInput() {
@@ -81,6 +107,27 @@
         }
     }
 
+    function ajustarQuantidade(delta) {
+        var val = parseQuantidade(input.value);
+        var base = val !== null && val > 0 ? val : 0;
+        var novo = base + delta;
+        if (novo < 0) novo = 0;
+        // Usar aritmética em milésimos para evitar erro de ponto flutuante
+        var milesimos = toMilesimos(novo);
+        var arredondado = fromMilesimos(Math.round(milesimos));
+        // Formatar com vírgula, no máximo 3 casas, sem zeros à direita
+        var fixo = arredondado.toFixed(3);
+        var partes = fixo.split('.');
+        var decimal = partes[1].replace(/0+$/, '');
+        if (decimal.length === 0) {
+            input.value = partes[0];
+        } else {
+            input.value = partes[0] + ',' + decimal;
+        }
+        atualizarPreview();
+        validarInput();
+    }
+
     function abrirModal(btn) {
         estado.btnAberto = btn;
         estado.produtoId = btn.getAttribute('data-id');
@@ -89,18 +136,23 @@
         estado.unidade = btn.getAttribute('data-unidade') || 'un';
         estado.fracionado = btn.getAttribute('data-fracionado') === 'true';
         estado.enviando = false;
+        estado.step = estado.fracionado ? 0.5 : 1;
 
         // Preencher modal
-        titulo.textContent = 'Repor estoque: ' + estado.produtoNome;
-        document.getElementById('reporEstoqueAtual').textContent =
-            'Estoque atual: ' + formatarNumeroBR(estado.estoqueAtual) + ' ' + estado.unidade;
+        titulo.textContent = 'Repor estoque';
+        document.getElementById('reporNomeProduto').textContent = estado.produtoNome;
+        estoqueAtualEl.textContent = formatarNumeroBR(estado.estoqueAtual) + ' ' + estado.unidade;
+        inputUnit.textContent = estado.unidade;
+        hiddenId.value = estado.produtoId;
         input.value = '';
-        preview.textContent = 'Novo estoque: —';
+        atualizarPreview();
+        atualizarHint();
         alerta.textContent = '';
         alerta.removeAttribute('aria-live');
         alerta.hidden = true;
         btnConfirmar.disabled = true;
         btnConfirmar.textContent = 'Repor';
+        btnConfirmar.classList.remove('repor-modal__btn--loading');
 
         // Focar input
         overlay.hidden = false;
@@ -186,47 +238,60 @@
         }
     });
 
-    // Preview em tempo real
+    // Stepper buttons
+    btnInc.addEventListener('click', function (e) {
+        e.preventDefault();
+        ajustarQuantidade(estado.step);
+    });
+
+    btnDec.addEventListener('click', function (e) {
+        e.preventDefault();
+        ajustarQuantidade(-estado.step);
+    });
+
+    // Teclado: setas no input
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            ajustarQuantidade(estado.step);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            ajustarQuantidade(-estado.step);
+        } else if (e.key === 'Enter' && !btnConfirmar.disabled && !estado.enviando) {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Preview e validação em tempo real
     input.addEventListener('input', function () {
         atualizarPreview();
         validarInput();
     });
 
-    // Enter no input = enviar
-    input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !btnConfirmar.disabled && !estado.enviando) {
-            e.preventDefault();
-            enviar();
-        }
-    });
-
-    // Botão Repor (confirmar)
-    btnConfirmar.addEventListener('click', function (e) {
+    // Submit do formulário
+    form.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!btnConfirmar.disabled && !estado.enviando) {
-            enviar();
-        }
+        if (btnConfirmar.disabled || estado.enviando) return;
+        enviar();
     });
 
     function enviar() {
         if (estado.enviando) return;
         estado.enviando = true;
         btnConfirmar.disabled = true;
-        btnConfirmar.textContent = 'Enviando...';
+        btnConfirmar.textContent = 'Repondo…';
+        btnConfirmar.classList.add('repor-modal__btn--loading');
 
-        var formData = new FormData();
-        formData.append('id', estado.produtoId);
-        formData.append('quantidade', input.value.trim());
-        if (tokenInput) formData.append('__RequestVerificationToken', tokenInput.value);
-
-        var headers = new Headers();
-        headers.append('X-CSRF-TOKEN', tokenInput ? tokenInput.value : '');
+        var formData = new FormData(form);
 
         fetch('/Home/Repor', {
             method: 'POST',
             body: formData,
-            headers: headers,
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRF-TOKEN': formData.get('__RequestVerificationToken') || ''
+            }
         })
         .then(function (resp) {
             if (resp.status === 400) {
@@ -258,6 +323,7 @@
                 alerta.hidden = false;
                 btnConfirmar.disabled = false;
                 btnConfirmar.textContent = 'Repor';
+                btnConfirmar.classList.remove('repor-modal__btn--loading');
                 estado.enviando = false;
                 input.focus();
             }
@@ -269,6 +335,7 @@
             alerta.hidden = false;
             btnConfirmar.disabled = false;
             btnConfirmar.textContent = 'Repor';
+            btnConfirmar.classList.remove('repor-modal__btn--loading');
             estado.enviando = false;
             input.focus();
         });

@@ -1,9 +1,8 @@
 /* ============================================================================
-   BOTÃO REPOR - ESTOQUE
-   Métrica idêntica a .btn-editar / .btn-excluir na tabela (32px altura)
-   Cores âmbar via tokens: --c-amber, --t-amber
+   REPOR ESTOQUE - CSS (modal + botão)
    ============================================================================ */
 
+/* ---- Botão Repor na tabela (mesma métrica que .btn-editar / .btn-excluir) ---- */
 .btn-repor {
     display: inline-flex;
     align-items: center;
@@ -34,23 +33,21 @@
     outline-offset: 2px;
 }
 
-/* ============================================================================
-   SOBREPOR LARGURA DA COLUNA AÇÕES (especificidade maior que a regra base)
-   A regra base está em corporate-theme.css linha ~2948:
-     .tabela-responsiva--estoque th:nth-child(4), .tabela-responsiva--estoque td:nth-child(4) { width: 190px; }
-   Usamos seletor com classe extra para ter especificidade maior SEM !important.
-   ============================================================================ */
+/* Sobrescrever largura da coluna Ações (especificidade maior que regra base 190px) */
+.tabela-responsiva--estoque td:nth-child(4).acoes-com-repor,
+.tabela-responsiva--estoque th:nth-child(4).acoes-com-repor {
+    width: 280px !important;
+    min-width: 280px;
+}
 
 .tabela-responsiva--estoque .acoes-com-repor {
     display: flex;
-    gap: 8px;
-    min-width: 260px;
+    gap: 6px;
     justify-content: center;
     align-items: center;
     flex-wrap: nowrap;
 }
 
-/* Garante que os 3 botões caibam na mesma linha */
 .tabela-responsiva--estoque .acoes-com-repor .btn-editar,
 .tabela-responsiva--estoque .acoes-com-repor .btn-repor,
 .tabela-responsiva--estoque .acoes-com-repor .btn-excluir,
@@ -71,10 +68,14 @@
     background: rgba(5, 8, 10, .78);
     z-index: 1090;
     padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 120ms ease;
 }
 
-.repor-overlay[hidden] {
-    display: none;
+.repor-overlay:not([hidden]) {
+    opacity: 1;
+    visibility: visible;
 }
 
 .repor-modal {
@@ -82,39 +83,60 @@
     max-height: 90dvh;
     background: var(--bg-card, #fff);
     border: 1px solid var(--line, #e5e7eb);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, .15);
     overflow: hidden;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.repor-overlay:not([hidden]) .repor-modal {
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 @media (max-width: 639px) {
     .repor-modal {
         width: 100%;
         max-width: 100%;
-        border-radius: 12px 12px 0 0;
         max-height: 100%;
-        align-items: stretch;
+        border-radius: 16px 16px 0 0;
+        align-self: flex-end;
     }
 }
 
+/* ---- Cabeçalho ---- */
 .repor-modal__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+    padding: 20px 24px 8px;
     flex-shrink: 0;
 }
 
 .repor-modal__title {
     margin: 0;
-    font-size: 1.125rem;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     color: var(--text, #111);
     line-height: 1.3;
+}
+
+.repor-modal__produto {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--text-soft, #6b7280);
+    line-height: 1.4;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .repor-modal__close {
@@ -144,107 +166,212 @@
     outline-offset: 2px;
 }
 
+/* ---- Corpo ---- */
 .repor-modal__body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
+    padding: 8px 24px 20px;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
 }
 
-.repor-modal__info {
+/* Grid de 2 caixas: Estoque atual / Novo estoque */
+.repor-modal__info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 480px) {
+    .repor-modal__info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.repor-modal__info-box {
+    background: var(--bg-alt, #f3f4f6);
+    border: 1px solid var(--line, #e5e7eb);
+    border-radius: 10px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: .9rem;
-    color: var(--text, #111);
+    text-align: center;
 }
 
-.repor-modal__info strong {
+.repor-modal__info-label {
+    font-size: 12px;
+    color: var(--text-soft, #6b7280);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.repor-modal__info-value {
+    font-size: 20px;
     font-weight: 600;
+    color: var(--text, #111);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
 }
 
+/* Label do campo */
 .repor-modal__label {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    font-size: .875rem;
-    font-weight: 500;
-    color: var(--text, #111);
-}
-
-.repor-modal__input {
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--border, #d1d5db);
-    border-radius: 8px;
-    background: var(--bg-card, #fff);
-    color: var(--text, #111);
-    font-size: 1rem;
-    font-family: inherit;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.repor-modal__input:focus {
-    outline: none;
-    border-color: var(--c-blue, #2563eb);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-blue) 20%, transparent);
-}
-
-.repor-modal__preview {
-    font-size: .9rem;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--c-blue, #2563eb);
-    padding: 8px 12px;
-    background: color-mix(in srgb, var(--c-blue) 8%, transparent);
-    border: 1px solid color-mix(in srgb, var(--c-blue) 20%, transparent);
-    border-radius: 8px;
-    text-align: center;
+    color: var(--text, #111);
 }
 
+/* Grupo do input: − [input] unidade + */
+.repor-modal__input-group {
+    display: flex;
+    align-items: stretch;
+    height: 48px;
+    border: 1px solid var(--line-input, var(--line, #d1d5db));
+    border-radius: 10px;
+    background: var(--bg-input, var(--bg-card, #fff));
+    overflow: hidden;
+    color-scheme: inherit;
+}
+
+.repor-modal__input-group:focus-within {
+    border-color: var(--c-blue, #2563eb);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-blue) 35%, transparent);
+}
+
+/* Botões − e + */
+.repor-modal__step-btn {
+    width: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text, #111);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.repor-modal__step-btn:hover {
+    background: var(--bg-alt, #f3f4f6);
+    color: var(--text, #111);
+}
+
+.repor-modal__step-btn:focus-visible {
+    outline: 2px solid var(--c-blue, #2563eb);
+    outline-offset: -2px;
+}
+
+/* Input principal */
+.repor-modal__input-group input {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 22px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text, #111);
+    font-variant-numeric: tabular-nums;
+    padding: 0 8px;
+    line-height: 1.2;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.repor-modal__input-group input::placeholder {
+    color: var(--text-soft, #6b7280);
+    font-weight: 400;
+}
+
+/* Unidade dentro do grupo */
+.repor-modal__unit {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--text-soft, #6b7280);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Dica */
+.repor-modal__hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-soft, #6b7280);
+    line-height: 1.4;
+}
+
+/* Alerta de erro */
 .repor-modal__alert {
     display: none;
     padding: 10px 12px;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--c-coral) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--c-coral) 40%, transparent);
-    color: var(--danger, #dc2626);
-    font-size: .875rem;
+    background: color-mix(in srgb, var(--c-coral) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-coral) 55%, transparent);
+    color: var(--t-coral, #dc2626);
+    font-size: 14px;
     font-weight: 500;
+    line-height: 1.4;
 }
 
 .repor-modal__alert[aria-live] {
     display: block;
 }
 
-.repor-modal__actions {
+/* ---- Rodapé ---- */
+.repor-modal__footer {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+    padding: 8px 24px 24px;
     flex-shrink: 0;
-    margin-top: 4px;
+}
+
+@media (max-width: 639px) {
+    .repor-modal__footer {
+        padding: 8px 16px 16px;
+    }
+    .repor-modal__footer .repor-modal__btn {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
 .repor-modal__btn {
     height: 40px;
     padding: 0 20px;
     border-radius: 8px;
-    font-size: .9rem;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
     border: 1px solid transparent;
+    white-space: nowrap;
+    min-width: 96px;
 }
 
 .repor-modal__btn--primary {
-    background: var(--c-blue, #2563eb);
-    color: #fff;
-    border-color: var(--c-blue, #2563eb);
+    background: color-mix(in srgb, var(--c-amber) 14%, transparent);
+    color: var(--t-amber, #FFD68A);
+    border-color: color-mix(in srgb, var(--c-amber) 55%, transparent);
 }
 
 .repor-modal__btn--primary:hover:not(:disabled) {
-    filter: brightness(1.1);
+    background: color-mix(in srgb, var(--c-amber) 26%, transparent);
+    border-color: color-mix(in srgb, var(--c-amber) 78%, transparent);
 }
 
 .repor-modal__btn--primary:disabled {
@@ -252,14 +379,37 @@
     cursor: not-allowed;
 }
 
+.repor-modal__btn--loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.repor-modal__btn--loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin: -8px 0 0 -8px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: repor-spin 0.6s linear infinite;
+}
+
+@keyframes repor-spin {
+    to { transform: rotate(360deg); }
+}
+
 .repor-modal__btn--secondary {
-    background: var(--bg-card, #fff);
+    background: var(--bg-alt, #f3f4f6);
     color: var(--text, #111);
-    border-color: var(--border, #d1d5db);
+    border-color: var(--line, #d1d5db);
 }
 
 .repor-modal__btn--secondary:hover {
-    background: var(--bg-alt, #f3f4f6);
+    background: color-mix(in srgb, var(--bg-alt) 80%, var(--line));
 }
 
 /* Trava de scroll no body quando modal aberto */

@@ -151,29 +151,43 @@
 
 @* ===== MODAL REPOR ESTOQUE (uma vez por página) ===== *@
 <div class="repor-overlay" id="modalRepor" hidden role="dialog" aria-modal="true" aria-labelledby="reporTitulo">
-    <div class="repor-modal">
+    <form id="formRepor" method="post" asp-controller="Home" asp-action="Repor" class="repor-modal">
         <div class="repor-modal__header">
-            <h2 class="repor-modal__title" id="reporTitulo">Repor estoque</h2>
+            <div>
+                <h2 class="repor-modal__title" id="reporTitulo">Repor estoque</h2>
+                <p class="repor-modal__produto" id="reporNomeProduto"></p>
+            </div>
             <button type="button" class="repor-modal__close" id="reporFechar" aria-label="Fechar">&times;</button>
         </div>
         <div class="repor-modal__body">
-            <div class="repor-modal__info">
-                <strong id="reporNomeProduto"></strong>
-                <span id="reporEstoqueAtual">Estoque atual: —</span>
+            <div class="repor-modal__info-grid">
+                <div class="repor-modal__info-box">
+                    <span class="repor-modal__info-label">Estoque atual</span>
+                    <span class="repor-modal__info-value" id="reporEstoqueAtual">—</span>
+                </div>
+                <div class="repor-modal__info-box">
+                    <span class="repor-modal__info-label">Novo estoque</span>
+                    <span class="repor-modal__info-value" id="reporNovoEstoque">—</span>
+                </div>
             </div>
             <label class="repor-modal__label">
                 Quantidade a adicionar
-                <input type="text" id="reporInput" inputmode="decimal" autocomplete="off" />
+                <div class="repor-modal__input-group" id="reporInputGroup">
+                    <button type="button" class="repor-modal__step-btn" id="reporBtnDec" aria-label="Diminuir">&minus;</button>
+                    <input type="text" name="quantidade" id="reporInput" inputmode="decimal" autocomplete="off" placeholder="0" />
+                    <span class="repor-modal__unit" id="reporInputUnit" aria-hidden="true">un</span>
+                    <button type="button" class="repor-modal__step-btn" id="reporBtnInc" aria-label="Aumentar">&plus;</button>
+                </div>
             </label>
-            <div class="repor-modal__preview" id="reporPreview">Novo estoque: —</div>
+            <p class="repor-modal__hint" id="reporHint">Aceita vírgula ou ponto. Até 3 casas decimais.</p>
             <div class="repor-modal__alert" id="reporAlerta" hidden role="alert"></div>
+            <input type="hidden" name="id" id="reporHiddenId" />
         </div>
-        <div class="repor-modal__actions">
+        <div class="repor-modal__footer">
             <button type="button" class="repor-modal__btn repor-modal__btn--secondary" id="reporCancelar">Cancelar</button>
-            <button type="button" class="repor-modal__btn repor-modal__btn--primary" id="reporConfirmar">Repor</button>
+            <button type="submit" class="repor-modal__btn repor-modal__btn--primary" id="reporConfirmar">Repor</button>
         </div>
-        @Html.AntiForgeryToken()
-    </div>
+    </form>
 </div>
 
 @* ===== ARQUIVOS ESPECÍFICOS DO REPOR (não carregados em layout compartilhado) ===== *@
