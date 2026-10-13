@@ -829,7 +829,53 @@ só um handler por `code` passa — é assim que a regressão fica presa.
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado em 10/10/2026 (ajustes de shell 1 e 2 de 3) a partir de `main@34c14bc`.*
+## 16. MODAIS (1 DE 3) — SETA DO MENU DO USUÁRIO (13/10/2026)
+
+Tag de partida: `pre-modais` (`e49b795`). Feature isolada em 3 commits:
+seta do menu do usuário; "Editar produto" em modal; "Nova conta" em modal.
+**Nenhum controller muda** — os modais reaproveitam as mesmas rotas, o mesmo
+formulário e o mesmo POST. Escopo deste commit (1 de 3): a seta do menu.
+
+### O que mudou
+
+- **`wwwroot/css/perfil-seta.css`** (novo): esconde o `<span
+  class="app-usuario__chevron">` antigo e desenha a seta no `::after` do
+  `#btnUsuario`. **Fechado** (`aria-expanded="false"`) a seta aponta **para
+  cima** (`rotate(-135deg)`, matriz `a≈-0.707, b≈-0.707`); **aberto**
+  (`aria-expanded="true"`) aponta **para baixo** (`rotate(45deg)`, `a≈0.707,
+  b≈0.707`). Sem glifo, SVG, caractere ou fonte de ícone; cor só por token
+  (`--text-soft`); respeita `prefers-reduced-motion`.
+- **`Views/Shared/_Layout.cshtml`**: **+1 linha** (o `<link>` de
+  `perfil-seta.css` logo após o `corporate-theme.css`), **0 removidas**. O HTML
+  do botão não foi tocado.
+- **`qa/perfil-seta-check.mjs`** (novo, reutiliza `qa/cdp-helper.mjs`): mede a
+  matriz do `::after` por CDP para Dono e Operador, nos dois temas, em 1440 e
+  390px; confirma seta única visível (span antigo escondido), retorno ao estado
+  "para cima" por Esc, clique no botão e clique fora, e os itens do menu por
+  papel (`["Usuários","Sair"]` Dono; `["Sair"]` Operador).
+
+### Verificação (13/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `node qa/perfil-seta-check.mjs` | **64/64** — Dono+Operador, escuro+claro, 1440+390px |
+| `dotnet build --no-incremental` | 0 erros; 8 avisos **pré-existentes** (baseline) |
+| `dotnet test tests.QA` | **370 aprovados / 3 falhas** — falhas **idênticas** ao baseline (`DashboardTemplateQaTests.FormasPagamento_*`) |
+| `node qa/encoding-check.mjs` | 168 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 727 pares equilibrados |
+| `node qa/contrast.mjs` | 60/60 pares, 0 problemas |
+| auto-conferência do diff | só `_Layout.cshtml` (+1/-0), `perfil-seta.css`, `perfil-seta-check.mjs`; `.db` intacto |
+
+### Regras mantidas
+
+- `controleestoque.db` **intacto** e fora do `git add`; seed de QA só no `.db`
+  temporário (`trx\app-teste.db`, fora do repositório).
+- Nenhum controller, `shell.js`, `corporate-theme.css` nem `repor*` tocados;
+  nenhuma migration, nenhum push. Capturas em `prints\seta-*.png`.
+
+---
+
+*Fim do relatório. Gerado em 02/10/2026, atualizado em 13/10/2026 (modais 1 de 3) a partir de `main@e49b795`.*
 
 
 

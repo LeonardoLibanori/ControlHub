@@ -1,0 +1,47 @@
+/* ============================================================================
+   perfil-seta.css - seta do menu do usuario (COMMIT 1)
+
+   Objetivo: a seta do botao #btnUsuario APONTA PARA CIMA quando o menu esta
+   FECHADO (aria-expanded="false") e PARA BAIXO quando ABERTO
+   (aria-expanded="true"). O span antigo (.app-usuario__chevron) e escondido
+   e a seta passa a ser desenhada no ::after do proprio botao - sem tocar no
+   HTML do _Layout e sem caractere, glifo, SVG ou fonte de icone.
+
+   Especificidade alta (html body .app-sidebar ...) para vencer as regras de
+   corporate-theme.css sem precisar de !important. Cores so por token.
+   ============================================================================ */
+
+/* O span antigo do chevron nao aparece mais: a seta agora e o ::after. */
+html body .app-sidebar .app-usuario__chevron { display: none; }
+
+/* O botao vira um flex com a informacao a esquerda e a seta a direita. */
+html body .app-sidebar .app-usuario__botao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+}
+
+/* Seta desenhada em CSS (duas bordas formam o angulo). FECHADO = para cima. */
+html body .app-sidebar .app-usuario__botao::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    color: var(--text-soft);
+    transform: translateY(2px) rotate(-135deg);
+    transition: transform .15s ease;
+}
+
+/* ABERTO = seta para baixo. */
+html body .app-sidebar .app-usuario__botao[aria-expanded="true"]::after {
+    transform: translateY(-2px) rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html body .app-sidebar .app-usuario__botao::after { transition: none; }
+}
