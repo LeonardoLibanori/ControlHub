@@ -11,6 +11,9 @@
                 Crie o acesso de quem vai operar o sistema.
             </p>
 
+            @* [data-modal-conteudo] = o bloco que o modal-form.js injeta no
+               modal (mesmo form da tela cheia). H2/fora fica so na tela cheia. *@
+            <div data-modal-conteudo>
             <div asp-validation-summary="All" class="text-danger small mb-3"></div>
 
             <form method="post" asp-controller="Usuarios" asp-action="Criar">
@@ -57,7 +60,8 @@
             </form>
 
             <div class="text-center mt-3">
-                <a href="/Usuarios/Index" class="btn btn-outline-secondary btn-sm">Voltar</a>
+                <a href="/Usuarios/Index" class="btn btn-outline-secondary btn-sm" data-modal-fechar>Voltar</a>
+            </div>
             </div>
         </div>
     </div>

@@ -10,7 +10,7 @@
            "quem entra no sistema" nem botao de voltar - a volta para o Caixa
            ja existe na navbar, e a tela fica limpa. *@
         <h2 class="mb-0">Usuários do sistema</h2>
-        <a href="/Usuarios/Criar" class="btn btn-primary fw-bold">Nova conta</a>
+        <a href="/Usuarios/Criar" class="btn btn-primary fw-bold" data-modal-form data-modal-titulo="Nova conta">Nova conta</a>
     </div>
 
     @* TempData vem do POST Criar; o redirect para cá evita reenvio do formulário. *@
@@ -78,3 +78,9 @@
         </div>
     }
 </div>
+
+@* Modal de Nova conta (COMMIT 3): o modal-form.js busca /Usuarios/Criar e
+   injeta o [data-modal-conteudo] de Criar.cshtml. Sem produto-form.js - nao ha
+   formulario de produto aqui. *@
+<link rel="stylesheet" href="~/css/app-modal.css" asp-append-version="true" />
+<script src="~/js/modal-form.js" asp-append-version="true"></script>

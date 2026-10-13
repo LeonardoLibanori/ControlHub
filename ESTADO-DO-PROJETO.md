@@ -951,7 +951,59 @@ As 2 falhas do `http-authz` e as 3 do `dotnet test` são **pré-existentes** e
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado em 13/10/2026 (modais 1 e 2 de 3) a partir de `main@e49b795`.*
+## 18. MODAIS (3 DE 3) — "NOVA CONTA" EM MODAL (13/10/2026)
+
+Fim da feature de 3 commits. Escopo deste commit (3 de 3): a tela de criação de
+conta (`/Usuarios/Criar`) abre num modal a partir de `/Usuarios/Index`,
+reaproveitando a **mesma rota**, o **mesmo formulário** e o **mesmo POST** da
+tela cheia. **Nenhum controller muda.**
+
+### O que mudou
+
+- **`Views/Usuarios/Index.cshtml`**: o botão "Nova conta" vira gatilho de modal
+  (`data-modal-form data-modal-titulo="Nova conta"`); a página carrega
+  `app-modal.css` + `modal-form.js` (sem `produto-form.js` — não há formulário
+  de produto aqui).
+- **`Views/Usuarios/Criar.cshtml`**: o bloco `validation-summary + form + Voltar`
+  é envolvido em `[data-modal-conteudo]` (é o que o `modal-form.js` injeta no
+  modal); o link "Voltar" ganha `data-modal-fechar` (fecha o modal no contexto
+  de modal, navega normalmente na tela cheia). `<h2>Nova conta</h2>` fica
+  **fora** — no modal o título vem do `data-modal-titulo`.
+- **`qa/modal-check.mjs`**: os e-mails criados viram **únicos por tema**
+  (`balcao.novo.<tema>@…`, `unico.teste.<tema>@…`) — com um banco único para
+  escuro+claro, o e-mail fixo fazia o 2º tema cair no erro de e-mail repetido.
+  Os cheques de "Nova conta" agora **rodam de verdade** (não mais `[PULA]`).
+
+### Verificação (13/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `node qa/modal-check.mjs` | **74 aprovadas / 0 falhas** — editar + Nova conta + Ctrl+clique + operador; Dono escuro+claro; **sem `[PULA]`** |
+| `node qa/shell-check.mjs` | **142 aprovadas / 0 falhas** (V1–V6) |
+| `powershell qa/http-assets.ps1` | **13 OK / 0 falha** |
+| `node qa/encoding-check.mjs` | 174 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 727 pares equilibrados |
+| `node qa/contrast.mjs` | 60/60 pares, 0 problemas |
+| `dotnet test tests.QA` | **370 aprovados / 3 falhas** — **idênticas** ao baseline (`FormasPagamento_*`) |
+| `powershell qa/http-authz.ps1` | 129 OK / **2 falhas pré-existentes** (Dashboard); `/Usuarios` (Dono 200, Operador 403) **OK**; banco **intacto** (SHA256 idêntico) |
+| auto-conferência do diff vs `pre-modais` | só arquivos das 3 features; controllers intocados; `.db` intacto |
+
+Assim como no COMMIT 2, as 2 falhas do `http-authz` e as 3 do `dotnet test`
+são **pré-existentes** (Dashboard) e **byte-idênticas** ao baseline: nenhuma
+regressão da feature de modais.
+
+### Regras mantidas
+
+- `controleestoque.db` **intacto** e fora do `git add`; seed de QA só no `.db`
+  temporário (`trx\app-teste.db`).
+- **Nenhum controller**, nenhum `shell.js`, nenhum `corporate-theme.css` e
+  nenhum `repor*` tocados; nenhuma migration, nenhum push.
+- Escopo do commit: `Views/Usuarios/Index.cshtml`, `Views/Usuarios/Criar.cshtml`,
+  `qa/modal-check.mjs`, esta nota. Capturas em `prints\modal-*-conta.png`.
+
+---
+
+*Fim do relatório. Gerado em 02/10/2026, atualizado em 13/10/2026 (modais 1, 2 e 3 de 3) a partir de `main@e49b795`.*
 
 
 

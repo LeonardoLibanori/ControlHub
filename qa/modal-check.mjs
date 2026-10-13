@@ -179,7 +179,7 @@ async function novaContaChecks(api, tema) {
 
     await abrirConta(api); await espera(1400);
     await setValor(api, '[data-modal-conteudo] input[name=Nome]', 'Balcao Novo');
-    await setValor(api, '[data-modal-conteudo] input[name=Email]', 'balcao.novo@teste.com');
+    await setValor(api, '[data-modal-conteudo] input[name=Email]', 'balcao.novo.' + tema + '@teste.com');
     await setValor(api, '[data-modal-conteudo] input[name=Senha]', 'Balcao@123');
     await setValor(api, '[data-modal-conteudo] input[name=ConfirmarSenha]', 'Balcao@123');
     await ev(api, `(()=>{const f=document.querySelector('[data-modal-conteudo] form'); f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return 'ok';})()`); await espera(2800);
@@ -191,7 +191,7 @@ async function novaContaChecks(api, tema) {
     const contCriar = criarContadorRede(api, '/Usuarios/Criar');
     await abrirConta(api); await espera(1400);
     await setValor(api, '[data-modal-conteudo] input[name=Nome]', 'Unico Teste');
-    await setValor(api, '[data-modal-conteudo] input[name=Email]', 'unico.teste@teste.com');
+    await setValor(api, '[data-modal-conteudo] input[name=Email]', 'unico.teste.' + tema + '@teste.com');
     await setValor(api, '[data-modal-conteudo] input[name=Senha]', 'Unico@123');
     await setValor(api, '[data-modal-conteudo] input[name=ConfirmarSenha]', 'Unico@123');
     await ev(api, `(()=>{const b=[...document.querySelectorAll('[data-modal-conteudo] button')].find(x=>/Criar conta/i.test(x.textContent)); if(b){ b.click(); b.click(); } return 'ok';})()`); await espera(2800);
