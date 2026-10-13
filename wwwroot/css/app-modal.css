@@ -1,0 +1,124 @@
+/* ============================================================================
+   app-modal.css - infraestrutura do modal de formulario (COMMIT 2)
+
+   O modal e montado por JS (modal-form.js) por DOM. Aqui fica so o visual:
+   overlay, caixa, cabecalho, corpo, responsivo e os ajustes de formulario
+   dentro do modal. Cores SOMENTE por token; a unica cor fixa permitida e o
+   fundo do overlay. Nenhum icone/glifo - o "x" do botao Fechar vem do JS
+   como caractere.
+   ============================================================================ */
+
+/* A pagina de fundo nao rola enquanto o modal estah aberto. */
+html.app-modal-aberto .app-main { overflow: hidden; }
+html.app-modal-aberto,
+html.app-modal-aberto body { overflow: hidden; }
+
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(5, 8, 10, .78);
+    /* entrada de 120ms (removida sob prefers-reduced-motion) */
+    animation: app-modal-in 120ms ease;
+}
+@keyframes app-modal-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.app-modal {
+    width: min(560px, 92vw);
+    max-height: 90dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+    overflow: hidden;
+}
+
+.app-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+}
+.app-modal__titulo {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+.app-modal__fechar {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line-input);
+    border-radius: 8px;
+    background: var(--bg-alt);
+    color: var(--text);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+.app-modal__fechar:hover { background: var(--bg-input); }
+.app-modal__fechar:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 2px; }
+
+/* so o corpo rola */
+.app-modal__corpo {
+    padding: 8px 24px 24px;
+    overflow-y: auto;
+    color: var(--text);
+}
+.app-modal__carregando {
+    padding: 24px 0;
+    color: var(--text-soft);
+    text-align: center;
+}
+.app-modal__erro {
+    color: var(--t-coral);
+}
+
+/* --- formulario dentro do modal --------------------------------------- */
+.app-modal__corpo form { max-width: none; }
+.app-modal__corpo .form-control,
+.app-modal__corpo .form-select { width: 100%; }
+.app-modal__corpo input,
+.app-modal__corpo select,
+.app-modal__corpo button { min-height: 40px; }
+
+/* botoes do formulario na mesma linha, a direita */
+.app-modal__corpo .app-modal-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+.app-modal__corpo .app-modal-acoes .btn { min-width: 120px; }
+
+/* --- mobile: caixa em largura total encostada no rodape ---------------- */
+@media (max-width: 639.98px) {
+    .app-modal-overlay { padding: 0; align-items: flex-end; }
+    .app-modal {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-modal-overlay { animation: none; }
+}

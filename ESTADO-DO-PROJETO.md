@@ -875,7 +875,83 @@ formulário e o mesmo POST. Escopo deste commit (1 de 3): a seta do menu.
 
 ---
 
-*Fim do relatório. Gerado em 02/10/2026, atualizado em 13/10/2026 (modais 1 de 3) a partir de `main@e49b795`.*
+## 17. MODAIS (2 DE 3) — "EDITAR PRODUTO" EM MODAL (13/10/2026)
+
+Continuação da feature de 3 commits (`pre-modais` → `ad63132` → COMMIT 2 → COMMIT 3).
+Escopo deste commit (2 de 3): abrir a edição de produto num modal reutilizando a
+**mesma rota GET/POST** de `/Home/Editar`, o **mesmo formulário** e o **mesmo
+token antiforgery** da tela cheia. **Nenhum controller muda.**
+
+### O que mudou
+
+- **`wwwroot/js/modal-form.js`** (novo, IIFE sem dependências): infraestrutura
+  genérica de modal de formulário. Intercepta o clique em
+  `<a data-modal-form data-modal-titulo="…">`, faz `fetch` do GET da rota,
+  injeta o **primeiro** `[data-modal-conteudo]` via `importNode` (scripts do HTML
+  buscado **não** rodam), monta overlay `.app-modal-overlay` por DOM e, no envio,
+  faz POST com `new FormData(form)` + token antiforgery (mesma técnica de
+  `repor-estoque.js`). Ctrl/Shift/Meta/clique do meio continuam sendo link
+  normal; Esc/clique no fundo fecham (fundo sujo **não** fecha); foco preso no
+  modal (Tab) e devolvido ao gatilho ao fechar; erro de GET mostra "Abrir em
+  tela cheia"; duplo clique no Salvar envia **1 POST** (rede CDP).
+- **`wwwroot/css/app-modal.css`** (novo): só o visual do modal (overlay, caixa,
+  cabeçalho, corpo, responsivo, ajustes de formulário dentro do modal). Cor
+  **somente por token**; única cor fixa permitida é o preto do backdrop.
+- **`wwwroot/js/produto-form.js`** (novo): o `<script>` inline que vivia em
+  `Editar.cshtml`, movido **sem mudar a lógica**; expõe
+  `window.ProdutoForm.iniciar(raiz)`, auto-inicia na tela cheia e é reamarrado
+  pelo `modal-form.js` ao injetar o conteúdo no modal.
+- **`Views/Home/Index.cshtml`**: link "Editar" ganha
+  `data-modal-form data-modal-titulo="Editar produto"`; carrega
+  `app-modal.css`, `produto-form.js` e `modal-form.js` (o `importNode` não
+  executa scripts do HTML buscado, então o JS precisa estar na página de origem).
+  **+9/-?** linhas.
+- **`Views/Home/Editar.cshtml`**: o formulário é envolvido em
+  `[data-modal-conteudo]` com um `[data-modal-fechar]` ("Voltar") e carrega os
+  mesmos 3 assets, de modo que a **tela cheia continua funcionando** idêntica.
+- **`qa/modal-check.mjs`** (novo, CDP): guarda da feature. Conta POSTs de
+  `/Home/Editar` e `/Usuarios/Criar` por **eventos de rede do CDP**
+  (`criarContadorRede`/`lerContador`, `Network.enable`), que sobrevivem ao
+  `location.reload()` do sucesso. Cobre editar (abre sem navegar, título,
+  produto certo, rótulo por kg/un, Voltar+foco, fundo limpo/sujo, Tab preso,
+  salvar recarrega mantendo busca, preço novo, duplo clique = 1 POST, GET
+  falho → "Abrir em tela cheia", colunas estáveis), Ctrl+clique (não abre modal
+  e não sequestra o link), Nova conta (pulada até o COMMIT 3), itens intactos,
+  operador (sem Editar/Usuarios). **Os cheques de "Nova conta" são pulados com
+  `[PULA]` enquanto o gatilho ainda não está em modal (COMMIT 3).**
+
+### Verificação (13/10/2026)
+
+| Checagem | Resultado |
+|---|---|
+| `node qa/modal-check.mjs` | **54 aprovadas / 0 falhas** — Dono escuro+claro; Nova conta `PULA` (COMMIT 3) |
+| `node qa/shell-check.mjs` | **142 aprovadas / 0 falhas** (V1–V6) |
+| `powershell qa/http-assets.ps1` | **13 OK / 0 falha** (6 assets × 2 req) |
+| `node qa/encoding-check.mjs` | 170 arquivos, 0 problemas |
+| `node qa/css-balance.mjs` | 727 pares equilibrados |
+| `node qa/contrast.mjs` | 60/60 pares, 0 problemas |
+| `dotnet test tests.QA` | **370 aprovados / 3 falhas** — falhas **idênticas** ao baseline (`FormasPagamento_*`) |
+| `powershell qa/http-authz.ps1` | 129 OK / **2 falhas pré-existentes** (texto do Dashboard "Vendas de hoje"/"ltimos 7 dias"; `Views/Dashboard` + `http-authz.ps1` = 0 diff vs baseline). Checagens do Estoque (`btn-novo`, `btn-editar`, permissões) **todas OK** |
+| auto-conferência do diff vs `pre-modais` | só arquivos permitidos + `_Layout` (+1/-0, do COMMIT 1); `.db` intacto |
+
+As 2 falhas do `http-authz` e as 3 do `dotnet test` são **pré-existentes** e
+**não** relacionadas aos modais: `Views/Dashboard`, `tests.QA` e
+`qa/http-authz.ps1` estão **byte-idênticos** ao baseline `pre-modais`
+(`git diff --stat pre-modais` = 0 linhas para esses caminhos).
+
+### Regras mantidas
+
+- `controleestoque.db` **intacto** (SHA256 idêntico no `http-authz`) e fora do
+  `git add`; seed de QA só no `.db` temporário (`trx\app-teste.db`).
+- **Nenhum controller**, nenhum `shell.js`, nenhum `corporate-theme.css` e
+  nenhum `repor*` tocados; nenhuma migration, nenhum push.
+- Escopo do commit: `app-modal.css`, `modal-form.js`, `produto-form.js`,
+  `Views/Home/Editar.cshtml`, `Views/Home/Index.cshtml`, `qa/modal-check.mjs`,
+  esta nota. Capturas em `prints\modal-*.png`.
+
+---
+
+*Fim do relatório. Gerado em 02/10/2026, atualizado em 13/10/2026 (modais 1 e 2 de 3) a partir de `main@e49b795`.*
 
 
 

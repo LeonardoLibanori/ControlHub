@@ -5,6 +5,7 @@
 
     <h2 class="mb-4 text-center">Editar produto</h2>
 
+    <div data-modal-conteudo>
     <form method="post" action="/Home/Editar">
         @Html.AntiForgeryToken()
         <input type="hidden" name="id" value="@Model.Id" />
@@ -20,7 +21,7 @@
                atualizarRotuloPreco e o servidor dependem deles). "Peso (kg)" fica
                selecionado so quando o Tipo ATUAL e PorPeso; qualquer outro (Prateleira,
                Geladeira, Freezer) cai em "Unidade" - igual ao fallback do servidor. *@
-            <select name="tipo" id="tipoProduto" onchange="atualizarRotuloPreco()" class="form-select" required>
+            <select name="tipo" id="tipoProduto" class="form-select" required>
                 @if (Model.Tipo == TipoProduto.PorPeso) { <option value="Prateleira">Unidade</option> <option value="PorPeso" selected>Peso (kg)</option> }
                 else { <option value="Prateleira" selected>Unidade</option> <option value="PorPeso">Peso (kg)</option> }
             </select>
@@ -30,7 +31,7 @@
             <label id="labelPreco" class="form-label fw-bold">Preço por kg (R$/kg)</label>
             <div class="input-group">
                 <span class="input-group-text">R$</span>
-                <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" oninput="formatarMoeda(this)" class="form-control" required />
+                <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" class="form-control" required />
             </div>
             <input type="hidden" name="preco" id="precoReal" value="@((Model.Preco * 100).ToString("0"))">
         </div>
@@ -47,32 +48,17 @@
     </form>
 
     <div class="text-center mt-3">
-        <a href="/Home/Index" class="btn btn-outline-secondary btn-sm">Voltar</a>
+        <a href="/Home/Index" class="btn btn-outline-secondary btn-sm" data-modal-fechar>Voltar</a>
+    </div>
     </div>
 
 </div>
 
-<script>
-    function atualizarRotuloPreco() {
-        const tipo = document.getElementById('tipoProduto').value;
-        document.getElementById('labelPreco').innerText = tipo === 'PorPeso'
-            ? 'Preço por kg (R$/kg):'
-            : 'Preço unitário (R$):';
-    }
-
-    atualizarRotuloPreco();
-
-    function formatarMoeda(input) {
-        let valor = input.value.replace(/\D/g, "");
-        if (valor === "") {
-            input.value = "";
-            document.getElementById("precoReal").value = "";
-            return;
-        }
-        input.value = (parseInt(valor) / 100).toFixed(2).replace(".", ",");
-        document.getElementById("precoReal").value = valor;
-    }
-
-</script>
+@* O script inline que havia aqui (rotulo do preco + formatarMoeda) foi movido
+   para wwwroot/js/produto-form.js, que expoe window.ProdutoForm.iniciar(raiz)
+   e se auto-inicia na tela cheia; o modal-form.js o reamarra ao injetar. *@
+<link rel="stylesheet" href="~/css/app-modal.css" asp-append-version="true" />
+<script src="~/js/produto-form.js" asp-append-version="true"></script>
+<script src="~/js/modal-form.js" asp-append-version="true"></script>
 
 
