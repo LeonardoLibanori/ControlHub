@@ -3182,18 +3182,31 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .app-sidebar__grupo {
-    font-size: .72rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .68rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .08em;
     color: var(--text-soft);
-    padding: .9rem 1.1rem .3rem;
+    opacity: .75;
+    padding: 1.15rem .75rem .4rem;
+    cursor: default;
+    user-select: none;
+}
+
+.app-sidebar__grupo:not(:first-child) {
+    margin-top: .6rem;
+    border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+    padding-top: 1.15rem;
 }
 
 .app-sidebar__nav {
     display: flex;
     flex-direction: column;
-    gap: .1rem;
-    padding: 0 .55rem;
+    gap: .2rem;
+    padding: 0 .65rem;
     flex: 1 1 auto;
     overflow-y: auto;
 }
@@ -3201,20 +3214,54 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 .app-sidebar__item {
     display: flex;
     align-items: center;
-    padding: .5rem .6rem;
+    gap: .65rem;
+    padding: .55rem .75rem;
     border-radius: 8px;
     text-decoration: none;
     color: var(--text-soft);
-    font-weight: 500;
+    font-size: .9rem;
+    font-weight: 600;
     white-space: nowrap;
+    border-left: 3px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .12s ease;
 }
 
-.app-sidebar__item:hover { background: var(--bg-alt); color: var(--text); }
+.app-sidebar__item::before {
+    font-family: 'bootstrap-icons' !important;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-block;
+    color: var(--text-soft);
+    opacity: .8;
+    transition: color .15s ease, opacity .15s ease;
+}
+
+.app-sidebar__item[href*="/Home/Index"]::before { content: "\F1C7"; } /* bi-box-seam */
+.app-sidebar__item[href="/Caixa"]::before { content: "\F244"; }        /* bi-cart3 */
+.app-sidebar__item[href*="Historico"]::before { content: "\F292"; }   /* bi-clock-history */
+.app-sidebar__item[href*="/Dashboard"]::before { content: "\F580"; }  /* bi-speedometer2 */
+
+.app-sidebar__item:hover {
+    background: var(--bg-alt);
+    color: var(--text);
+    transform: translateX(2px);
+}
+
+.app-sidebar__item:hover::before {
+    color: var(--text);
+    opacity: 1;
+}
 
 .app-sidebar__item.active {
     background: color-mix(in srgb, var(--c-blue) 14%, transparent);
     color: var(--t-blue);
-    font-weight: 600;
+    font-weight: 700;
+    border-left-color: var(--c-blue);
+}
+
+.app-sidebar__item.active::before {
+    color: var(--t-blue);
+    opacity: 1;
 }
 
 /* --- rodape da sidebar: linha do tema + botao do usuario --- */
