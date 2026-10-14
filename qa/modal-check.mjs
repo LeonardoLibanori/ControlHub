@@ -2,7 +2,7 @@
    modal-check.mjs - guarda dos modais de formulario (COMMIT 2 e 3)
    Dono e Operador, dois temas, 1440x900, 1366x768 e 390x844, com 3 produtos.
    COMMIT 2 (Editar produto) - 15 checagens; COMMIT 3 (Nova conta) - 8;
-   COMMIT 4 (Editar conta de usuario) - 13.
+   COMMIT 4 (Editar conta de usuario) - 13; COMMIT 5 (Novo produto) - 6.
    Credenciais SO por ambiente: SHELL_DONO_EMAIL/SENHA, SHELL_OPER_EMAIL/SENHA.
    Uso: node qa/modal-check.mjs --base http://127.0.0.1:5311 --out "...\prints"
    ============================================================================ */
@@ -256,6 +256,39 @@ async function editarContaChecks(api, tema) {
     check(g + ' (7) tela cheia tem o formulario', cheia.form === true && /Editar conta/.test(cheia.h2), JSON.stringify(cheia));
 }
 
+// COMMIT 5 (modal Novo produto): o gatilho "Novo produto" no Home/Index vira
+// modal, como o "Editar produto"/"Nova conta"/"Editar conta". O POST /Home/Novo
+// SEMPRE redireciona para Index (mesmo no erro, via TempData), entao o modal
+// fecha e recarrega a lista. Aqui verificamos o que nao depende de estado do
+// banco: abre sem navegar + titulo, Esc fecha, e duplo clique = 1 POST (o
+// form fica desabilitado apos o 1o envio). NAO criamos produto de verdade.
+async function novoProdutoChecks(api, tema) {
+    const g = 'novo-prod/' + tema;
+    await ev(api, `location.href = ${JSON.stringify(BASE + '/Home/Index')}`); await espera(800);
+    const gatilho = await ev(api, `!!document.querySelector('a[data-modal-form][data-modal-titulo="Novo produto"]')`);
+    if (!gatilho) { pular(g + ' Novo produto ainda nao em modal (COMMIT 5 pendente)'); return; }
+
+    await ev(api, `(()=>{const a=document.querySelector('a[data-modal-form][data-modal-titulo="Novo produto"]'); if(!a) throw new Error('sem link Novo produto'); a.click(); return 'ok';})()`); await espera(1400);
+    let st = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), titulo: (document.querySelector('.app-modal__titulo')||{}).textContent, form: !!document.querySelector('[data-modal-conteudo] form[action*="/Home/Novo"]'), acao: ((document.querySelector('[data-modal-conteudo] form')||{}).getAttribute('action'))||'', path: location.pathname }`);
+    check(g + ' (1) modal Novo produto abre sem navegar', st.overlay === true && st.form === true && st.path.indexOf('/Home/Index') === 0, JSON.stringify(st));
+    check(g + ' (1) titulo "Novo produto"', st.titulo === 'Novo produto', st.titulo);
+    check(g + ' (1) form aponta para /Home/Novo', st.acao.indexOf('/Home/Novo') >= 0, st.acao);
+
+    await fecharEsc(api); await espera(400);
+    let fechou = await j(api, `{ overlay: !!document.querySelector('.app-modal-overlay'), foco: document.activeElement && document.activeElement.className }`);
+    check(g + ' (4) Esc fecha Novo produto', fechou.overlay === false);
+    check(g + ' (4) foco volta ao gatilho', /btn-novo/.test(fechou.foco || ''), fechou.foco);
+
+    await ev(api, `location.href = ${JSON.stringify(BASE + '/Home/Index')}`); await espera(800);
+    const contNovo = criarContadorRede(api, '/Home/Novo');
+    await ev(api, `(()=>{const a=document.querySelector('a[data-modal-form][data-modal-titulo="Novo produto"]'); if(a) a.click(); return 'ok';})()`); await espera(1400);
+    await setValor(api, '[data-modal-conteudo] input[name=nome]', 'Produto Qa ' + tema);
+    await setValor(api, '[data-modal-conteudo] input[name=codigoBarras]', '');
+    await ev(api, `(()=>{const b=[...document.querySelectorAll('[data-modal-conteudo] button[type=submit]')].find(x=>/Salvar produto/i.test(x.textContent)); if(b){ b.click(); b.click(); } return 'ok';})()`); await espera(2800);
+    const nposts = lerContador(contNovo);
+    check(g + ' (7) duplo clique envia UM POST /Home/Novo', nposts === 1, 'posts=' + nposts);
+}
+
 
 async function operadorChecks(api, tema) {
     const g = 'operador/' + tema;
@@ -324,6 +357,7 @@ async function main() {
                 await fecharEsc(api); await espera(300);
             }
             await editarContaChecks(api, tema);
+            await novoProdutoChecks(api, tema);
             await itensIntactos(api, tema);
             await ctrlClique(api, tema);
         }

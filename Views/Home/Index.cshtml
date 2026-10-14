@@ -42,7 +42,7 @@
     @if (podeGerenciarEstoque)
     {
         <div class="mb-4 d-flex flex-wrap gap-2">
-            <a asp-controller="Home" asp-action="Novo" class="btn-novo">Novo produto</a>
+            <a asp-controller="Home" asp-action="Novo" class="btn-novo" data-modal-form data-modal-titulo="Novo produto">Novo produto</a>
 
             @* Exportar (item 3): leva o mesmo `buscaAtual` da tela, para o
                arquivo ter exatamente os produtos que estao na tabela. Sem o

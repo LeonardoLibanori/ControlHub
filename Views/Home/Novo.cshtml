@@ -1,12 +1,20 @@
-﻿@using ControleEstoqueLoja.Models
+@using ControleEstoqueLoja.Models
 @{
     ViewData["Title"] = "Novo Produto";
 }
 
 <div class="container mt-4">
     <div class="product-form-panel">
+
         <h2 class="mb-4">Novo produto</h2>
 
+        @* COMMIT 4 (modal Novo produto): o formulario fica dentro do
+           [data-modal-conteudo] para o modal-form.js extrair e injetar. O <h2>
+           e o container ficam FORA - o titulo do modal vem do gatilho
+           (data-modal-titulo="Novo produto" no Index.cshtml). A logica que era
+           um <script> inline aqui foi movida para wwwroot/js/produto-form.js
+           (ProdutoForm.iniciar), que o modal-form.js reamarra ao injetar. *@
+        <div data-modal-conteudo>
         <form method="post" action="/Home/Novo">
             @Html.AntiForgeryToken()
             <div class="mb-3">
@@ -33,18 +41,17 @@
                    do enum (o JS atualizarQuantidade e o servidor dependem deles).
                    Geladeira e Freezer seguem no enum para os produtos legados, e um
                    produto assim aparece aqui como "Unidade". *@
-                <select name="tipo" id="tipoProduto" class="form-select" required onchange="atualizarQuantidade()">
+                <select name="tipo" id="tipoProduto" class="form-select" required>
                     <option value="Prateleira">Unidade</option>
                     <option value="PorPeso">Peso (kg)</option>
                 </select>
             </div>
 
             <div class="mb-3">
-                <label id="labelPreco" class="form-label fw-bold">Preço por kg (R$/kg)</label>
+                <label id="labelPreco" class="form-label fw-bold">Preço unitário (R$)</label>
                 <div class="input-group">
                     <span class="input-group-text">R$</span>
-                    <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required
-                           oninput="formatarMoeda(this, 'precoReal')" />
+                    <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required />
                 </div>
                 <input type="hidden" name="preco" id="precoReal">
             </div>
@@ -52,16 +59,16 @@
             <div class="mb-4">
                 <label id="labelQuantidade" class="form-label fw-bold">Quantidade inicial</label>
                 <div class="input-group">
-                    <input type="number" id="quantidadeVisual" class="form-control" min="0" step="any" required oninput="atualizarQuantidade()" />
-                    <span id="unidadeQuantidade" class="input-group-text">kg</span>
+                    <input type="number" id="quantidadeVisual" class="form-control" min="0" step="any" required />
+                    <span id="unidadeQuantidade" class="input-group-text">un</span>
                 </div>
                 <input type="hidden" name="quantidade" id="quantidadeReal" />
             </div>
 
             <div class="mb-3">
-                <label id="labelEstoqueMinimo" class="form-label fw-bold">Estoque mínimo (alerta)</label>
+                <label id="labelEstoqueMinimo" class="form-label fw-bold">Estoque mínimo (alerta, un)</label>
                 <div class="input-group">
-                    <input type="number" id="estoqueMinimoVisual" class="form-control" min="0" step="any" placeholder="0 = sem alerta" oninput="sincronizarEstoqueMinimo()" />
+                    <input type="number" id="estoqueMinimoVisual" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
                     <span id="unidadeEstoqueMinimo" class="input-group-text">un</span>
                 </div>
                 <input type="hidden" name="estoqueMinimo" id="estoqueMinimoReal" />
@@ -72,80 +79,20 @@
         </form>
 
         <div class="text-center mt-3">
-            <a href="/Home/Index" class="btn btn-outline-secondary btn-sm">Voltar</a>
+            <a href="/Home/Index" class="btn btn-outline-secondary btn-sm" data-modal-fechar>Voltar</a>
         </div>
+        </div>
+
     </div>
 </div>
 
-<script>
-    function atualizarQuantidade() {
-        const tipo = document.getElementById('tipoProduto').value;
-        const input = document.getElementById('quantidadeVisual');
-        const hidden = document.getElementById('quantidadeReal');
-        const label = document.getElementById('labelQuantidade');
-        const unidade = document.getElementById('unidadeQuantidade');
-        const labelPreco = document.getElementById('labelPreco');
-
-        if (tipo === 'PorPeso') {
-            label.innerText = "Quantidade inicial:";
-            unidade.innerText = "kg";
-            input.step = "any";
-            labelPreco.innerText = "Preço por kg (R$/kg):";
-        } else {
-            label.innerText = "Quantidade inicial:";
-            unidade.innerText = "un";
-            input.step = "1";
-            labelPreco.innerText = "Preço unitário (R$):";
-        }
-
-        hidden.value = input.value.replace(',', '.');
-        sincronizarEstoqueMinimo();
-    }
-
-    // O estoque mínimo usa a MESMA unidade da quantidade (kg / un). Mantém os
-    // dois labels em sincronia quando o tipo do produto muda.
-    function sincronizarEstoqueMinimo() {
-        const tipo = document.getElementById('tipoProduto').value;
-        const unidadeMin = document.getElementById('unidadeEstoqueMinimo');
-        const labelMin = document.getElementById('labelEstoqueMinimo');
-        const visual = document.getElementById('estoqueMinimoVisual');
-        const hidden = document.getElementById('estoqueMinimoReal');
-
-        const ePeso = tipo === 'PorPeso';
-        if (unidadeMin) unidadeMin.innerText = ePeso ? "kg" : "un";
-        if (labelMin) labelMin.innerText = ePeso ? "Estoque mínimo (alerta, kg):" : "Estoque mínimo (alerta, un):";
-        if (visual) visual.step = ePeso ? "any" : "1";
-        if (hidden) hidden.value = visual ? visual.value.replace(',', '.') : "";
-    }
-
-    atualizarQuantidade();
-
-        function formatarMoeda(input, idOculto) {
-        let valor = input.value.replace(/\D/g, "");
-        if (valor === "") {
-            input.value = "";
-            if(idOculto) document.getElementById(idOculto).value = "";
-            return;
-        }
-        // Exibe formatado no input que o usuário vê (ex: 12,20)
-        input.value = (parseInt(valor) / 100).toFixed(2).replace(".", ",");
-
-        // Se houver um ID oculto (como precoReal), guarda o valor puro (ex: 1220)
-        if(idOculto) {
-            document.getElementById(idOculto).value = valor;
-        }
-
-        // Retorna o valor limpo para uso em funções que não usam campos ocultos
-        return valor;
-    }
-
-        // Previne que o leitor de código de barras envie o formulário antes da hora
-    document.getElementById("inputCodigo").addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-            e.preventDefault(); // Não deixa o formulário ser enviado
-
-            // Opcional: foca no campo Nome após o bip para agilizar
-            document.querySelector('input[name="nome"]').focus();
-        }
-    });
-</script>
+@* O <script> inline que existia aqui (atualizarQuantidade, sincronizarEstoqueMinimo,
+   formatarMoeda e o listener do #inputCodigo) foi movido para
+   wwwroot/js/produto-form.js, que expoe window.ProdutoForm.iniciar(raiz) e se
+   auto-inicia na tela cheia; o modal-form.js o reamarra ao injetar no modal.
+   Os atributos onchange/oninput foram removidos: a logica agora e amarrada por
+   addEventListener, que sobrevive a injecao do modal (funcoes globais inline nao
+   existem no escopo do conteudo importado). *@
+<link rel="stylesheet" href="~/css/app-modal.css" asp-append-version="true" />
+<script src="~/js/produto-form.js" asp-append-version="true"></script>
+<script src="~/js/modal-form.js" asp-append-version="true"></script>
