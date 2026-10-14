@@ -1,12 +1,13 @@
 @model ControleEstoqueLoja.Controllers.DashboardViewModel
 @using System.Globalization
+@using ControleEstoqueLoja.Data
 @inject ControleEstoqueLoja.Data.ApplicationDbContext _context
 @{
     ViewData["Title"] = "Dashboard";
 
     var br = CultureInfo.GetCultureInfo("pt-BR");
-    string Dinheiro(decimal valor) => valor.ToString("C", br);
-    string Qtd(decimal valor) => valor.ToString("0.###", br);
+    string Dinheiro(decimal valor) => FormatoPtBr.Moeda(valor);
+    string Qtd(decimal valor) => FormatoPtBr.Quantidade(valor);
 
     // Frase de variação
     string FraseVariacao()
@@ -16,9 +17,9 @@
         if (Model.FaturamentoAnterior == 0m)
             return "Ainda não há vendas no período anterior para comparar.";
         if (Model.VariacaoPercentual > 0m)
-            return $"As vendas subiram {Model.VariacaoPercentual.Value.ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+            return $"As vendas subiram {Model.VariacaoPercentual.Value.ToString("F1", br)}% em relação ao período anterior.";
         if (Model.VariacaoPercentual < 0m)
-            return $"As vendas caíram {Math.Abs(Model.VariacaoPercentual.Value).ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+            return $"As vendas caíram {Math.Abs(Model.VariacaoPercentual.Value).ToString("F1", br)}% em relação ao período anterior.";
         return "As vendas ficaram estáveis em relação ao período anterior.";
     }
 
@@ -88,7 +89,7 @@
             <span class="dsh-kpi-rotulo">Faturamento</span>
             <strong class="dsh-kpi-valor">@Dinheiro(Model.FaturamentoAtual)</strong>
             <span class="dsh-kpi-variacao" style="color:@CorVariacao();background:@(Model.VariacaoPercentual > 0 ? "var(--s-green-fundo)" : (Model.VariacaoPercentual < 0 ? "var(--s-coral-fundo)" : "var(--s-slate-fundo)"))">
-                @(Model.VariacaoPercentual == null ? "—" : (Model.VariacaoPercentual > 0 ? "+" : "") + Model.VariacaoPercentual.Value.ToString("F1", CultureInfo.InvariantCulture) + "%")
+                @FormatoPtBr.Percentual(Model.VariacaoPercentual)
             </span>
             <span class="dsh-kpi-vs">vs período anterior</span>
         </article>
@@ -99,7 +100,7 @@
             <span class="dsh-kpi-rotulo">Vendas</span>
             <strong class="dsh-kpi-valor">@Model.VendasAtual</strong>
             <span class="dsh-kpi-variacao" style="color:@(Model.VendasAnterior > 0 && Model.VendasAtual != Model.VendasAnterior ? (Model.VendasAtual > Model.VendasAnterior ? "var(--t-green)" : "var(--t-coral)") : "var(--text-soft)");background:@(Model.VendasAnterior > 0 && Model.VendasAtual != Model.VendasAnterior ? (Model.VendasAtual > Model.VendasAnterior ? "var(--s-green-fundo)" : "var(--s-coral-fundo)") : "var(--s-slate-fundo)")">
-                @(Model.VendasAnterior > 0 ? (Model.VendasAtual > Model.VendasAnterior ? "+" : "") + ((decimal)(Model.VendasAtual - Model.VendasAnterior) / Model.VendasAnterior * 100m).ToString("F1", CultureInfo.InvariantCulture) + "%" : "—")
+                @(Model.VendasAnterior > 0 ? FormatoPtBr.Percentual((decimal)(Model.VendasAtual - Model.VendasAnterior) / Model.VendasAnterior * 100m) : "—")
             </span>
             <span class="dsh-kpi-vs">vs período anterior</span>
         </article>
@@ -110,7 +111,7 @@
             <span class="dsh-kpi-rotulo">Ticket médio</span>
             <strong class="dsh-kpi-valor">@Dinheiro(Model.TicketMedioAtual)</strong>
             <span class="dsh-kpi-variacao" style="color:@(Model.TicketMedioAnterior > 0 && Model.TicketMedioAtual != Model.TicketMedioAnterior ? (Model.TicketMedioAtual > Model.TicketMedioAnterior ? "var(--t-green)" : "var(--t-coral)") : "var(--text-soft)");background:@(Model.TicketMedioAnterior > 0 && Model.TicketMedioAtual != Model.TicketMedioAnterior ? (Model.TicketMedioAtual > Model.TicketMedioAnterior ? "var(--s-green-fundo)" : "var(--s-coral-fundo)") : "var(--s-slate-fundo)")">
-                @(Model.TicketMedioAnterior > 0 ? (Model.TicketMedioAtual > Model.TicketMedioAnterior ? "+" : "") + ((Model.TicketMedioAtual - Model.TicketMedioAnterior) / Model.TicketMedioAnterior * 100m).ToString("F1", CultureInfo.InvariantCulture) + "%" : "—")
+                @(Model.TicketMedioAnterior > 0 ? FormatoPtBr.Percentual((Model.TicketMedioAtual - Model.TicketMedioAnterior) / Model.TicketMedioAnterior * 100m) : "—")
             </span>
             <span class="dsh-kpi-vs">vs período anterior</span>
         </article>
@@ -162,7 +163,7 @@
                         <text>
                             <line x1="56" y1="@y" x2="704" y2="@y" stroke="var(--line)" stroke-width="1" stroke-dasharray="4,4" />
                             <text x="52" y="@(y + 4)" font-size="12" fill="var(--text-soft)" text-anchor="end" style="font-family:'DM Sans', sans-serif">
-                                R$ @tick.ToString("F0", CultureInfo.InvariantCulture)
+                                R$ @tick.ToString("F0", br)
                             </text>
                         </text>
                     }
@@ -196,7 +197,7 @@
                             var anterior = Model.SerieAnterior.Count > i && Model.SerieAnterior[i].ValorAnterior.HasValue
                                 ? Model.SerieAnterior[i].ValorAnterior.Value
                                 : (decimal?)null;
-                            var tooltip = $"{Model.SerieAtual[i].Rotulo} · R$ {valor.ToString("F2", CultureInfo.InvariantCulture)} · {(anterior.HasValue ? $"anterior R$ {anterior.Value.ToString("F2", CultureInfo.InvariantCulture)}" : "sem anterior")}";
+                            var tooltip = $"{Model.SerieAtual[i].Rotulo} · R$ {valor.ToString("F2", br)} · {(anterior.HasValue ? $"anterior R$ {anterior.Value.ToString("F2", br)}" : "sem anterior")}";
                             var isSelecionado = Model.DiaSelecionado.HasValue && Model.SerieAtual[i].Rotulo.Contains(Model.DiaSelecionado.Value.ToString("dd/MM"));
 
                             <a href="@(Model.SerieAtual[i].ValorAtual.HasValue && Model.Periodo != "hoje" && Model.Periodo != "ontem"
@@ -243,9 +244,9 @@
                     <tbody>
                         @for (int i = 0; i < Model.SerieAtual.Count; i++)
                         {
-                            var atual = Model.SerieAtual[i].ValorAtual?.ToString("F2", CultureInfo.InvariantCulture) ?? "—";
+                            var atual = Model.SerieAtual[i].ValorAtual?.ToString("F2", br) ?? "—";
                             var anterior = Model.SerieAnterior.Count > i && Model.SerieAnterior[i].ValorAnterior.HasValue
-                                ? Model.SerieAnterior[i].ValorAnterior.Value.ToString("F2", CultureInfo.InvariantCulture)
+                                ? Model.SerieAnterior[i].ValorAnterior.Value.ToString("F2", br)
                                 : "—";
                             <tr>
                                 <th scope="row">@Model.SerieAtual[i].Rotulo</th>
@@ -304,7 +305,7 @@
                                 <span class="dsh-rosca-cor" style="background:@fp.Cor" aria-hidden="true"></span>
                                 <span class="dsh-rosca-nome">@fp.Metodo</span>
                                 <span class="dsh-rosca-detalhes">
-                                    <span class="dsh-rosca-pct">@fp.Percentual.ToString("F1", CultureInfo.InvariantCulture)%</span>
+                                    <span class="dsh-rosca-pct">@FormatoPtBr.PercentualSimples(fp.Percentual)</span>
                                     <span class="dsh-rosca-val">@Dinheiro(fp.Valor)</span>
                                 </span>
                             </li>
@@ -389,7 +390,7 @@
                             </div>
                             <div class="dsh-mais-vendido-valor-bar">
                                 <strong class="dsh-mais-vendido-valor">@Dinheiro(p.Valor)</strong>
-                                <div class="dsh-barra-relativa" role="img" aria-label="@p.BarraRelativa.ToString("F1", CultureInfo.InvariantCulture)% do maior">
+                                <div class="dsh-barra-relativa" role="img" aria-label="@FormatoPtBr.PercentualSimples(p.BarraRelativa) do maior">
                                     <div class="dsh-barra-fill" style="width:@p.BarraRelativa.ToString("F1", CultureInfo.InvariantCulture)%; background:var(--c-blue)"></div>
                                 </div>
                             </div>
