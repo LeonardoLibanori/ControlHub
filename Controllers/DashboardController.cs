@@ -66,7 +66,7 @@ namespace ControleEstoqueLoja.Controllers
             var vendasPeriodo = await _context.Vendas
                 .AsNoTracking()
                 .Where(v => v.DataVenda >= periodoInicio && v.DataVenda < periodoFim)
-                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda })
+                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda, MetodoPagamento = v.MetodoPagamento })
                 .ToListAsync();
 
             var faturamentoAtual = vendasPeriodo.Sum(v => v.Total);
@@ -1047,8 +1047,9 @@ return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
 // =====================================================================
 
 /// <summary>
-/// Projecao minima de uma venda dentro da janela: so a data e o total
-/// gravado. Carregar a venda inteira arrastaria os itens, que nao servem
+/// Projecao minima de uma venda dentro da janela: data, total gravado e
+/// metodo de pagamento (a rosca de formas de pagamento agrupa por ele).
+/// Carregar a venda inteira arrastaria os itens, que nao servem
 /// para nada no grafico.
 /// </summary>
 public class VendaPeriodo

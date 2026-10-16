@@ -1049,3 +1049,14 @@ node ControleEstoqueLoja\qa\modal-check.mjs
 `Views/Usuarios/Index.cshtml`, `Views/Usuarios/Editar.cshtml`, `qa/modal-check.mjs`,
 `ESTADO-DO-PROJETO.md` (seÃ§Ã£o 19). `.db` fora do `git add`.
 
+
+## 20. FASE 0/B — TESTES CONFIÁVEIS (15/10/2026)
+
+- **Portão**: `git status --short` vazio no repositório novo (o `.db` não é mais versionado).
+- **Causa das 3 falhas `FormasPagamento_*`** (esperavam 2/3/6 fatias; saía 1): `DashboardController.Index` projetava `VendaPeriodo { Data = .., Total = .. }` **sem `MetodoPagamento`** → a propriedade (default `string.Empty`) chegava vazia em todas as vendas → `MontarFormasPagamento` agrupava tudo em **1 única fatia** (método vazio, cor "slate"). Evidências: seed correto (`SeedVenda` grava o método), projeção incompleta (linha 69) e resultado `Actual: 1` nos 3 asserts.
+- **Conserto no CÓDIGO** (testes estavam corretos pela especificação): o `Select` do período atual passa a projetar `MetodoPagamento = v.MetodoPagamento`; comentário da classe `VendaPeriodo` atualizado. Nenhum valor esperado trocado, nenhum Skip, nenhum teste apagado.
+- **Conta (dinheiro)**: 100+50 "Dinheiro"/"dinheiro" vs 200 PIX → 165/365 = 45,2% e 200/365 = 54,8% (soma 100,0); 3×100 → 33,3+33,3+**33,4** (último absorve); 6 formas total 480 → 41,7+20,8+15,6+10,4+6,3+**5,2** = 100,0.
+- **Regressão**: commit-base `6c96719` (grep "detalhe do dia em partial"; é o antigo `9c016b9` reescrito) — `git diff 6c96719 HEAD -- tests.QA` = **só arquivos novos** (+1620/0 deleções em `DashboardTemplateQaTests.cs` e `ReporEstoqueQaTests.cs`); nenhum `[Fact]`/`[Theory]`/`[InlineData]` reduzido ou apagado.
+- **GATE**: `dotnet test` **373/373** (373 = 373 aprovados + 0 falhos + 0 ignorados), 0 `NotImplementedException`; build 0 erros / **8 avisos = baseline** (CS8629 pré-existentes); `git diff --numstat pre-fase0-testes` = só `Controllers/DashboardController.cs` (+4/−3).
+- **Commit**: `test(qa): corrige agrupamento de formas de pagamento e concilia a suite` (tag baseline `pre-fase0-testes`).
+
