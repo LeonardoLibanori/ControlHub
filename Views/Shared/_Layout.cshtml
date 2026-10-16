@@ -1,4 +1,4 @@
-﻿@*
+@*
     ==========================================================================
     BUG-13 (commit 4): MENU POR PAPEL.
     ==========================================================================
@@ -178,7 +178,7 @@
     @* Nome do produto: generico de proposito. A identidade visual da loja
        (CNPJ, endereco, telefone) ainda nao esta parametrizada - ver
        Views/Caixa/GerarCupom.cshtml e a secao "Dados da empresa" do README. *@
-    <title>@ViewData["Title"] - Controle de Estoque e Caixa</title>
+    <title>@ViewData["Title"]</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -267,9 +267,7 @@
                 </div>
             </header>
             <main class="app-content" id="appContent">@RenderBody()</main>
-            <footer class="app-footer">
-                <div class="container">&copy; 2026 - Controle de Estoque e Caixa</div>
-            </footer>
+            
         </div>
         <div class="cortina-sidebar" id="cortinaSidebar" aria-hidden="true"></div>
     </div>
@@ -433,11 +431,7 @@ else
         @RenderBody()
     </main>
 
-    <footer class="footer text-muted text-center py-3">
-        <div class="container" style="color: white;">
-            &copy; 2026 - Controle de Estoque e Caixa
-        </div>
-    </footer>
+
 }
 
         @* Modal Atalhos (Mantido) *@
