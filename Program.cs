@@ -13,6 +13,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
+// Ancora caminho RELATIVO do SQLite no ContentRoot (pasta do projeto/publicacao).
+// O SQLite resolve "Data Source=..." contra a pasta de trabalho do processo, que
+// varia conforme a forma de execucao (ex.: o F5 do VS Code abre na raiz do
+// workspace e nao na pasta do projeto). Sem esta ancoragem, o app abria/criava
+// um controleestoque.db VAZIO em outra pasta e o login virava a tela "Criar dono".
+if (!string.IsNullOrWhiteSpace(connectionString))
+{
+    var sqlite = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(connectionString);
+    if (!string.IsNullOrWhiteSpace(sqlite.DataSource) && !Path.IsPathRooted(sqlite.DataSource))
+    {
+        sqlite.DataSource = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, sqlite.DataSource));
+        connectionString = sqlite.ToString();
+    }
+}
+
 // Substitua a linha do AddDbContext por esta:
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
@@ -30,6 +45,12 @@ Console.WriteLine($"O BANCO ATIVO É: {connectionString}");
 // cadastrar/excluir vendedor) nao passam por formulario: o token precisa
 // vir no header X-CSRF-TOKEN, lido de um <meta> renderizado no layout.
 // ------------------------------------------------------------------
+// NAO usar SameSite=None aqui: navegadores descartam cookies SameSite=None sem
+// Secure, o cookie do token nao e salvo, e TODO POST (inclusive o login) cai
+// no [ValidateAntiForgeryToken] e falha. Lax cobre os fetch() de admin-caixa.js
+// porque SameSite so regula requisicoes CROSS-site; fetch e form do mesmo site
+// levam o cookie normalmente. (WIP que colocou None sem Secure causou o bug de
+// login de 16/10/2026 - corrigido aqui.)
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
