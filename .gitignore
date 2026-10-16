@@ -395,12 +395,11 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 # ---------------------------------------------------------------------------
-# Banco de EXEMPLO: este DEVE ser versionado.
-# Estas excecoes ficam no FINAL de proposito: o template do Visual Studio
-# contem as regras *.db / *.db-shm / *.db-wal, e no Git a ultima regra que
-# casa com o caminho e a que vale.
+# Banco de EXEMPLO: NAO e mais versionado (Fase 0/C).
+# O arquivo controleestoque.exemplo.db foi removido do repositorio; qualquer
+# .db cai nas regras *.db / *.db-shm / *.db-wal acima. Nenhuma excecao !*.db
+# deve existir neste arquivo.
 # ---------------------------------------------------------------------------
-!controleestoque.exemplo.db
 # Os sidecars de WAL (-shm / -wal) do template NAO sao versionados de
 # proposito: sao artefato de runtime de quem abriu o arquivo e perdem o
 # sentido longe do .db que os gerou. Como o template e copiado para
@@ -408,16 +407,22 @@ FodyWeavers.xsd
 # ao lado de um .db copiado e vetor de corrupcao. Ficam entao cobertos pelas
 # regras *.db-shm / *.db-wal do template do Visual Studio acima.
 # ---------------------------------------------------------------------------
-# Banco REAL: AGORA VERSIONADO (decisao de 02/10/2026).
+# Banco REAL: NAO versionado (Fase 0/C - reverte a decisao de 02/10/2026).
 # ---------------------------------------------------------------------------
-# O objetivo e ter o MESMO banco (e portanto os MESMOS logins) na maquina de
-# casa e na do trabalho, com o dia a dia sendo so `git pull` / `git push`.
-# A regra `!controleestoque.db` precisa vir DEPOIS das regras *.db do template
-# (a ultima regra que casa com o caminho e a que vale) - por isso esta secao
-# fica no fim do arquivo.
-# LEIA SINCRONIZAR.md antes do primeiro push: explica o porque, o fluxo certo
-# e o que fazer quando as duas maquinas mexerem no mesmo banco.
-!controleestoque.db
+# O banco contem dados de operacao e NUNCA entra no Git: ele cai nas regras
+# *.db / *.db-shm / *.db-wal do template do Visual Studio acima. O app cria
+# um banco novo na primeira execucao (Database.Migrate) e /Account/Setup
+# cria o Dono. Ver SINCRONIZAR.md e o aviso no fim de ESTADO-DO-PROJETO.md.
+# ---------------------------------------------------------------------------
+# Artefatos locais de QA/diagnostico (nunca versionados).
+# ---------------------------------------------------------------------------
+trx/
+prints/
+amostras/
+_artefatos/
+*.db-*
+*.bak
+*.backup
 # Os sidecars de runtime NAO sao versionados: sao artefato temporario de quem
 # ---------------------------------------------------------------------------
 # Backups locais do banco (criados por sincronizar.ps1 antes de cada pull/push).
