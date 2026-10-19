@@ -16,6 +16,36 @@ function csrfHeaders(extra) {
     });
 }
 
+// Renova o <meta> do token anti-forgery buscando a pagina de novo.
+//
+// Por que existe: Security/CookieSecurityEvents.cs reemite o cookie
+// antiforgery a cada 30 min de atividade. Se essa renovacao cair numa
+// requisicao AJAX (poll, busca, etc.), a resposta ja sai com o cookie NOVO,
+// mas o <meta> renderizado na pagina continua com o token VELHO - e todo
+// POST seguinte volta 400 com corpo vazio ate o usuario recarregar a tela.
+// Chamar isto em seguida de um 400 e refazer o POST UMA vez resolve sem
+// recarregar e sem perder o carrinho.
+async function atualizarTokenCsrf() {
+    try {
+        const resp = await fetch(window.location.href, {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+            cache: 'no-store'
+        });
+        if (!resp.ok) return false;
+        const html = await resp.text();
+        const achou = /name="csrf-token"\s+content="([^"]+)"/.exec(html);
+        if (!achou || !achou[1]) return false;
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (!meta) return false;
+        meta.setAttribute('content', achou[1]);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 
 // 2. ABRIR TELAS DE SANGRIA/SUPRIMENTO
 function prepararSangria() { abrirModalOperacao('Sangria'); }
@@ -898,7 +928,7 @@ async function enviarVendaDeVez() {
     try {
         Swal.showLoading();
 
-        const response = await fetch('/Caixa/FinalizarVenda', {
+        let response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
             headers: csrfHeaders({
@@ -906,10 +936,37 @@ async function enviarVendaDeVez() {
             })
         });
 
+        // 400 sem corpo = anti-forgery recusado (token velho da pagina).
+        // Renova o <meta> e refaz o POST UMA vez (ver atualizarTokenCsrf).
+        if (response.status === 400 && await atualizarTokenCsrf()) {
+            response = await fetch('/Caixa/FinalizarVenda', {
+                method: 'POST',
+                body: data,
+                headers: csrfHeaders({
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                })
+            });
+        }
+
         if (!response.ok) {
-            const textoErro = await response.text();
-            console.log('[ERRO 400] status:', response.status, 'texto:', textoErro.substring(0, 2000));
-            throw new Error('Servidor retornou ' + response.status + ': ' + textoErro.substring(0, 200));
+            // O servidor RESPONDEU (nao e falha de conexao): mostra status e
+            // detalhe em vez do alerta generico "servidor nao respondeu".
+            const textoErro = (await response.text()).trim();
+            console.error('[FinalizarVenda] HTTP', response.status, textoErro.substring(0, 500));
+            try { fecharModal(); } catch (e) { /* noop */ }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            Swal.fire({
+                title: 'Venda não concluída',
+                text: 'O servidor recusou a requisição (HTTP ' + response.status + '). ' +
+                    (textoErro
+                        ? 'Detalhe: ' + textoErro.substring(0, 300)
+                        : 'Sem detalhe no corpo. Se a venda não saiu, recarregue a página (Ctrl+Shift+R) e tente de novo.'),
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
+            return;
         }
 
         const res = await response.json();

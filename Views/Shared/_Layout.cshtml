@@ -201,7 +201,11 @@
             <nav class="app-sidebar__nav">
                 <div class="app-sidebar__grupo">Operação</div>
                 <a class="app-sidebar__item @(MenuAtivo("Home") ? "active" : null)" href="/Home/Index" aria-current="@(MenuAtivo("Home") ? "page" : null)">Estoque</a>
-                @if (podeVerFinanceiro)
+                @* BUG menu do Operador: o Caixa e do PDV, que usa PodeOperarPDV
+                   (Dono E Operador). Antes estava em PodeVerFinanceiro (so Dono):
+                   o Operador caia no Caixa pelo redirect do login, mas ao sair
+                   nao tinha link para voltar - o item nao existia no menu. *@
+                @if (podeOperarPdv)
                 {
                     <a class="app-sidebar__item @(MenuAtivo("Caixa", "Index") ? "active" : null)" href="/Caixa" aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)">Caixa</a>
                 }
@@ -584,7 +588,7 @@ else
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <script src="~/js/admin-caixa.js"></script>
+    <script src="~/js/admin-caixa.js" asp-append-version="true"></script>
 
    
 

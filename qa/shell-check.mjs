@@ -55,9 +55,13 @@ const PERFIS = {
     },
     operador: {
         papel: 'Operador', negado: true,
-        itens: ['Estoque'],
+        // Operador: Estoque (consulta, HomeController e so [Authorize]) e
+        // Caixa (PDV, PodeOperarPDV). Sem o link do Caixa ele entrava pelo
+        // redirect do login e nao conseguia voltar. Historico/Dashboard
+        // continuam sendo so do Dono (PodeVerFinanceiro).
+        itens: ['Estoque', 'Caixa'],
         grupos: ['Operação'],
-        hrefs: ['/Home/Index'],
+        hrefs: ['/Home/Index', '/Caixa'],
         menu: ['Sair']
     }
 };
