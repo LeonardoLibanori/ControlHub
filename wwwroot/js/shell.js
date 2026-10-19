@@ -124,7 +124,10 @@
     }
     function alternar() {
         if (ehDesktop()) {
-            var fechada = estadoSidebar() !== 'fechada';
+            var atual = estadoSidebar();
+            // Inverte o estado atual: primeiro clique (null/aberta) FECHA,
+            // proximo ABRE. O clique do usuario e o pedido - nao se ignora.
+            var fechada = atual !== 'fechada';
             try { localStorage.setItem(CHAVE_SIDEBAR, fechada ? 'fechada' : 'aberta'); } catch (e) { }
             marcarFechada(fechada);
         } else if (sidebar && sidebar.classList.contains('aberto')) {

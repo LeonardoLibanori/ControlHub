@@ -857,7 +857,11 @@ else
 
                     const resp = await fetch('/Caixa/ExcluirVendedor', {
                         method: 'POST',
-                        body: params
+                        body: params,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
                     });
                     const res = await resp.json();
 
@@ -924,7 +928,14 @@ else
             params.append('nome', dados.nome);
             params.append('codigo', dados.codigo);
 
-            const resp = await fetch('/Caixa/CadastrarVendedor', { method: 'POST', body: params });
+            const resp = await fetch('/Caixa/CadastrarVendedor', {
+                method: 'POST',
+                body: params,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             const res = await resp.json();
 
             if (res.success) {

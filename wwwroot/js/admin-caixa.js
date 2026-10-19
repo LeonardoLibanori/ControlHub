@@ -821,6 +821,14 @@ async function pedirCupomVendedor() {
             confirmButtonText: 'Validar',
             cancelButtonText: 'Cancelar',
             allowOutsideClick: false,
+            didOpen: () => {
+                // O input do Swal pode ainda nao estar no DOM quando didOpen roda;
+                // o setTimeout garante que o foco grude e o operador consiga digitar.
+                setTimeout(() => {
+                    const input = document.querySelector('.swal2-input');
+                    if (input) input.focus();
+                }, 50);
+            },
             inputValidator: (v) => {
                 if (!v || !v.trim()) return 'Digite o cupom ou cancele.';
             }
@@ -897,6 +905,12 @@ async function enviarVendaDeVez() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             })
         });
+
+        if (!response.ok) {
+            const textoErro = await response.text();
+            console.log('[ERRO 400] status:', response.status, 'texto:', textoErro.substring(0, 2000));
+            throw new Error('Servidor retornou ' + response.status + ': ' + textoErro.substring(0, 200));
+        }
 
         const res = await response.json();
 

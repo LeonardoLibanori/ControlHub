@@ -842,6 +842,17 @@ textarea.form-control {
     z-index: 12000 !important;
 }
 
+/* Swal2 nao pode alterar overflow/height/padding do html/body quando o modal
+   esta aberto. O shell usa height:100% + overflow:hidden + flexbox para todo o
+   layout; qualquer reflow no html/body desalinha o sidebar
+   (height:100% + display:flex + overflow:hidden), empurrando o
+   app-sidebar__bottom (tema e perfil) para baixo. */
+html.swal2-open,
+body.swal2-open {
+    overflow: visible !important;
+    padding-right: 0 !important;
+}
+
 /* BUG-35 - o overlay dos ATALHOS cobria a tela inteira.
    O .modal-overlay e position:fixed + inset:0 + z-index:9999. O botao que
    fecha o modal usava style.display='none', mas o atalho ESC (no _Layout)
@@ -3495,8 +3506,10 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     .app-content { padding: 1rem; }
 }
 
-/* modais/sweetalert/overlay de atalhos sempre ACIMA da sidebar */
-.swal2-container { z-index: 2000 !important; }
+/* modais/sweetalert/overlay de atalhos sempre ACIMA da sidebar e do modal
+   custom (#modalPagamento, z 9999 no CSS e 11000 via JS): regra unica, sem
+   duplicar .swal2-container (a outra definicao esta junto ao .modal-overlay). */
+.swal2-container { z-index: 12000 !important; }
 .modal { z-index: 1060; }
 .shortcut-help-overlay { z-index: 2100; }
 
@@ -5317,3 +5330,22 @@ html[data-sidebar="fechada"] .app-hamburguer__barra {
 html.swal2-height-auto,
 body.swal2-height-auto { height: 100% !important; }
 body.swal2-shown { padding-right: 0 !important; }
+
+/* ===== SweetAlert2 nao pode mexer no layout do shell ===== */
+html.swal2-height-auto,
+html body.swal2-height-auto { height: 100% !important; }
+html body.swal2-shown,
+html body.swal2-shown.swal2-height-auto { padding-right: 0 !important; }
+
+/* enquanto um popup esta aberto, o shell e a sidebar mantem a altura da janela */
+.swal2-shown .app-shell { height: 100vh !important; height: 100dvh !important; }
+.swal2-shown .app-sidebar { height: 100% !important; }
+
+/* Recolher a sidebar no desktop vale MESMO com um modal aberto: !important e
+   media query garantem que nenhum estilo de popup nem a ordem de carregamento
+   (o dashboard.css so existe na pagina do Dashboard) desfaça o recolhimento. */
+@media (min-width: 1024px) {
+  html[data-sidebar="fechada"] .app-sidebar { display: none !important; }
+  html[data-sidebar="fechada"] .app-shell { grid-template-columns: 1fr !important; }
+  html[data-sidebar="fechada"] .app-main { grid-column: 1 / -1 !important; }
+}

@@ -214,12 +214,12 @@
             <input type="text" id="cpfClienteInput" class="form-control form-control-lg text-center mb-4" placeholder="000.000.000-00" maxlength="14">
 
             @* CUPOM DO VENDEDOR (opcional - programa de recompensa por venda):
-               antes era obrigatorio e bloqueava a finalizacao; agora e um botao
-               que o operador clica so quando a empresa usa essa recompensa. *@
+               campo direto: o operador digita o codigo e o sistema valida ao
+               tirar o foco. Verde = cupom existente e ativo; vermelho = invalido. *@
             <div class="d-grid mb-3">
-                <button type="button" id="btnCupomVendedor" class="btn btn-outline-secondary py-2 fw-bold" onclick="gerenciarCupomVendedor()">
-                    Cupom do vendedor (opcional)
-                </button>
+                <label class="form-label small fw-bold">Cupom do vendedor (opcional)</label>
+                <input type="text" id="cupomVendedorInput" class="form-control" placeholder="Digite o cupom...">
+                <span id="statusCupomVendedor" class="small mt-1 d-block"></span>
             </div>
 
             <div class="d-flex gap-2">
@@ -509,8 +509,6 @@ async function enviarVendaDeVez() {
     });
 
     try {
-        Swal.showLoading();
-
         const response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
@@ -524,17 +522,63 @@ async function enviarVendaDeVez() {
         const res = await response.json();
 
         if (res.success) {
-            $('.modal').modal('hide');
+            // Fecha o modal custom de pagamento (.modal-overlay), nao um .modal do Bootstrap.
+            // Sem isso o overlay fica com display='flex' cobrindo a tela e o menu da sidebar
+            // fica por baixo (z-index 1050 < 9999/11000), parecendo "bugado".
+            const mp = document.getElementById('modalPagamento');
+            if (mp) mp.style.display = 'none';
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+
+            // Limpa o estado do sidebar (cortina + classe aberto) para nao deixar
+            // o menu travado depois que o Swal fecha e a pagina recarrega.
+            const cortina = document.getElementById('cortinaSidebar');
+            const sidebar = document.getElementById('app-sidebar');
+            if (cortina) cortina.classList.remove('ativo');
+            if (sidebar) sidebar.classList.remove('aberto');
+
+            // ============ DIAGNOSTICO TEMPORARIO ============
+            function medir(tag) {
+                const h = document.documentElement;
+                const b = document.body;
+                const s = document.getElementById('app-sidebar');
+                const nav = s ? s.querySelector('nav') : null;
+                const bottom = s ? s.querySelector('.app-sidebar__bottom') : null;
+                const cs = (el) => el ? getComputedStyle(el) : null;
+                const r = (el) => el ? el.getBoundingClientRect() : null;
+                console.log('[' + tag + '] html:', { h: h.clientHeight, oh: h.style.overflow, ph: h.style.paddingRight, cls: h.className });
+                console.log('[' + tag + '] body:', { h: b.clientHeight, oh: b.style.overflow, ph: b.style.paddingRight, cls: b.className });
+                console.log('[' + tag + '] sidebar:', s ? { h: r(s)?.height, oh: s.style.overflow, flex: cs(s)?.flex, display: cs(s)?.display, rect: { t: r(s)?.top, b: r(s)?.bottom, h: r(s)?.height } } : 'null');
+                console.log('[' + tag + '] nav:', nav ? { flex: cs(nav)?.flex, oh: nav.style.overflow, rect: { t: r(nav)?.top, b: r(nav)?.bottom, h: r(nav)?.height } } : 'null');
+                console.log('[' + tag + '] bottom:', bottom ? { display: cs(bottom)?.flex, rect: { t: r(bottom)?.top, b: r(bottom)?.bottom, h: r(bottom)?.height } } : 'null');
+                console.log('[' + tag + '] window:', { ih: window.innerHeight, iw: window.innerWidth });
+            }
+            medir('ANTES_SWAL');
+
             Swal.fire({
                 title: 'Venda Finalizada!',
                 text: 'Sucesso ao processar a venda.',
                 icon: 'success',
-                confirmButtonText: 'OK'
+                confirmButtonText: 'OK',
+                didOpen: () => {
+                    medir('DIDOPEN');
+                    console.log('[DIDOPEN] html classes:', document.documentElement.className);
+                    console.log('[DIDOPEN] body classes:', document.body.className);
+                    const swalContainer = document.querySelector('.swal2-container');
+                    console.log('[DIDOPEN] swal2-container:', swalContainer ? { zIndex: getComputedStyle(swalContainer).zIndex, display: swalContainer.style.display, rect: swalContainer.getBoundingClientRect() } : 'null');
+                }
             }).then(() => {
+                medir('APOS_FECHAR_SWAL');
                 if (res.vendaId) window.open('/Caixa/GerarCupom?id=' + res.vendaId, '_blank');
                 location.reload();
             });
         } else {
+            // Em caso de erro, tambem fecha o modal custom antes de mostrar o erro
+            try { fecharModal(); } catch (e) { /* noop */ }
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
             Swal.fire({
                 // BUG-30: o titulo era fixo em "Erro no Estoque", mas a recusa
                 // pode ser de dinheiro insuficiente (BUG-29), de cupom, de
@@ -551,6 +595,49 @@ async function enviarVendaDeVez() {
         Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
     }
 }
+</script>
+
+<script>
+    // Validação visual do cupom do vendedor ao sair do campo.
+    // Verde = cupom existente e ativo; vermelho = invalido.
+    document.getElementById('cupomVendedorInput')?.addEventListener('blur', async function () {
+        const codigo = this.value.trim();
+        const status = document.getElementById('statusCupomVendedor');
+        const input = this;
+
+        if (!codigo) {
+            codigoVendedorInformado = '';
+            input.classList.remove('is-valid', 'is-invalid');
+            status.textContent = '';
+            status.className = 'small mt-1 d-block';
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(codigo)}`);
+            const data = await resp.json();
+
+            if (data.exists) {
+                codigoVendedorInformado = codigo.toUpperCase();
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                status.textContent = 'Cupom validado.';
+                status.className = 'small mt-1 d-block text-success';
+            } else {
+                codigoVendedorInformado = '';
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                status.textContent = 'Cupom não encontrado.';
+                status.className = 'small mt-1 d-block text-danger';
+            }
+        } catch (e) {
+            codigoVendedorInformado = '';
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            status.textContent = 'Erro ao validar cupom.';
+            status.className = 'small mt-1 d-block text-danger';
+        }
+    });
 </script>
 
 @if (Context.Request.Query.ContainsKey("imprimirId"))

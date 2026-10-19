@@ -464,19 +464,39 @@
     height: 200px;
 }
 
-/* O controller entrega a cor da forma como um nome CSS ("green", "cyan",
-   ...). Estes seletores traduzem o nome para o token do tema, para a rosca
-   mudar de cor junto com claro/escuro sem tocar no controller. */
-.dsh-rosca-svg circle[stroke="green"]  { stroke: var(--c-green); }
-.dsh-rosca-svg circle[stroke="cyan"]   { stroke: var(--c-cyan); }
-.dsh-rosca-svg circle[stroke="violet"] { stroke: var(--c-violet); }
-.dsh-rosca-svg circle[stroke="blue"]   { stroke: var(--c-blue); }
-.dsh-rosca-svg circle[stroke="amber"]  { stroke: var(--c-amber); }
-.dsh-rosca-svg circle[stroke="slate"]  { stroke: var(--c-slate); }
+/* A cor da fatia vem do NOME da forma de pagamento: a view aplica a classe
+   dsh-fp-* tanto no <circle> quanto no quadradinho da legenda. Assim rosca e
+   legenda nunca divergem, nao depende do campo Cor do servidor e as cores
+   viram token do tema (mudam com claro/escuro). */
+.dsh-fp-dinheiro { --dsh-fp-cor: var(--c-green); }
+.dsh-fp-pix      { --dsh-fp-cor: var(--c-cyan); }
+.dsh-fp-credito  { --dsh-fp-cor: var(--c-violet); }
+.dsh-fp-debito   { --dsh-fp-cor: var(--c-blue); }
+.dsh-fp-voucher  { --dsh-fp-cor: var(--c-amber); }
+.dsh-fp-outro    { --dsh-fp-cor: var(--c-slate); }
+
+.dsh-rosca-svg circle[class*="dsh-fp-"] { stroke: var(--dsh-fp-cor); }
 
 .dsh-rosca-svg text {
     font-family: 'Manrope', 'Segoe UI', sans-serif;
     font-variant-numeric: tabular-nums;
+}
+
+/* Total no centro: tamanho decidido AQUI, por classe. O furo tem 126
+   unidades de diametro; valores longos (ex.: R$ 12.345,67) recebem --fit ou
+   --fit2 via script e encolhem sozinhos sem estourar o anel. */
+.dsh-rosca-total {
+    font-size: 21px;
+    font-weight: 700;
+    fill: var(--text);
+}
+
+.dsh-rosca-total--fit  { font-size: 17px; }
+.dsh-rosca-total--fit2 { font-size: 13px; }
+
+.dsh-rosca-sub {
+    font-size: 11px;
+    fill: var(--text-soft);
 }
 
 .dsh-rosca-legenda {
@@ -504,13 +524,8 @@
     border-radius: 3px;
 }
 
-/* Mesma tradução nome -> token para o quadradinho da legenda. */
-.dsh-rosca-cor[style*="green"]  { background: var(--c-green)  !important; }
-.dsh-rosca-cor[style*="cyan"]   { background: var(--c-cyan)   !important; }
-.dsh-rosca-cor[style*="violet"] { background: var(--c-violet) !important; }
-.dsh-rosca-cor[style*="blue"]   { background: var(--c-blue)   !important; }
-.dsh-rosca-cor[style*="amber"]  { background: var(--c-amber)  !important; }
-.dsh-rosca-cor[style*="slate"]  { background: var(--c-slate)  !important; }
+/* Mesma classe dsh-fp-* da rosca colore o quadradinho da legenda. */
+.dsh-rosca-cor[class*="dsh-fp-"] { background: var(--dsh-fp-cor); }
 
 .dsh-rosca-nome {
     font-size: 14px;

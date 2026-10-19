@@ -22,6 +22,9 @@ $ErrorActionPreference = 'Stop'
 
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $ProjetoDir = Split-Path -Parent $ScriptDir
+. (Join-Path $ScriptDir 'senha-teste.ps1')
+$SenhaDono = Get-SenhaDono
+$SenhaOper = Get-SenhaOperador
 $DbIsolado  = Join-Path $env:TEMP ('qa-shell-' + [Guid]::NewGuid().ToString('N') + '.db')
 $BaseUrl    = "http://127.0.0.1:$Porta"
 
@@ -89,21 +92,21 @@ $dono = NovaSessao
 $sp = Chama $dono 'GET' '/Account/Setup' $null $null $false
 if ($sp.Code -ne 200) { Say "ERRO: GET /Account/Setup -> $($sp.Code)"; exit 1 }
 $tk = Token $sp.Body
-$bD = 'NomeExibicao=Dono%20Teste&Email=dono%40teste.com&Senha=Dono%40123&ConfirmarSenha=Dono%40123'
+$bD = 'NomeExibicao=Dono%20Teste&Email=dono%40teste.com&Senha=' + [uri]::EscapeDataString($SenhaDono) + '&ConfirmarSenha=' + [uri]::EscapeDataString($SenhaDono)
 $cr = Chama $dono 'POST' '/Account/Setup' $bD $tk $false
 if ($cr.Code -ne 302) { Say "ERRO: criar Dono -> $($cr.Code)"; exit 1 }
 
 $pg = Chama $dono 'GET' '/Usuarios/Criar' $null $null $false
 $tk2 = Token $pg.Body
-$bO = 'Nome=Operador%20Teste&Email=operador%40teste.com&Senha=Operador%40123&ConfirmarSenha=Operador%40123&Papel=Operador'
+$bO = 'Nome=Operador%20Teste&Email=operador%40teste.com&Senha=' + [uri]::EscapeDataString($SenhaOper) + '&ConfirmarSenha=' + [uri]::EscapeDataString($SenhaOper) + '&Papel=Operador'
 $co = Chama $dono 'POST' '/Usuarios/Criar' $bO $tk2 $false
 if ($co.Code -ne 302) { Say "ERRO: criar Operador -> $($co.Code)"; exit 1 }
 
 Say ''
 Say 'CREDENCIAIS DE TESTE (banco isolado, temporario):'
 Say "  base .......: $BaseUrl"
-Say "  dono .......: dono@teste.com / ***REMOVIDO***"
-Say "  operador ...: operador@teste.com / Operador@123"
+Say '  dono .......: dono@teste.com / <senha-de-teste>'
+Say '  operador ...: operador@teste.com / <senha-de-teste>'
 Say "  db .........: $DbIsolado"
 Say "  app PID ....: $($app.Id)"
 

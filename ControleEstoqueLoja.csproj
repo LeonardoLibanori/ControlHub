@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Controllers\FluxoCaixaController.cs" />
     <Compile Remove="Migrations\20260205115542_InitialCreate.Designer.cs" />
     <Compile Remove="Models\Class.cs" />
   </ItemGroup>

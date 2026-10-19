@@ -11,6 +11,26 @@
     string Dinheiro(decimal valor) => FormatoPtBr.Moeda(valor);
     string Qtd(decimal valor) => FormatoPtBr.Quantidade(valor);
 
+    // Cor da rosca vem do NOME da forma de pagamento, nao do campo Cor do
+    // servidor: Dinheiro verde, Pix ciano, Credito violeta, Debito azul,
+    // Voucher ambar; o resto, cinza. A mesma classe colore o <circle> e o
+    // quadradinho da legenda, entao os dois nunca divergem.
+    string ClasseForma(string metodo)
+    {
+        var bruto = (metodo ?? "").Trim().ToLowerInvariant();
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in bruto.Normalize(System.Text.NormalizationForm.FormD))
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                sb.Append(ch);
+        var s = sb.ToString();
+        if (s.StartsWith("dinheiro")) return "dsh-fp-dinheiro";
+        if (s.StartsWith("pix")) return "dsh-fp-pix";
+        if (s.StartsWith("credito")) return "dsh-fp-credito";
+        if (s.StartsWith("debito")) return "dsh-fp-debito";
+        if (s.StartsWith("voucher")) return "dsh-fp-voucher";
+        return "dsh-fp-outro";
+    }
+
     // Frase de variação
     string FraseVariacao()
     {
@@ -278,33 +298,42 @@
                 <div class="dsh-rosca-container">
                     <svg class="dsh-rosca-svg" viewBox="0 0 200 200" role="img" aria-label="Distribuição de formas de pagamento">
                         @{
-                            foreach (var fp in Model.FormasPagamento)
+                            // Rosca nova: furo de 126 de diametro e anel de 22 de
+                            // espessura -> raio medio 74, circunferencia 2*PI*74 =
+                            // 464,96. As fatias comecam no topo e seguem no sentido
+                            // horario, na mesma ordem da legenda (rotate -90).
+                            const decimal CIRC_ROSCA = 464.96m;
+                            decimal accRosca = 0m;
+                        }
+                        <g transform="rotate(-90 100 100)">
+                            @foreach (var fp in Model.FormasPagamento)
                             {
-                                var dashArray = fp.DashArray.ToString("F2", CultureInfo.InvariantCulture);
-                                var dashOffset = fp.DashOffset.ToString("F2", CultureInfo.InvariantCulture);
-                                <circle cx="100" cy="100" r="40"
+                                var fatiaRosca = CIRC_ROSCA * fp.Percentual / 100m;
+                                var dashArray = fatiaRosca.ToString("F2", CultureInfo.InvariantCulture);
+                                var sobra = (CIRC_ROSCA - fatiaRosca).ToString("F2", CultureInfo.InvariantCulture);
+                                var dashOffset = (CIRC_ROSCA - accRosca).ToString("F2", CultureInfo.InvariantCulture);
+                                accRosca += fatiaRosca;
+                                <circle cx="100" cy="100" r="74"
+                                       class="@ClasseForma(fp.Metodo)"
                                        fill="none"
-                                       stroke="@fp.Cor"
-                                       stroke-width="24"
-                                       stroke-dasharray="@dashArray @(251.33m - fp.DashArray)"
+                                       stroke-width="22"
+                                       stroke-dasharray="@dashArray @sobra"
                                        stroke-dashoffset="@dashOffset"
                                        stroke-linecap="butt" />
                             }
-                        }
-                        <!-- Total no centro -->
-                        <text x="100" y="95" font-size="24" fill="var(--text)" text-anchor="middle" font-weight="700" font-family="'Manrope', sans-serif">
-                            @Dinheiro(Model.FaturamentoAtual)
-                        </text>
-                        <text x="100" y="118" font-size="12" fill="var(--text-soft)" text-anchor="middle" font-family="'DM Sans', sans-serif">
-                            Total do período
-                        </text>
+                        </g>
+                        <!-- Total no centro: o tamanho vem do CSS (classes
+                             dsh-rosca-total / --fit / --fit2); o script da secao
+                             Scripts encolhe o texto quando ele nao cabe no furo. -->
+                        <text class="dsh-rosca-total" x="100" y="97" text-anchor="middle">@Dinheiro(Model.FaturamentoAtual)</text>
+                        <text class="dsh-rosca-sub" x="100" y="116" text-anchor="middle">Total do período</text>
                     </svg>
 
                     <ul class="dsh-rosca-legenda" role="list" aria-label="Detalhamento das formas de pagamento">
                         @foreach (var fp in Model.FormasPagamento)
                         {
                             <li class="dsh-rosca-item">
-                                <span class="dsh-rosca-cor" style="background:@fp.Cor" aria-hidden="true"></span>
+                                <span class="dsh-rosca-cor @ClasseForma(fp.Metodo)" aria-hidden="true"></span>
                                 <span class="dsh-rosca-nome">@fp.Metodo</span>
                                 <span class="dsh-rosca-detalhes">
                                     <span class="dsh-rosca-pct">@FormatoPtBr.PercentualSimples(fp.Percentual)</span>
@@ -444,6 +473,22 @@
 
 @section Scripts {
     <script>
+        // Total central da rosca: se o texto nao couber no furo (126 unidades),
+        // ganha uma classe menor definida no CSS. Classes, nunca font-size inline.
+        (function () {
+            'use strict';
+            var total = document.querySelector('.dsh-rosca-total');
+            if (!total || typeof total.getComputedTextLength !== 'function') return;
+            function ajustar() {
+                total.classList.remove('dsh-rosca-total--fit', 'dsh-rosca-total--fit2');
+                var largura = total.getComputedTextLength();
+                if (largura > 132) total.classList.add('dsh-rosca-total--fit2');
+                else if (largura > 118) total.classList.add('dsh-rosca-total--fit');
+            }
+            ajustar();
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustar);
+        })();
+
         // Scripts existentes para o detalhe do dia (mantidos)
         (function () {
             'use strict';
