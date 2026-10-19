@@ -13,7 +13,7 @@ Desenvolvido em **ASP.NET Core MVC + Entity Framework Core (SQLite)**, com suít
 
 ## 🔑 Acesso de teste
 
-**Demo on-line:** <http://controle-estoque-loja.runasp.net>
+**Demo on-line:** <https://controle-estoque-loja.runasp.net>
 
 Contas de demonstração para avaliação do projeto:
 
