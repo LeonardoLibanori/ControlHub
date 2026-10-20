@@ -11,26 +11,6 @@
     string Dinheiro(decimal valor) => FormatoPtBr.Moeda(valor);
     string Qtd(decimal valor) => FormatoPtBr.Quantidade(valor);
 
-    // Cor da rosca vem do NOME da forma de pagamento, nao do campo Cor do
-    // servidor: Dinheiro verde, Pix ciano, Credito violeta, Debito azul,
-    // Voucher ambar; o resto, cinza. A mesma classe colore o <circle> e o
-    // quadradinho da legenda, entao os dois nunca divergem.
-    string ClasseForma(string metodo)
-    {
-        var bruto = (metodo ?? "").Trim().ToLowerInvariant();
-        var sb = new System.Text.StringBuilder();
-        foreach (var ch in bruto.Normalize(System.Text.NormalizationForm.FormD))
-            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
-                sb.Append(ch);
-        var s = sb.ToString();
-        if (s.StartsWith("dinheiro")) return "dsh-fp-dinheiro";
-        if (s.StartsWith("pix")) return "dsh-fp-pix";
-        if (s.StartsWith("credito")) return "dsh-fp-credito";
-        if (s.StartsWith("debito")) return "dsh-fp-debito";
-        if (s.StartsWith("voucher")) return "dsh-fp-voucher";
-        return "dsh-fp-outro";
-    }
-
     // Frase de variação
     string FraseVariacao()
     {
@@ -106,7 +86,7 @@
     <!-- 2. Quatro cartões KPI -->
     <section class="dsh-kpi-grade" aria-label="Indicadores principais">
         <!-- Faturamento -->
-        <article class="dsh-kpi-card">
+        <article class="dsh-kpi-card dsh-kpi-faturamento">
             <span class="dsh-kpi-ponto" style="background:var(--c-blue)"></span>
             <span class="dsh-kpi-rotulo">Faturamento</span>
             <strong class="dsh-kpi-valor">@Dinheiro(Model.FaturamentoAtual)</strong>
@@ -117,7 +97,7 @@
         </article>
 
         <!-- Vendas (contagem) -->
-        <article class="dsh-kpi-card">
+        <article class="dsh-kpi-card dsh-kpi-vendas">
             <span class="dsh-kpi-ponto" style="background:var(--c-violet)"></span>
             <span class="dsh-kpi-rotulo">Vendas</span>
             <strong class="dsh-kpi-valor">@Model.VendasAtual</strong>
@@ -128,7 +108,7 @@
         </article>
 
         <!-- Ticket médio -->
-        <article class="dsh-kpi-card">
+        <article class="dsh-kpi-card dsh-kpi-ticket">
             <span class="dsh-kpi-ponto" style="background:var(--c-cyan)"></span>
             <span class="dsh-kpi-rotulo">Ticket médio</span>
             <strong class="dsh-kpi-valor">@Dinheiro(Model.TicketMedioAtual)</strong>
@@ -139,7 +119,7 @@
         </article>
 
         <!-- Dinheiro na gaveta (sem selo de variação) -->
-        <article class="dsh-kpi-card">
+        <article class="dsh-kpi-card dsh-kpi-gaveta">
             <span class="dsh-kpi-ponto" style="background:var(--c-green)"></span>
             <span class="dsh-kpi-rotulo">Dinheiro na gaveta</span>
             <strong class="dsh-kpi-valor @(Model.SaldoGaveta < 0 ? "dsh-negativo" : "")">@Dinheiro(Model.SaldoGaveta)</strong>
@@ -164,97 +144,191 @@
                 </div>
             </div>
 
-            <div class="dsh-grafico-svg-container" role="img" aria-label="Gráfico de faturamento por @Model.Periodo">
-                @{
-                    // Preparar dados para o SVG
-                    var maxValor = Model.SerieAtual.Where(s => s.ValorAtual.HasValue).Select(s => s.ValorAtual.Value).DefaultIfEmpty(0m).Max();
-                    var maxAnterior = Model.SerieAnterior.Where(s => s.ValorAnterior.HasValue).Select(s => s.ValorAnterior.Value).DefaultIfEmpty(0m).Max();
-                    var maxGeral = new[] { maxValor, maxAnterior }.Max();
+            @{
+                var rVals = Model.SerieAtual.Where(s => s.ValorAtual.HasValue).ToList();
+                var rUnidade = (Model.Periodo == "hoje" || Model.Periodo == "ontem") ? "hora" : (Model.Periodo == "ano" ? "mês" : "dia");
 
-                    var caminhoAtual = ControleEstoqueLoja.Data.GraficoSvg.CaminhoLinha(Model.SerieAtual.Select(s => s.ValorAtual).ToList(), maxGeral);
-                    var caminhoAnterior = ControleEstoqueLoja.Data.GraficoSvg.CaminhoLinha(Model.SerieAnterior.Select(s => s.ValorAnterior).ToList(), maxGeral);
-                    var areaAtual = ControleEstoqueLoja.Data.GraficoSvg.CaminhoArea(Model.SerieAtual.Select(s => s.ValorAtual).ToList(), maxGeral);
-                    var ticks = ControleEstoqueLoja.Data.GraficoSvg.NiceTicks(maxGeral);
+                // O servidor pode mandar o mes abreviado em ingles ("oct"); aqui sempre em portugues.
+                string RotuloPt(string? r)
+                {
+                    if (string.IsNullOrWhiteSpace(r)) { return ""; }
+                    switch (r.Trim().TrimEnd('.').ToLowerInvariant())
+                    {
+                        case "feb": return "fev";
+                        case "apr": return "abr";
+                        case "may": return "mai";
+                        case "aug": return "ago";
+                        case "sep": return "set";
+                        case "oct": return "out";
+                        case "dec": return "dez";
+                        default: return r;
+                    }
+                }
+            }
+            @if (rVals.Count > 0)
+            {
+                var rMelhor = rVals.OrderByDescending(s => s.ValorAtual!.Value).First();
+                var rMedia = Model.FaturamentoAtual / rVals.Count;
+                <dl class="dsh-grafico-resumo">
+                    <div>
+                        <dt>Total no período</dt>
+                        <dd>@Dinheiro(Model.FaturamentoAtual)</dd>
+                    </div>
+                    <div>
+                        <dt>Melhor @rUnidade</dt>
+                        <dd>@Dinheiro(rMelhor.ValorAtual!.Value) <small>@RotuloPt(rMelhor.Rotulo)</small></dd>
+                    </div>
+                    <div>
+                        <dt>Média por @rUnidade</dt>
+                        <dd>@Dinheiro(rMedia)</dd>
+                    </div>
+                </dl>
+            }
+
+            <div class="dsh-grafico-svg-container">
+                @{
+                    // Grafico em SVG PURO. Nenhum elemento HTML pode ficar dentro do <svg>:
+                    // um <span> ali dentro faz o navegador fechar o SVG e jogar o resto
+                    // (marcadores e rotulos do eixo X) para fora do desenho.
+                    const double GEsq = 56d, GDir = 704d, GTopo = 16d, GBase = 224d;
+                    var gSerie = Model.SerieAtual;
+                    var gAnt = Model.SerieAnterior;
+                    int gQtd = gSerie.Count;
+
+                    var gMaxAtual = gSerie.Where(s => s.ValorAtual.HasValue).Select(s => s.ValorAtual.Value).DefaultIfEmpty(0m).Max();
+                    var gMaxAnterior = gAnt.Where(s => s.ValorAnterior.HasValue).Select(s => s.ValorAnterior.Value).DefaultIfEmpty(0m).Max();
+                    var gMaxGeral = gMaxAtual > gMaxAnterior ? gMaxAtual : gMaxAnterior;
+                    var gTicks = ControleEstoqueLoja.Data.GraficoSvg.NiceTicks(gMaxGeral).ToList();
+                    double gTopoValor = gTicks.Count > 0 ? Convert.ToDouble(gTicks[gTicks.Count - 1]) : 0d;
+                    if (gTopoValor <= 0d) { gTopoValor = 1d; }
+
+                    string GN(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+                    double GPx(int idx) => gQtd <= 1 ? (GEsq + GDir) / 2d : GEsq + (idx / (double)(gQtd - 1)) * (GDir - GEsq);
+                    double GPy(decimal v) => GBase - (GBase - GTopo) * Math.Min(1d, Math.Max(0d, (double)v / gTopoValor));
+
+                    string GLinha(IEnumerable<decimal?> valores)
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        var idx = 0;
+                        foreach (var v in valores)
+                        {
+                            if (v.HasValue)
+                            {
+                                sb.Append(sb.Length == 0 ? "M" : " L").Append(GN(GPx(idx))).Append(' ').Append(GN(GPy(v.Value)));
+                            }
+                            idx++;
+                        }
+                        return sb.ToString();
+                    }
+
+                    string GArea(IEnumerable<decimal?> valores)
+                    {
+                        var linha = GLinha(valores);
+                        if (linha.Length == 0) { return ""; }
+                        double primeiroX = double.NaN, ultimoX = double.NaN;
+                        var idx = 0;
+                        foreach (var v in valores)
+                        {
+                            if (v.HasValue)
+                            {
+                                var px = GPx(idx);
+                                if (double.IsNaN(primeiroX)) { primeiroX = px; }
+                                ultimoX = px;
+                            }
+                            idx++;
+                        }
+                        return linha + " L" + GN(ultimoX) + " " + GN(GBase) + " L" + GN(primeiroX) + " " + GN(GBase) + " Z";
+                    }
+
+                    var gCaminhoAtual = GLinha(gSerie.Select(s => s.ValorAtual));
+                    var gCaminhoAnterior = GLinha(gAnt.Select(s => s.ValorAnterior));
+                    var gAreaAtual = GArea(gSerie.Select(s => s.ValorAtual));
+                    var gPasso = Math.Max(1, (int)Math.Ceiling(gQtd / 8d));
+                    var gLinkAtivo = Model.Periodo == "7dias" || Model.Periodo == "30dias" || Model.Periodo == "mes";
+                    var gHoje = DateTime.Today;
                 }
 
-                <svg class="dsh-grafico-svg" viewBox="0 0 720 260" aria-label="Gráfico de faturamento por @Model.Periodo: série atual em azul, anterior em cinza tracejado">
-                    <!-- Grade horizontal (ticks) -->
-                    @foreach (var tick in ticks)
+                <svg class="dsh-grafico-svg" viewBox="0 0 736 260" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Gráfico de faturamento: período atual em azul e período anterior tracejado">
+                    <defs>
+                        <linearGradient id="dshGradAtual" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" class="dsh-grad-topo" />
+                            <stop offset="1" class="dsh-grad-base" />
+                        </linearGradient>
+                    </defs>
+
+                    @foreach (var gTick in gTicks)
                     {
-                        var y = 16 + 244 * (1 - (double)tick / (double)(ticks.LastOrDefault() == 0 ? 1 : ticks.LastOrDefault()));
-                        <text>
-                            <line x1="56" y1="@y" x2="704" y2="@y" stroke="var(--line)" stroke-width="1" stroke-dasharray="4,4" />
-                            <text x="52" y="@(y + 4)" font-size="12" fill="var(--text-soft)" text-anchor="end" style="font-family:'DM Sans', sans-serif">
-                                R$ @tick.ToString("F0", br)
-                            </text>
-                        </text>
+                        var gTv = Convert.ToDecimal(gTick);
+                        var gYTick = GPy(gTv);
+                        <g class="dsh-eixo-y">
+                            <line class="dsh-grade-linha" x1="@GN(GEsq)" y1="@GN(gYTick)" x2="@GN(GDir)" y2="@GN(gYTick)" />
+                            <text class="dsh-eixo-texto" x="@GN(GEsq - 8)" y="@GN(gYTick + 4)" text-anchor="end">R$ @(gTv == decimal.Floor(gTv) ? gTv.ToString("N0", br) : gTv.ToString("N2", br))</text>
+                        </g>
                     }
 
-                    <!-- Área do período atual -->
-                    @if (!string.IsNullOrEmpty(areaAtual))
+                    @if (gAreaAtual.Length > 0)
                     {
-                        <path d="@areaAtual" fill="var(--s-blue-fundo)" opacity="0.5" />
+                        <path class="dsh-area-atual" d="@gAreaAtual" fill="url(#dshGradAtual)" />
+                    }
+                    @if (gCaminhoAnterior.Length > 0)
+                    {
+                        <path class="dsh-linha-anterior" d="@gCaminhoAnterior" />
+                    }
+                    @if (gCaminhoAtual.Length > 0)
+                    {
+                        <path class="dsh-linha-atual" d="@gCaminhoAtual" />
                     }
 
-                    <!-- Linha do período anterior (tracejada) -->
-                    @if (!string.IsNullOrEmpty(caminhoAnterior))
+                    @for (var gi = 0; gi < gQtd; gi++)
                     {
-                        <path d="@caminhoAnterior" fill="none" stroke="var(--c-slate)" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round" stroke-linejoin="round" />
-                    }
-
-                    <!-- Linha do período atual -->
-                    @if (!string.IsNullOrEmpty(caminhoAtual))
-                    {
-                        <path d="@caminhoAtual" fill="none" stroke="var(--c-blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                    }
-
-                    <!-- Pontos de captura (anchors) - um por bucket com valor -->
-                    @for (int i = 0; i < Model.SerieAtual.Count; i++)
-                    {
-                        if (Model.SerieAtual[i].ValorAtual.HasValue)
+                        if (!gSerie[gi].ValorAtual.HasValue) { continue; }
+                        var gValor = gSerie[gi].ValorAtual.Value;
+                        var gRotulo = RotuloPt(gSerie[gi].Rotulo);
+                        var gCx = GPx(gi);
+                        var gCy = GPy(gValor);
+                        decimal? gValorAnt = gAnt.Count > gi ? gAnt[gi].ValorAnterior : null;
+                        var gDica = gRotulo + " · " + Dinheiro(gValor) + " · " + (gValorAnt.HasValue ? "anterior " + Dinheiro(gValorAnt.Value) : "sem período anterior");
+                        var gSel = Model.DiaSelecionado.HasValue && gRotulo == Model.DiaSelecionado.Value.ToString("dd/MM", br);
+                        string? gLink = null;
+                        if (gLinkAtivo && DateTime.TryParseExact(gRotulo, "dd/MM", br, DateTimeStyles.None, out var gData))
                         {
-                            var x = 56 + (i / (double)(Model.SerieAtual.Count - 1)) * 648;
-                            var y = 16 + 244 * (1 - (double)Model.SerieAtual[i].ValorAtual.Value / (double)(ticks.LastOrDefault() == 0 ? 1 : ticks.LastOrDefault()));
-                            var valor = Model.SerieAtual[i].ValorAtual.Value;
-                            var anterior = Model.SerieAnterior.Count > i && Model.SerieAnterior[i].ValorAnterior.HasValue
-                                ? Model.SerieAnterior[i].ValorAnterior.Value
-                                : (decimal?)null;
-                            var tooltip = $"{Model.SerieAtual[i].Rotulo} · R$ {valor.ToString("F2", br)} · {(anterior.HasValue ? $"anterior R$ {anterior.Value.ToString("F2", br)}" : "sem anterior")}";
-                            var isSelecionado = Model.DiaSelecionado.HasValue && Model.SerieAtual[i].Rotulo.Contains(Model.DiaSelecionado.Value.ToString("dd/MM"));
-
-                            <a href="@(Model.SerieAtual[i].ValorAtual.HasValue && Model.Periodo != "hoje" && Model.Periodo != "ontem"
-                                ? Url.Action("Index", "Dashboard", new { periodo = Model.Periodo, data = DateTime.ParseExact(Model.SerieAtual[i].Rotulo, "dd/MM", br) })
-                                : "#")"
-                               class="dsh-grafico-ancora @(isSelecionado ? "is-selecionado" : "")"
-                               style="left:@(x - 12)px; top:@(y - 12)px;"
-                               aria-label="@tooltip"
-                               data-tooltip="@tooltip"
-                               data-valor="@valor.ToString("F2", CultureInfo.InvariantCulture)"
-                               data-anterior="@(anterior?.ToString("F2", CultureInfo.InvariantCulture) ?? "")"
-                               data-rotulo="@Model.SerieAtual[i].Rotulo"
-                               tabindex="0"
-                               role="button">
-                                <span class="dsh-grafico-marcador @(isSelecionado ? "is-selecionado" : "")" aria-hidden="true"></span>
-                            </a>
+                            if (gData.Date > gHoje) { gData = gData.AddYears(-1); }
+                            gLink = Url.Action("Index", "Dashboard", new { periodo = Model.Periodo, data = gData.ToString("yyyy-MM-dd") });
                         }
+                        <g class="dsh-ponto @(gSel ? "is-selecionado" : "")">
+                            @if (gSel)
+                            {
+                                <line class="dsh-guia" x1="@GN(gCx)" y1="@GN(GTopo)" x2="@GN(gCx)" y2="@GN(GBase)" />
+                            }
+                            @if (gLink != null)
+                            {
+                                <a href="@gLink" class="dsh-grafico-ancora" aria-label="@gDica" aria-current="@(gSel ? "true" : null)">
+                                    <title>@gDica</title>
+                                    <circle class="dsh-grafico-hit" cx="@GN(gCx)" cy="@GN(gCy)" r="14" />
+                                    <circle class="dsh-grafico-marcador" cx="@GN(gCx)" cy="@GN(gCy)" r="4.5" />
+                                </a>
+                            }
+                            else
+                            {
+                                <g class="dsh-grafico-ancora dsh-sem-link">
+                                    <title>@gDica</title>
+                                    <circle class="dsh-grafico-hit" cx="@GN(gCx)" cy="@GN(gCy)" r="14" />
+                                    <circle class="dsh-grafico-marcador" cx="@GN(gCx)" cy="@GN(gCy)" r="4.5" />
+                                </g>
+                            }
+                        </g>
                     }
 
-                    <!-- Eixo X - rótulos esparsos (máx 8) -->
-                    @{
-                        var step = Math.Max(1, Model.SerieAtual.Count / 8);
-                        for (int i = 0; i < Model.SerieAtual.Count; i += step)
-                        {
-                            var x = 56 + (i / (double)(Model.SerieAtual.Count - 1)) * 648;
-                            var rotulo = Model.SerieAtual[i].Rotulo;
-                            <text>
-                                <text x="@x" y="252" font-size="11" fill="var(--text-soft)" text-anchor="middle" style="font-family:'DM Sans', sans-serif">@rotulo</text>
-                            </text>
-                        }
+                    @for (var gj = 0; gj < gQtd; gj += gPasso)
+                    {
+                        <g class="dsh-eixo-x">
+                            <text class="dsh-eixo-texto" x="@GN(GPx(gj))" y="@GN(GBase + 22)" text-anchor="middle">@RotuloPt(gSerie[gj].Rotulo)</text>
+                        </g>
                     }
                 </svg>
 
                 <!-- Tabela equivalente para leitores de tela -->
-                <table class="dsh-grafico-tabela-sr" aria-hidden="true">
+                <table class="dsh-grafico-tabela-sr">
                     <caption>Dados do gráfico: @Model.Periodo</caption>
                     <thead>
                         <tr>
@@ -296,44 +370,45 @@
             else
             {
                 <div class="dsh-rosca-container">
-                    <svg class="dsh-rosca-svg" viewBox="0 0 200 200" role="img" aria-label="Distribuição de formas de pagamento">
+                    <svg class="dsh-rosca-svg" viewBox="0 0 200 200" role="group" aria-label="Distribuição das formas de pagamento">
                         @{
-                            // Rosca nova: furo de 126 de diametro e anel de 22 de
-                            // espessura -> raio medio 74, circunferencia 2*PI*74 =
-                            // 464,96. As fatias comecam no topo e seguem no sentido
-                            // horario, na mesma ordem da legenda (rotate -90).
-                            const decimal CIRC_ROSCA = 464.96m;
-                            decimal accRosca = 0m;
-                        }
-                        <g transform="rotate(-90 100 100)">
-                            @foreach (var fp in Model.FormasPagamento)
+                            const double GRaio = 74d;
+                            var gCirc = 2d * Math.PI * GRaio;
+                            var gAcum = 0d;
+                            var gTotalTxt = Dinheiro(Model.FaturamentoAtual);
+                            string GRn(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+                            string GCorForma(string? metodo)
                             {
-                                var fatiaRosca = CIRC_ROSCA * fp.Percentual / 100m;
-                                var dashArray = fatiaRosca.ToString("F2", CultureInfo.InvariantCulture);
-                                var sobra = (CIRC_ROSCA - fatiaRosca).ToString("F2", CultureInfo.InvariantCulture);
-                                var dashOffset = (CIRC_ROSCA - accRosca).ToString("F2", CultureInfo.InvariantCulture);
-                                accRosca += fatiaRosca;
-                                <circle cx="100" cy="100" r="74"
-                                       class="@ClasseForma(fp.Metodo)"
-                                       fill="none"
-                                       stroke-width="22"
-                                       stroke-dasharray="@dashArray @sobra"
-                                       stroke-dashoffset="@dashOffset"
-                                       stroke-linecap="butt" />
+                                var m = (metodo ?? "").Trim().ToLowerInvariant();
+                                if (m.Contains("dinheiro")) { return "dsh-forma-dinheiro"; }
+                                if (m.Contains("pix")) { return "dsh-forma-pix"; }
+                                if (m.Contains("créd") || m.Contains("cred")) { return "dsh-forma-credito"; }
+                                if (m.Contains("déb") || m.Contains("deb")) { return "dsh-forma-debito"; }
+                                if (m.Contains("voucher")) { return "dsh-forma-voucher"; }
+                                return "dsh-forma-outro";
                             }
+                        }
+                        <circle class="dsh-rosca-fundo" cx="100" cy="100" r="74" fill="none" />
+                        @foreach (var fp in Model.FormasPagamento)
+                        {
+                            var gPct = Math.Max(0d, Convert.ToDouble(fp.Percentual));
+                            var gComp = gPct / 100d * gCirc;
+                            <circle class="dsh-rosca-fatia @GCorForma(fp.Metodo)" cx="100" cy="100" r="74" fill="none" stroke-width="22"
+                                    stroke-dasharray="@GRn(gComp) @GRn(gCirc - gComp)" stroke-dashoffset="@GRn(-gAcum)"
+                                    transform="rotate(-90 100 100)" />
+                            gAcum += gComp;
+                        }
+                        <g class="dsh-rosca-centro">
+                            <text class="dsh-rosca-total @(gTotalTxt.Length > 12 ? "is-muito-longo" : gTotalTxt.Length > 9 ? "is-longo" : "")" x="100" y="99" text-anchor="middle">@gTotalTxt</text>
+                            <text class="dsh-rosca-sub" x="100" y="120" text-anchor="middle">Total do período</text>
                         </g>
-                        <!-- Total no centro: o tamanho vem do CSS (classes
-                             dsh-rosca-total / --fit / --fit2); o script da secao
-                             Scripts encolhe o texto quando ele nao cabe no furo. -->
-                        <text class="dsh-rosca-total" x="100" y="97" text-anchor="middle">@Dinheiro(Model.FaturamentoAtual)</text>
-                        <text class="dsh-rosca-sub" x="100" y="116" text-anchor="middle">Total do período</text>
                     </svg>
 
                     <ul class="dsh-rosca-legenda" role="list" aria-label="Detalhamento das formas de pagamento">
                         @foreach (var fp in Model.FormasPagamento)
                         {
                             <li class="dsh-rosca-item">
-                                <span class="dsh-rosca-cor @ClasseForma(fp.Metodo)" aria-hidden="true"></span>
+                                <span class="dsh-rosca-cor @GCorForma(fp.Metodo)" aria-hidden="true"></span>
                                 <span class="dsh-rosca-nome">@fp.Metodo</span>
                                 <span class="dsh-rosca-detalhes">
                                     <span class="dsh-rosca-pct">@FormatoPtBr.PercentualSimples(fp.Percentual)</span>
@@ -473,22 +548,6 @@
 
 @section Scripts {
     <script>
-        // Total central da rosca: se o texto nao couber no furo (126 unidades),
-        // ganha uma classe menor definida no CSS. Classes, nunca font-size inline.
-        (function () {
-            'use strict';
-            var total = document.querySelector('.dsh-rosca-total');
-            if (!total || typeof total.getComputedTextLength !== 'function') return;
-            function ajustar() {
-                total.classList.remove('dsh-rosca-total--fit', 'dsh-rosca-total--fit2');
-                var largura = total.getComputedTextLength();
-                if (largura > 132) total.classList.add('dsh-rosca-total--fit2');
-                else if (largura > 118) total.classList.add('dsh-rosca-total--fit');
-            }
-            ajustar();
-            if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustar);
-        })();
-
         // Scripts existentes para o detalhe do dia (mantidos)
         (function () {
             'use strict';
@@ -572,23 +631,7 @@
                 });
             }
 
-            document.querySelectorAll('.dsh-grafico-ancora').forEach(ancora => {
-                ancora.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const dia = this.dataset.rotulo;
-                    const dias = '@Model.Periodo';
-                    if (!this.disabled && !this.classList.contains('dsh-grafico-ancora-vazio')) {
-                        abrirDetalhe(dia, dias);
-                    }
-                });
-
-                ancora.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        this.click();
-                    }
-                });
-            });
+            // Os pontos do grafico agora sao links normais para ?data=... (sem JavaScript).
 
             const btnFecharExistente = document.getElementById('fecharDetalheDia');
             if (btnFecharExistente) {

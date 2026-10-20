@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # ControlHub — Controle de Estoque e Caixa
+=======
+﻿# ControlHub — Controle de Estoque e Caixa
+>>>>>>> ef90759 (Visual para pc atualizado)
 
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![Entity Framework Core](https://img.shields.io/badge/EF%20Core-10.0-3178C6)
@@ -13,7 +17,11 @@ Desenvolvido em **ASP.NET Core MVC + Entity Framework Core (SQLite)**, com suít
 
 ## 🔑 Acesso de teste
 
+<<<<<<< HEAD
 **Demo on-line:** <https://controle-estoque-loja.runasp.net>
+=======
+**Demo on-line:** <http://controle-estoque-loja.runasp.net>
+>>>>>>> ef90759 (Visual para pc atualizado)
 
 Contas de demonstração para avaliação do projeto:
 

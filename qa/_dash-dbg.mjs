@@ -1,33 +1,43 @@
-/* qa/_dash-dbg.mjs - debug do cabecalho do Dashboard. TEMP. */
 import { abrirChrome, conectar, login, fechar } from './cdp-helper.mjs';
 const BASE = 'http://localhost:5311';
-const espera = ms => new Promise(r => setTimeout(r, ms));
-const { chrome, ...ctx1 } = abrirChrome(1440, 960, 9471);
-const api = await conectar(9471);
+const DONO_EMAIL = process.env.SHELL_DONO_EMAIL || 'admin@loja.com';
+const DONO_SENHA = process.env.SHELL_DONO_SENHA || 'Admin123';
+const periodo = process.argv[2] || 'ano';
+const { chrome, perfil, porta } = abrirChrome(1440, 960, 9471);
+const api = await conectar(porta);
 try {
-    await login(api, BASE, 'dono@teste.com', '***REMOVIDO***');
-    await api.cmd('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-    await api.ir(BASE + '/Dashboard'); await espera(700);
-    const html = String(await api.avaliar(`document.querySelector('.dash-cabecalho').outerHTML.slice(0, 400)`));
-    console.log('HTML do cabecalho:\n', html);
-    const info = String(await api.avaliar(`(() => {
-        const h = document.querySelector('.dash-cabecalho');
-        const cs = getComputedStyle(h);
-        const t = document.querySelector('.dash-cabecalho .dash-titulo');
-        const s = document.querySelector('.dash-cabecalho .dash-periodo');
-        const cont = document.querySelector('.dash-container') || h.parentElement;
-        const tb = t.getBoundingClientRect(), sb = s.getBoundingClientRect(), hb = h.getBoundingClientRect();
-        return JSON.stringify({
-            innerWidth: window.innerWidth,
-            headerW: Math.round(hb.width), headerDisplay: cs.display, headerFlexWrap: cs.flexWrap,
-            containerW: Math.round(cont.getBoundingClientRect().width), containerClass: cont.className,
-            titulo: { top: Math.round(tb.top), bottom: Math.round(tb.bottom), left: Math.round(tb.left), w: Math.round(tb.width) },
-            seletor: { top: Math.round(sb.top), bottom: Math.round(sb.bottom), left: Math.round(sb.left), w: Math.round(sb.width) }
-        }, null, 0);
-    })()`));
-    console.log('computed:', info);
+  await login(api, BASE, DONO_EMAIL, DONO_SENHA);
+  await api.cmd('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await api.ir(BASE + '/Dashboard?periodo=' + encodeURIComponent(periodo));
+  await new Promise(r => setTimeout(r, 1200));
+  const res = await api.avaliar(`(() => {
+    const q = sel => {
+      const e = document.querySelector(sel);
+      return e ? { existente: true, tag: e.tagName, cls: (e.className || '').toString(), txt: e.textContent.trim() } : { existente: false };
+    };
+    const boas = document.querySelector('.dsh-boas-vindas');
+    const saud = document.querySelector('h1.dsh-saudacao');
+    const cab = document.querySelector('.dsh-cabecalho');
+    const secao = document.querySelector('.dsh-kpi-grade');
+    const svg = document.querySelector('svg');
+    return {
+      url: location.href,
+      boas: q('.dsh-boas-vindas'),
+      cabecalho: cab ? { cls: cab.className, childCount: cab.children.length } : null,
+      saudacao: q('h1.dsh-saudacao'),
+      kpiGrade: !!secao,
+      svg: svg ? { tag: svg.tagName, cls: (svg.className||'').toString() } : null,
+      bodyText: document.body ? document.body.textContent.slice(0, 500) : '',
+      htmlLen: document.documentElement.outerHTML.length
+    };
+  })()`);
+  console.log(JSON.stringify(res, null, 2));
+} catch (e) {
+  console.error('ERRO', e.message);
+  const s = await api.avaliar('document.body ? document.body.outerHTML.slice(0, 800) : String(e)');
+  console.log('BODY-SNAP', s);
 } finally {
-    fechar({ ws: api.ws, pid: chrome.pid, perfil: ctx1.perfil });
-    chrome.kill();
+  fechar({ ws: api.ws, pid: chrome.pid, perfil });
+  chrome.kill();
 }
 process.exit(0);

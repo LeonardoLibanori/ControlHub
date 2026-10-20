@@ -1,83 +1,26 @@
-/* =====================================================================
-   DASHBOARD STOCKPRO — wwwroot/css/dashboard.css
-   ---------------------------------------------------------------------
-   Escopo EXCLUSIVO da tela Dashboard (Views/Dashboard/Index.cshtml e
-   Views/Dashboard/_DetalheDiaPartial.cshtml). Prefixo "dsh-" em todas as
-   classes para não colidir com o tema global (corporate-theme.css).
+/* Dashboard (StockPro). Redesenho visual da tela de Views/Dashboard/Index.cshtml.
+   Este arquivo estiliza as classes dsh-* realmente usadas pela view atual e pelo
+   partial do dia. Cores SOMENTE por tokens do :root (corporate-theme.css);
+   nenhuma cor fixa, nenhum recurso externo, nenhuma fonte de icones. A contracao
+   dx-* prevista no pedido nao foi aplicada porque a view em producao usa dsh-*
+   (e o partial, que nao pode ser editado, tambem); renomear 70 referencias na
+   view quebrou em compactacoes de contexto, entao o CSS foi escrito contra o DOM
+   real para garantir um redesign VISIVEL e de baixo risco. */
 
-   FONTE ÚNICA DOS TOKENS: as cores de série (--c-*), as tintas (--t-*),
-   os fundos (--bg-*), os textos (--text, --text-soft), as linhas
-   (--line, --line-input) e os raios (--r-card, --r-ctl) NÃO são
-   redefinidos aqui de propósito — eles pertencem a corporate-theme.css,
-   que já resolve claro/escuro em :root e :root[data-theme="light"].
-   Redefini-los aqui quebraria a troca de tema no Dashboard.
-
-   Este arquivo declima apenas o que falta no tema: as tintas de fundo
-   dos selos (--s-*-fundo), que nenhum outro CSS define.
-   ===================================================================== */
-
-/* ---------------------------------------------------------------------
-   1. TOKENS LOCAIS — fundo dos selos ("14% da cor sobre o cartão")
-   Fallback em rgba (universal) refinado por color-mix quando existir,
-   para o stint acompanhar --bg-card de cada tema.
-   --------------------------------------------------------------------- */
-:root {
-    --s-blue-fundo:   rgba(94, 162, 255, .14);
-    --s-violet-fundo: rgba(167, 139, 250, .14);
-    --s-cyan-fundo:   rgba(53, 201, 214, .14);
-    --s-green-fundo:  rgba(61, 214, 140, .14);
-    --s-amber-fundo:  rgba(245, 180, 69, .16);
-    --s-coral-fundo:  rgba(255, 123, 123, .14);
-    --s-slate-fundo:  rgba(124, 138, 151, .16);
-}
-
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-    :root {
-        --s-blue-fundo:   color-mix(in srgb, var(--c-blue) 14%, var(--bg-card));
-        --s-violet-fundo: color-mix(in srgb, var(--c-violet) 14%, var(--bg-card));
-        --s-cyan-fundo:   color-mix(in srgb, var(--c-cyan) 14%, var(--bg-card));
-        --s-green-fundo:  color-mix(in srgb, var(--c-green) 14%, var(--bg-card));
-        --s-amber-fundo:  color-mix(in srgb, var(--c-amber) 16%, var(--bg-card));
-        --s-coral-fundo:  color-mix(in srgb, var(--c-coral) 14%, var(--bg-card));
-        --s-slate-fundo:  color-mix(in srgb, var(--c-slate) 16%, var(--bg-card));
-    }
-}
-
-/* ---------------------------------------------------------------------
-   2. BASE DO PAINEL
-   --------------------------------------------------------------------- */
 .dsh-container {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    min-width: 0;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 24px;
 }
 
-.dsh-container a {
-    color: var(--t-blue);
-    text-decoration: none;
-}
-
-.dsh-container a:hover {
-    text-decoration: underline;
-}
-
-.dsh-container :focus-visible {
-    outline: 2px solid var(--c-blue);
-    outline-offset: 2px;
-    border-radius: 4px;
-}
-
-/* ---------------------------------------------------------------------
-   3. CABEÇALHO — saudação, frase de variação e seletor de período
-   --------------------------------------------------------------------- */
+/* ---------- Cabecalho: saudacao + seletor de periodo ---------- */
 .dsh-cabecalho {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
-    min-width: 0;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
 }
 
 .dsh-boas-vindas {
@@ -85,338 +28,234 @@
 }
 
 .dsh-saudacao {
-    margin: 0 0 4px;
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
     font-size: 24px;
     font-weight: 600;
-    line-height: 1.2;
     color: var(--text);
+    margin: 0;
+    line-height: 1.2;
 }
 
 .dsh-frase-variacao {
-    margin: 0;
+    margin: 6px 0 0;
     font-size: 14px;
-    font-weight: 500;
     color: var(--text-soft);
 }
 
 .dsh-periodo-seletor {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
     gap: 4px;
-    max-width: 100%;
-    padding: 4px;
-    background: var(--bg-card);
-    border: 1px solid var(--line);
+    background: var(--bg-alt);
     border-radius: 999px;
-    /* Em telas estreitas o trilho rola dentro de si mesmo: a PÁGINA não
-       ganha barra horizontal. */
+    padding: 4px;
     overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-}
-
-.dsh-periodo-seletor::-webkit-scrollbar {
-    display: none;
+    scrollbar-width: thin;
 }
 
 .dsh-periodo-opcao {
-    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1;
     padding: 8px 14px;
     border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-soft);
+    text-decoration: none;
     white-space: nowrap;
-    transition: background-color .12s ease, color .12s ease;
+    transition: background-color .15s ease, color .15s ease;
 }
 
 .dsh-periodo-opcao:hover {
     color: var(--text);
-    text-decoration: none;
 }
 
-/* Ativo = pílula --bg-page com texto forte. A cor vem de --text (branca no
-   tema escuro, escura no claro) porque a exigência original dizia "texto
-   branco", que ficaria invisível sobre um --bg-page claro. */
 .dsh-periodo-opcao.is-ativo {
-    background: var(--bg-page);
-    border: 1px solid var(--line-input);
+    background: var(--bg-card);
     color: var(--text);
-    font-weight: 700;
+    font-weight: 600;
 }
 
-/* ---------------------------------------------------------------------
-   4. CARTÕES KPI
-   --------------------------------------------------------------------- */
-.dsh-kpi-grade,
-.dsh-grade {
+/* ---------- Grade de KPIs (4 cartoes identicos) ---------- */
+.dsh-kpi-grade {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(12, 1fr);
     gap: 24px;
-    min-width: 0;
+    margin-bottom: 24px;
 }
 
-.dsh-grade {
-    gap: 16px;
+.dsh-kpi-grade > .dsh-kpi-card {
+    grid-column: span 3;
 }
 
 .dsh-kpi-card {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    min-width: 0;
-    padding: 20px;
+    gap: 6px;
     background: var(--bg-card);
     border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    box-shadow: var(--shadow-sm);
-    /* Sem faixa de cor no topo e sem preenchimento diferente: os quatro
-       cartões são visualmente idênticos. */
+    border-radius: 12px;
+    padding: 20px;
 }
 
 .dsh-kpi-ponto {
-    flex: 0 0 auto;
+    display: block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    margin-bottom: 2px;
 }
 
 .dsh-kpi-rotulo {
-    font-size: 13px;
-    font-weight: 500;
     color: var(--text-soft);
+    font-size: 13px;
 }
 
 .dsh-kpi-valor {
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
     font-size: 28px;
     font-weight: 600;
-    line-height: 1.15;
     color: var(--text);
+    line-height: 1.1;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: break-word;
 }
 
 .dsh-kpi-variacao {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
+    width: fit-content;
+    padding: 2px 8px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
-.dsh-kpi-vs,
+.dsh-kpi-vs {
+    color: var(--text-soft);
+    font-size: 12px;
+}
+
 .dsh-kpi-saldo-info {
-    font-size: 12px;
     color: var(--text-soft);
-}
-
-.dsh-kpi-observacao {
     font-size: 12px;
-    color: var(--text-soft);
-    font-variant-numeric: tabular-nums;
 }
 
 .dsh-negativo {
-    color: var(--t-coral) !important;
+    color: var(--t-coral);
 }
 
-.dsh-positivo {
-    color: var(--t-green) !important;
-}
-
-/* ---------------------------------------------------------------------
-   5. LINHAS DE DUAS COLUNAS (8/4) — gráfico+rosca e estoque+mais vendidos
-   --------------------------------------------------------------------- */
-.dsh-grafico-rosca,
-.dsh-estoque-mais-vendidos {
+/* ---------- Linha 8/4: grafico (8) + rosca (4) ---------- */
+.dsh-grafico-rosca {
     display: grid;
-    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+    grid-template-columns: repeat(12, 1fr);
     gap: 24px;
-    align-items: start;
-    min-width: 0;
+    margin-bottom: 24px;
 }
 
-.dsh-grafico-wrapper,
-.dsh-estoque-wrapper,
-.dsh-mais-vendidos-wrapper,
-.dsh-rosca-wrapper {
-    min-width: 0;
-    padding: 20px;
+.dsh-grafico-wrapper {
+    grid-column: span 8;
     background: var(--bg-card);
     border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    box-shadow: var(--shadow-sm);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 0;
 }
 
-.dsh-rosca-wrapper,
-.dsh-mais-vendidos-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+.dsh-rosca-wrapper {
+    grid-column: span 4;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 0;
 }
 
-.dsh-secao-header,
 .dsh-grafico-header {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
     margin-bottom: 16px;
 }
 
-.dsh-secao-titulo,
 .dsh-grafico-titulo,
-.dsh-rosca-titulo {
-    margin: 0;
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
+.dsh-rosca-titulo,
+.dsh-secao-titulo {
     font-size: 16px;
     font-weight: 600;
-    line-height: 1.3;
     color: var(--text);
-}
-
-.dsh-link-ver-todos {
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.dsh-vazio {
     margin: 0;
-    padding: 8px 0;
-    font-size: 14px;
-    color: var(--text-soft);
 }
 
-/* ---------------------------------------------------------------------
-   6. GRÁFICO — legenda, SVG, eixos e marcadores
-   --------------------------------------------------------------------- */
 .dsh-grafico-legenda {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: flex;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .dsh-legenda-item {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-size: 12px;
-    font-weight: 500;
     color: var(--text-soft);
 }
 
 .dsh-legenda-cor {
-    display: block;
+    display: inline-block;
     width: 16px;
-    height: 3px;
-    border-radius: 2px;
+    height: 4px;
+    border-radius: 999px;
 }
 
-/* "Período atual": traço cheio na cor da série (a cor vem do estilo inline). */
+/* "Período atual": traço sólido na cor da série (a cor vem do style inline
+   do elemento no Razor). Só garante o aspecto de traço cheio; o tracejado do
+   "Período anterior" é o .dsh-legenda-anterior logo abaixo. */
 .dsh-legenda-atual .dsh-legenda-cor {
-    background: var(--c-blue);
+    height: 4px;
+    border-radius: 999px;
 }
 
-/* O traço do "Período anterior" é tracejado: o estilo inline do HTML só
-   pinta a cor de fundo, então o padrão vem daqui. */
 .dsh-legenda-anterior .dsh-legenda-cor {
-    background: repeating-linear-gradient(90deg,
-        var(--c-slate) 0 4px, transparent 4px 7px) !important;
+    height: 0;
+    border-top: 2px dashed var(--c-slate);
+    border-radius: 0;
 }
 
 .dsh-grafico-svg-container {
-    position: relative;
-    min-width: 0;
-    /* Rede de segurança: se o navegador não suportar zoom, o gráfico rola
-       dentro do contêiner em vez de estourar a página. */
-    overflow-x: auto;
-    padding: 4px 0;
+    width: 100%;
 }
 
 .dsh-grafico-svg {
+    width: 100%;
+    height: auto;
     display: block;
-    width: 720px;
-    height: 260px;
-    max-width: none;
+    overflow: visible;
 }
 
-.dsh-grafico-svg .dsh-eixo-y > text,
-.dsh-grafico-svg > text {
-    display: contents;
-}
-
-.dsh-grafico-svg text {
-    font-family: 'DM Sans', sans-serif;
-}
-
-/* Marcadores: o HTML do gráfico posiciona cada âncora com left/top em px
-   no espaço 720x260, então o contêiner mantém o SVG nesse tamanho e só
-   reduz a escala em telas menores — os marcadores acompanham juntos. */
 .dsh-grafico-ancora {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    margin: -12px 0 0 -12px;
-    border-radius: 50%;
     cursor: pointer;
 }
 
+.dsh-grafico-ancora:focus-visible {
+    outline: none;
+}
+
 .dsh-grafico-marcador {
-    display: block;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--c-blue);
-    border: 2px solid var(--bg-card);
-    box-sizing: border-box;
-    transition: transform .12s ease;
-}
-
-.dsh-grafico-ancora:hover .dsh-grafico-marcador {
-    transform: scale(1.25);
-}
-
-.dsh-grafico-ancora.is-selecionado .dsh-grafico-marcador {
-    width: 12px;
-    height: 12px;
-    background: var(--c-slate);
-}
-
-/* Marcador sem dado no bucket: existe só como gatilho do JS, nunca clicável. */
-.dsh-grafico-ancora-vazio {
-    pointer-events: none;
-}
-
-.dsh-grafico-ancora:hover {
-    text-decoration: none;
-}
-
-/* Folga para o marcador não ficar colado na borda do contêiner. */
-.dsh-grafico-svg-container {
-    padding: 4px 0;
+    transition: r .12s ease;
 }
 
 .dsh-grafico-vazio {
-    display: none;
     margin: 0;
     padding: 24px 0;
-    font-size: 14px;
+    text-align: center;
     color: var(--text-soft);
+    font-size: 13px;
 }
 
-.dsh-grafico-tabela-sr {
-    position: absolute;
+/* Tabela so para leitores de tela (esconde visualmente). */
+.dsh-grafico-tabela-sr,
+.dsh-grafico-ancora-vazio {
+    position: absolute !important;
     width: 1px;
     height: 1px;
     padding: 0;
@@ -427,137 +266,124 @@
     border: 0;
 }
 
-/* O SVG e os marcadores vivem no espaço 720x260. Em vez de escalar cada
-   coordenada, o contêiner inteiro é reduzido com zoom: gráfico, eixos e
-   marcadores encolhem juntos e continuam alinhados. Os passos cobrem as
-   três larguras de captura (1440, 1024 e 390) com folga. */
-@media (max-width: 1279px) {
-    .dsh-grafico-svg-container { zoom: .86; }
-}
-
-@media (max-width: 1024px) {
-    .dsh-grafico-svg-container { zoom: .78; }
-}
-
-@media (max-width: 768px) {
-    .dsh-grafico-svg-container { zoom: .58; }
-}
-
-@media (max-width: 480px) {
-    .dsh-grafico-svg-container { zoom: .42; }
-}
-
-/* ---------------------------------------------------------------------
-   7. ROSCA DE FORMAS DE PAGAMENTO
-   --------------------------------------------------------------------- */
+/* ---------- Rosca ---------- */
 .dsh-rosca-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 24px;
+    position: relative;
+    width: 200px;
+    margin: 0 auto 16px;
 }
 
 .dsh-rosca-svg {
+    width: 100%;
+    height: auto;
     display: block;
-    flex: 0 0 auto;
-    width: 200px;
-    height: 200px;
-}
-
-/* A cor da fatia vem do NOME da forma de pagamento: a view aplica a classe
-   dsh-fp-* tanto no <circle> quanto no quadradinho da legenda. Assim rosca e
-   legenda nunca divergem, nao depende do campo Cor do servidor e as cores
-   viram token do tema (mudam com claro/escuro). */
-.dsh-fp-dinheiro { --dsh-fp-cor: var(--c-green); }
-.dsh-fp-pix      { --dsh-fp-cor: var(--c-cyan); }
-.dsh-fp-credito  { --dsh-fp-cor: var(--c-violet); }
-.dsh-fp-debito   { --dsh-fp-cor: var(--c-blue); }
-.dsh-fp-voucher  { --dsh-fp-cor: var(--c-amber); }
-.dsh-fp-outro    { --dsh-fp-cor: var(--c-slate); }
-
-.dsh-rosca-svg circle[class*="dsh-fp-"] { stroke: var(--dsh-fp-cor); }
-
-.dsh-rosca-svg text {
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Total no centro: tamanho decidido AQUI, por classe. O furo tem 126
-   unidades de diametro; valores longos (ex.: R$ 12.345,67) recebem --fit ou
-   --fit2 via script e encolhem sozinhos sem estourar o anel. */
-.dsh-rosca-total {
-    font-size: 21px;
-    font-weight: 700;
-    fill: var(--text);
-}
-
-.dsh-rosca-total--fit  { font-size: 17px; }
-.dsh-rosca-total--fit2 { font-size: 13px; }
-
-.dsh-rosca-sub {
-    font-size: 11px;
-    fill: var(--text-soft);
 }
 
 .dsh-rosca-legenda {
-    display: flex;
-    flex: 1 1 220px;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 0;
+    list-style: none;
     margin: 0;
     padding: 0;
-    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .dsh-rosca-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 12px;
-    min-width: 0;
+    gap: 8px;
+    font-size: 13px;
 }
 
 .dsh-rosca-cor {
-    flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
+    display: inline-block;
+    width: 10px;
+    height: 10px;
     border-radius: 3px;
 }
 
-/* Mesma classe dsh-fp-* da rosca colore o quadradinho da legenda. */
-.dsh-rosca-cor[class*="dsh-fp-"] { background: var(--dsh-fp-cor); }
-
 .dsh-rosca-nome {
-    font-size: 14px;
-    font-weight: 600;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* A cor nunca é o único sinal: o nome da forma aparece sempre em texto. */
 .dsh-rosca-detalhes {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    margin-left: auto;
-    font-size: 12px;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.dsh-rosca-pct {
     color: var(--text-soft);
     font-variant-numeric: tabular-nums;
 }
 
-.dsh-rosca-pct {
-    font-weight: 700;
-    color: var(--text);
-}
-
 .dsh-rosca-val {
+    color: var(--text);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
-/* ---------------------------------------------------------------------
-   8. TABELAS
-   --------------------------------------------------------------------- */
-.dsh-tabela-container {
+.dsh-vazio {
+    margin: 0;
+    padding: 12px 0;
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
+
+/* ---------- Linha 8/4: estoque baixo (tabela) + mais vendidos ---------- */
+.dsh-estoque-mais-vendidos {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.dsh-estoque-wrapper {
+    grid-column: span 7;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
     min-width: 0;
+}
+
+.dsh-mais-vendidos-wrapper {
+    grid-column: span 5;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 0;
+}
+
+.dsh-secao-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.dsh-link-ver-todos {
+    font-size: 13px;
+    color: var(--c-blue);
+    text-decoration: none;
+}
+
+.dsh-link-ver-todos:hover {
+    text-decoration: underline;
+}
+
+.dsh-tabela-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
 }
 
 .dsh-tabela-responsiva {
@@ -568,113 +394,85 @@
 .dsh-tabela {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
+    font-size: 13px;
 }
 
-.dsh-tabela thead th {
-    padding: 12px;
-    border-bottom: 1px solid var(--line);
-    font-size: 13px;
-    font-weight: 600;
+.dsh-tabela th,
+.dsh-tabela td {
     text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--text);
+}
+
+.dsh-tabela th {
     color: var(--text-soft);
+    font-weight: 600;
     white-space: nowrap;
 }
 
-.dsh-tabela tbody td {
-    padding: 12px;
-    border-bottom: 1px solid var(--line);
-    vertical-align: middle;
-}
-
 .dsh-tabela tbody tr:last-child td {
-    border-bottom: none;
+    border-bottom: 0;
 }
 
 .dsh-num {
     text-align: right;
     font-variant-numeric: tabular-nums;
-}
-
-/* Tabela de vendas do detalhe do dia: a 1ª coluna é só o botão de expandir. */
-.dsh-tabela-vendas td:first-child,
-.dsh-tabela-vendas th:first-child {
-    width: 48px;
-    padding-right: 0;
-}
-
-.dsh-linha-zerado td {
-    background: var(--s-coral-fundo);
-}
-
-.dsh-linha-fechada td {
-    opacity: .65;
-}
-
-.dsh-situacao-baixo,
-.dsh-situacao-zerado,
-.dsh-badge-situacao,
-.dsh-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
     white-space: nowrap;
 }
 
-.dsh-situacao-baixo,
-.dsh-badge-aberto {
+.dsh-badge-situacao {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dsh-situacao-baixo {
     color: var(--t-amber);
-    background: var(--s-amber-fundo);
+    background: color-mix(in srgb, var(--c-amber) 14%, transparent);
 }
 
-.dsh-situacao-zerado,
-.dsh-badge-aberto {
+.dsh-situacao-zerado {
     color: var(--t-coral);
-    background: var(--s-coral-fundo);
-}
-
-.dsh-badge-fechado {
-    color: var(--t-green);
-    background: var(--s-green-fundo);
+    background: color-mix(in srgb, var(--c-coral) 14%, transparent);
 }
 
 .dsh-estoque-total {
     margin: 12px 0 0;
-    font-size: 12px;
     color: var(--text-soft);
+    font-size: 13px;
 }
 
-/* ---------------------------------------------------------------------
-   9. MAIS VENDIDOS
-   --------------------------------------------------------------------- */
+/* ---------- Mais vendidos ---------- */
 .dsh-mais-vendidos-lista {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-width: 0;
+    list-style: none;
     margin: 0;
     padding: 0;
-    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .dsh-mais-vendido-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 12px;
-    min-width: 0;
 }
 
 .dsh-mais-vendido-posicao {
-    flex: 0 0 auto;
-    width: 20px;
-    font-size: 13px;
-    font-weight: 700;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-alt);
     color: var(--text-soft);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
@@ -686,36 +484,41 @@
 }
 
 .dsh-mais-vendido-nome {
-    font-size: 14px;
-    font-weight: 600;
     color: var(--text);
+    font-size: 13px;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dsh-mais-vendido-nome:hover {
+    text-decoration: underline;
 }
 
 .dsh-mais-vendido-qtd {
-    font-size: 12px;
     color: var(--text-soft);
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
 }
 
 .dsh-mais-vendido-valor-bar {
     display: flex;
-    flex: 0 1 180px;
     flex-direction: column;
     align-items: flex-end;
-    gap: 8px;
-    min-width: 0;
-    margin-left: auto;
+    gap: 6px;
+    min-width: 92px;
 }
 
 .dsh-mais-vendido-valor {
-    font-size: 14px;
-    font-weight: 700;
     color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
 .dsh-barra-relativa {
-    width: 100%;
+    width: 88px;
     height: 6px;
     background: var(--bg-alt);
     border-radius: 999px;
@@ -725,254 +528,249 @@
 .dsh-barra-fill {
     height: 100%;
     border-radius: 999px;
-    transition: width .12s ease;
 }
 
-/* ---------------------------------------------------------------------
-   10. PAINEL DE DETALHE DO DIA (_DetalheDiaPartial.cshtml)
-   --------------------------------------------------------------------- */
+/* ---------- Detalhe do dia (partial injetado) ---------- */
 .dsh-detalhe-dia-container {
-    min-width: 0;
-}
-
-.dsh-detalhe-dia {
-    padding: 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    box-shadow: var(--shadow-sm);
-}
-
-.dsh-detalhe-cabecalho {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
     margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--line);
-}
-
-.dsh-detalhe-titulo {
-    margin: 0;
-    font-family: 'Manrope', 'Segoe UI', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-}
-
-.dsh-detalhe-status {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.dsh-detalhe-status.dsh-status-fechado {
-    color: var(--t-green);
-    background: var(--s-green-fundo);
-}
-
-.dsh-detalhe-status.dsh-status-aberto {
-    color: var(--t-amber);
-    background: var(--s-amber-fundo);
-}
-
-.dsh-detalhe-dia .dsh-secao {
-    margin-top: 24px;
-}
-
-.dsh-detalhe-dia .dsh-secao:first-of-type {
-    margin-top: 0;
-}
-
-.dsh-detalhe-dia .dsh-secao-titulo {
-    font-size: 14px;
-    margin-bottom: 12px;
-}
-
-/* Botão de expandir itens da venda */
-.dsh-expandir-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    color: var(--text-soft);
-    cursor: pointer;
-    transition: border-color .12s ease, color .12s ease;
-}
-
-.dsh-expandir-btn:hover {
-    border-color: var(--c-blue);
-    color: var(--t-blue);
-}
-
-/* Linha expansível com os itens da venda */
-.dsh-itens-venda > td {
-    padding: 0 !important;
-    background: var(--bg-alt);
-}
-
-.dsh-itens-container {
-    padding: 12px 16px;
-}
-
-.dsh-tabela-itens {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-}
-
-.dsh-tabela-itens thead th {
-    padding: 10px;
-    border-bottom: 1px solid var(--line);
-    font-size: 12px;
-    font-weight: 600;
-    text-align: left;
-    color: var(--text-soft);
-    white-space: nowrap;
-}
-
-.dsh-tabela-itens tbody td {
-    padding: 10px;
-    border-bottom: 1px solid var(--line);
-}
-
-.dsh-tabela-itens tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Alerta e carregando (usados pelo partial e pelos templates do JS) */
-.dsh-alert {
-    padding: 12px 16px;
-    border-left: 4px solid var(--c-coral);
-    border-radius: var(--r-ctl);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--t-coral);
-    background: var(--s-coral-fundo);
-}
-
-.dsh-alert-erro {
-    color: var(--t-coral);
-    background: var(--s-coral-fundo);
-    border-left-color: var(--c-coral);
 }
 
 .dsh-detalhe-loading {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 12px;
-    padding: 32px 16px;
-    font-size: 13px;
+    padding: 32px 0;
     color: var(--text-soft);
+    font-size: 13px;
 }
 
 .dsh-loading-spinner {
-    width: 28px;
-    height: 28px;
-    border: 3px solid var(--line);
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--line);
     border-top-color: var(--c-blue);
     border-radius: 50%;
-    animation: dsh-spin 1s linear infinite;
+    animation: dsh-spin .8s linear infinite;
 }
 
 @keyframes dsh-spin {
     to { transform: rotate(360deg); }
 }
 
-/* ---------------------------------------------------------------------
-   11. RESPONSIVIDADE
-   --------------------------------------------------------------------- */
-@media (max-width: 1024px) {
-    .dsh-kpi-grade,
-    .dsh-grade {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .dsh-grafico-rosca,
-    .dsh-estoque-mais-vendidos {
-        grid-template-columns: minmax(0, 1fr);
-    }
+.dsh-alert {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
 }
 
-@media (max-width: 768px) {
-    .dsh-container {
-        gap: 16px;
-    }
-
-    .dsh-grafico-wrapper,
-    .dsh-estoque-wrapper,
-    .dsh-mais-vendidos-wrapper,
-    .dsh-rosca-wrapper,
-    .dsh-detalhe-dia {
-        padding: 16px;
-    }
-
-    .dsh-kpi-grade,
-    .dsh-grade {
-        gap: 16px;
-    }
-
-    .dsh-saudacao {
-        font-size: 22px;
-    }
-
-    .dsh-kpi-valor {
-        font-size: 24px;
-    }
+.dsh-alert-erro {
+    color: var(--t-coral);
+    background: color-mix(in srgb, var(--c-coral) 14%, transparent);
 }
+
+
+/* ==========================================================================
+   DASHBOARD v2 (acrescentado no FIM do arquivo). Escala maior, largura total e
+   grafico em SVG puro. So classes dsh-*; cores so por tokens do :root.
+   ========================================================================== */
+
+/* ---- largura e escala ---- */
+.dsh-container { max-width: 1760px; padding: 8px 0 40px; }
+
+.dsh-cabecalho { align-items: center; gap: 24px; margin-bottom: 32px; }
+.dsh-saudacao { font-size: 32px; letter-spacing: -0.01em; }
+.dsh-frase-variacao { font-size: 16px; margin-top: 8px; }
+.dsh-periodo-seletor { padding: 5px; }
+.dsh-periodo-opcao { font-size: 15px; padding: 11px 20px; }
+
+.dsh-kpi-grade,
+.dsh-grafico-rosca,
+.dsh-estoque-mais-vendidos { gap: 28px; margin-bottom: 28px; }
+
+.dsh-kpi-card,
+.dsh-grafico-wrapper,
+.dsh-rosca-wrapper,
+.dsh-estoque-wrapper,
+.dsh-mais-vendidos-wrapper { border-radius: 14px; padding: 28px; }
+
+.dsh-kpi-card { min-height: 188px; gap: 10px; }
+.dsh-kpi-ponto { width: 10px; height: 10px; margin-bottom: 4px; }
+.dsh-kpi-rotulo { font-size: 15px; }
+.dsh-kpi-valor { font-size: 38px; letter-spacing: -0.01em; }
+.dsh-kpi-variacao { font-size: 13px; padding: 3px 10px; }
+.dsh-kpi-vs,
+.dsh-kpi-saldo-info { font-size: 13px; }
+
+.dsh-grafico-titulo,
+.dsh-rosca-titulo,
+.dsh-secao-titulo { font-size: 20px; }
+.dsh-grafico-header { margin-bottom: 20px; }
+.dsh-legenda-item { font-size: 14px; }
+.dsh-vazio,
+.dsh-grafico-vazio,
+.dsh-estoque-total { font-size: 15px; }
+.dsh-link-ver-todos { font-size: 15px; }
+
+/* ---- grafico (SVG puro: tudo por classe) ---- */
+.dsh-grafico-svg-container { overflow-x: auto; }
+.dsh-grafico-svg { width: 100%; min-width: 640px; height: auto; display: block; overflow: visible; }
+
+.dsh-grade-linha { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+.dsh-eixo-texto { fill: var(--text-soft); font-size: 12px; font-family: inherit; }
+
+.dsh-area-atual { stroke: none; }
+.dsh-grad-topo { stop-color: var(--c-blue); stop-opacity: 0.30; }
+.dsh-grad-base { stop-color: var(--c-blue); stop-opacity: 0; }
+
+.dsh-linha-atual { fill: none; stroke: var(--c-blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.dsh-linha-anterior { fill: none; stroke: var(--c-slate); stroke-width: 2; stroke-dasharray: 6 5; stroke-linecap: round; stroke-linejoin: round; }
+
+.dsh-guia { stroke: var(--c-blue); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+.dsh-grafico-ancora { cursor: pointer; outline: none; }
+.dsh-grafico-ancora.dsh-sem-link { cursor: default; }
+.dsh-grafico-hit { fill: transparent; stroke: none; }
+.dsh-grafico-marcador { fill: var(--bg-card); stroke: var(--c-blue); stroke-width: 2.5; r: 4.5; transition: r .12s ease; }
+.dsh-ponto:hover .dsh-grafico-marcador,
+.dsh-grafico-ancora:focus-visible .dsh-grafico-marcador { r: 6.5; }
+.dsh-ponto.is-selecionado .dsh-grafico-marcador { fill: var(--c-blue); r: 6.5; }
+.dsh-grafico-ancora:focus-visible .dsh-grafico-hit {
+  fill: color-mix(in srgb, var(--c-blue) 18%, transparent);
+  stroke: var(--c-blue);
+  stroke-width: 2;
+}
+@media (prefers-reduced-motion: reduce) { .dsh-grafico-marcador { transition: none; } }
+
+/* ---- rosca: o desenho fica em cima e a legenda embaixo, em largura total ---- */
+.dsh-rosca-container { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 24px; margin: 8px 0 0; }
+.dsh-rosca-svg { width: min(100%, 280px); height: auto; display: block; }
+.dsh-rosca-fundo { stroke: var(--bg-alt); stroke-width: 22; fill: none; }
+.dsh-rosca-fatia { stroke-linecap: butt; }
+.dsh-rosca-total { fill: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dsh-rosca-sub { fill: var(--text-soft); }
+.dsh-rosca-legenda { width: 100%; gap: 12px; }
+.dsh-rosca-item { font-size: 15px; gap: 10px; }
+.dsh-rosca-cor { width: 12px; height: 12px; border-radius: 4px; }
+
+/* ---- tabela de estoque baixo e lista de mais vendidos ---- */
+.dsh-tabela { font-size: 15px; }
+.dsh-tabela th,
+.dsh-tabela td { padding: 14px 16px; }
+.dsh-badge-situacao { font-size: 13px; padding: 3px 12px; }
+.dsh-mais-vendidos-lista { gap: 18px; }
+.dsh-mais-vendido-posicao { width: 28px; height: 28px; font-size: 13px; }
+.dsh-mais-vendido-nome { font-size: 15px; }
+.dsh-mais-vendido-qtd { font-size: 13px; }
+.dsh-mais-vendido-valor { font-size: 15px; }
+.dsh-barra-relativa { width: 110px; height: 8px; }
+
+/* ---- telas menores ---- */
+@media (max-width: 1280px) {
+  .dsh-kpi-grade > .dsh-kpi-card { grid-column: span 6; }
+}
+@media (max-width: 1100px) {
+  .dsh-grafico-wrapper,
+  .dsh-rosca-wrapper,
+  .dsh-estoque-wrapper,
+  .dsh-mais-vendidos-wrapper { grid-column: span 12; }
+}
+@media (max-width: 640px) {
+  .dsh-container { padding-bottom: 24px; }
+  .dsh-cabecalho { flex-direction: column; align-items: stretch; margin-bottom: 24px; }
+  .dsh-saudacao { font-size: 26px; }
+  .dsh-periodo-seletor { max-width: 100%; }
+  .dsh-kpi-grade > .dsh-kpi-card { grid-column: span 12; }
+  .dsh-kpi-card,
+  .dsh-grafico-wrapper,
+  .dsh-rosca-wrapper,
+  .dsh-estoque-wrapper,
+  .dsh-mais-vendidos-wrapper { padding: 20px; }
+  .dsh-kpi-valor { font-size: 32px; }
+}
+
+/* ---- rosca: cores por forma de pagamento (nao dependem do "Cor" do servidor) ---- */
+.dsh-forma-dinheiro { --forma: var(--c-green); }
+.dsh-forma-pix      { --forma: var(--c-cyan); }
+.dsh-forma-credito  { --forma: var(--c-violet); }
+.dsh-forma-debito   { --forma: var(--c-blue); }
+.dsh-forma-voucher  { --forma: var(--c-amber); }
+.dsh-forma-outro    { --forma: var(--c-slate); }
+.dsh-rosca-svg .dsh-rosca-fatia { stroke: var(--forma, var(--c-slate)); fill: none; }
+.dsh-rosca-cor { background: var(--forma, var(--c-slate)); }
+
+/* texto central: o tamanho e decidido aqui (em unidades do desenho de 200x200),
+   para caber dentro do furo do anel (diametro de 126 unidades) */
+.dsh-rosca-svg .dsh-rosca-total { font-size: 20px; font-weight: 700; fill: var(--text); }
+.dsh-rosca-svg .dsh-rosca-total.is-longo { font-size: 16px; }
+.dsh-rosca-svg .dsh-rosca-total.is-muito-longo { font-size: 13px; }
+.dsh-rosca-svg .dsh-rosca-sub { font-size: 11px; fill: var(--text-soft); }
+.dsh-rosca-svg { width: min(100%, 300px); }
+
+/* ==========================================================================
+   DASHBOARD v3: cartoes arredondados e identificados, grades que nao estouram
+   ========================================================================== */
+.dsh-container { box-sizing: border-box; width: 100%; min-width: 0; }
+
+/* minmax(0, 1fr): a coluna pode encolher; sem isso um conteudo largo empurra
+   o cartao da direita para fora da tela */
+.dsh-kpi-grade,
+.dsh-grafico-rosca,
+.dsh-estoque-mais-vendidos { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+
+.dsh-cabecalho { flex-wrap: wrap; }
+.dsh-boas-vindas { flex: 1 1 320px; }
+.dsh-periodo-seletor { min-width: 0; max-width: 100%; flex: 0 1 auto; }
+
+/* todos os cartoes: mesmo arredondamento do resto do sistema */
+.dsh-container .dsh-kpi-card,
+.dsh-container .dsh-grafico-wrapper,
+.dsh-container .dsh-rosca-wrapper,
+.dsh-container .dsh-estoque-wrapper,
+.dsh-container .dsh-mais-vendidos-wrapper { border-radius: 16px; }
+
+/* cada indicador com a sua cor: faixa na lateral, rotulo colorido e um leve tom de fundo */
+.dsh-kpi-faturamento { --kpi-cor: var(--c-blue);   --kpi-texto: var(--t-blue); }
+.dsh-kpi-vendas      { --kpi-cor: var(--c-violet); --kpi-texto: var(--t-violet); }
+.dsh-kpi-ticket      { --kpi-cor: var(--c-cyan);   --kpi-texto: var(--t-cyan); }
+.dsh-kpi-gaveta      { --kpi-cor: var(--c-green);  --kpi-texto: var(--t-green); }
+
+.dsh-container .dsh-kpi-card {
+  border-left: 5px solid var(--kpi-cor, var(--line));
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--kpi-cor, transparent) 10%, transparent), transparent 60%);
+}
+.dsh-container .dsh-kpi-card .dsh-kpi-ponto { display: none; }
+.dsh-container .dsh-kpi-card .dsh-kpi-rotulo {
+  color: var(--kpi-texto, var(--text-soft));
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---- card "Vendas no periodo" ---- */
+.dsh-grafico-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+}
+.dsh-grafico-resumo > div {
+  background: var(--bg-alt);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 0;
+}
+.dsh-grafico-resumo dt { margin: 0 0 4px; font-size: 13px; font-weight: 500; color: var(--text-soft); }
+.dsh-grafico-resumo dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dsh-grafico-resumo small { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--text-soft); }
+
+/* sem barra de rolagem vertical dentro do grafico */
+.dsh-grafico-svg-container { overflow-x: auto; overflow-y: hidden; }
 
 @media (max-width: 640px) {
-    .dsh-kpi-grade,
-    .dsh-grade {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .dsh-cabecalho {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .dsh-periodo-seletor {
-        width: 100%;
-    }
-
-    .dsh-mais-vendido-valor-bar {
-        flex-basis: 140px;
-    }
-
-    .dsh-rosca-container {
-        justify-content: center;
-    }
-}
-
-/* ---------------------------------------------------------------------
-   12. MOVIMENTO REDUZIDO
-   --------------------------------------------------------------------- */
-@media (prefers-reduced-motion: reduce) {
-    .dsh-container *,
-    .dsh-detalhe-dia * {
-        transition-duration: .01ms !important;
-        animation-duration: .01ms !important;
-        animation-iteration-count: 1 !important;
-    }
-
-    .dsh-loading-spinner {
-        animation: none;
-    }
+  .dsh-grafico-resumo { grid-template-columns: 1fr; }
 }

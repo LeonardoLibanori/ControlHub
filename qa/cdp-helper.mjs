@@ -90,15 +90,43 @@ export async function conectar(porta) {
 
 export async function login(api, base, email, senha) {
     await api.ir(base + '/Account/Login');
-    await api.avaliar(`(() => {
-        const f = document.querySelector('form');
+    // Já autenticado, /Account/Login redireciona e o formulário não existe:
+    // sai pela rota POST /Account/Logout (formulário do layout, com token
+    // antiforgery embutido) antes de logar de novo.
+    const temForm = await api.avaliar(`!!document.querySelector('input[name="Email"]')`);
+    if (!temForm) {
+        await api.ir(base + '/Dashboard');
+        const saiu = await api.avaliar(`(() => {
+            const f = document.querySelector('form[action*="Logout" i]');
+            if (!f) return 'sem-form';
+            f.submit(); return 'saiu';
+        })()`);
+        if (saiu !== 'saiu') throw new Error('login: sem form de logout em ' + base);
+        await new Promise(r => setTimeout(r, 1500));
+        await api.ir(base + '/Account/Login');
+    }
+    await api.avaliar(`(async () => {
+        for (let i = 0; i < 20; i++) {
+            if (document.querySelector('input[name="Email"]')) return 'achou';
+            await new Promise(ok => setTimeout(ok, 150));
+        }
+        return 'timeout';
+    })()`);
+    const situacao = await api.avaliar(`(() => {
+        const e = document.querySelector('input[name="Email"]');
+        const s = document.querySelector('input[name="Senha"]');
+        if (!e || !s) {
+            return 'sem-inputs href=' + location.href + ' forms=' + document.querySelectorAll('form').length;
+        }
+        // Preenche e submete o form QUE CONTÉM os campos (a página de login
+        // pode coexistir com outros forms no DOM dependendo do estado).
+        const f = e.form;
         const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        const e = f.querySelector('input[name="Email"]');
-        const s = f.querySelector('input[name="Senha"]');
         set.call(e, ${JSON.stringify(email)}); e.dispatchEvent(new Event('input', { bubbles: true }));
         set.call(s, ${JSON.stringify(senha)}); s.dispatchEvent(new Event('input', { bubbles: true }));
         f.submit(); return 'ok';
     })()`);
+    if (situacao !== 'ok') throw new Error('login: formulário inesperado (' + situacao + ') para ' + email);
     await new Promise(r => setTimeout(r, 2500));
     const apos = String(await api.avaliar('location.href'));
     if (apos.includes('/Account/Login')) throw new Error('login falhou para ' + email);

@@ -1,0 +1,132 @@
+================================================================================
+RELATÓRIO QA — DASHBOARD STOCKPRO (ControlHub-limpo)
+Guard visual: qa/dashboard-check.mjs (reuso de qa/cdp-helper.mjs)
+Base: http://localhost:5236 (app real, DB controleestoque.db)
+Re-verificação: 20/10/2026 — encoded UTF-8 (o arquivo anterior era UTF-16 e
+aparecia como mojibake fora do PowerShell)
+================================================================================
+
+RESULTADO ANTES:  31 falhas em 12 grupos (todos no tema escuro; o run antigo
+                   nunca chegava ao tema claro — ver "correções de infra")
+RESULTADO DEPOIS: 661 checks OK / 0 falha(s)  ->  dashboard-check: OK
+                   (2 temas x 6 períodos x 3 larguras + bloco "com dia selecionado")
+Evidência:        qa/_out-dashboard.txt (stdout completo do run vencedor)
+
+--------------------------------------------------------------------------------
+GRUPO 1 — "<text> do gráfico com altura >= 10px" = 0.0px (15 falhas:
+          hoje/ontem/7dias/30dias/mes x 1024/1440/390px)
+--------------------------------------------------------------------------------
+Causa raiz:  a view envolvia cada par <line>+<text> num <text> PAI
+             (<text><text x=.../></text>). <text> aninhado é conteúdo
+             inválido em SVG: o navegador não gera caixa para o filho nem para
+             o pai → getBoundingClientRect().height = 0 para todos os <text>.
+             Agravante em dashboard.css: ".dsh-grafico-svg > text {
+             display: contents;" também destruía a caixa dos <text> diretos.
+Correção:    Views/Dashboard/Index.cshtml: wrappers viraram <g> (agrupamento
+             SVG válido) nos ticks do eixo Y e nos rótulos do eixo X.
+             wwwroot/css/dashboard.css: regra display:contents morta removida.
+             qa/dashboard-check.mjs (check 3): mede a altura INTRÍNSECA
+             (desconta o CSS zoom do .dsh-grafico-svg-container — .86/.78/.58/
+             .42 por largura). O bug real (caixa colapsada em 0) continua sendo
+             acusado; o zoom de encaixe do gráfico deixa de gerar falso positivo.
+Verificação: check completo 661/0; o check "<text> ... altura >= 10px" passa
+             nos 36 combos de tema/ período/ largura.
+
+--------------------------------------------------------------------------------
+GRUPO 2 — "4 cartões mesma altura (+/-1px)" em 390px (5 falhas: alturas
+          173,173,173,139 — fileira de 1 coluna com alturas independentes)
+--------------------------------------------------------------------------------
+Causa raiz:  @media (max-width: 640px) de dashboard.css usava
+             grid-template-columns: repeat(4, minmax(0,1fr)): quatro colunas
+             de ~70px esmagavam o conteúdo (e, no estado anterior, 1fr
+             renderizava 4 linhas independentes sem esticar). Em qualquer um
+             dos casos os cartões não compartilhavam altura de linha.
+Correção:    @media 640px agora usa repeat(2, minmax(0,1fr)): duas colunas por
+             linha; o stretch padrão do grid iguala as alturas dentro da linha
+             (linha 1 = max(cart1,cart2); linha 2 = max(cart3,cart4)).
+Verificação: check "4 cartões mesma altura (+/-1px)" OK nas 6 combinações de
+             tema x período em 390px (alturas idênticas) e nas demais larguras.
+
+--------------------------------------------------------------------------------
+GRUPO 3 — "nenhum elemento fora da viewport" em 390px (5 falhas: 42 itens —
+          gaveta off-canvas, última pílula de período e tabela de estoque)
+--------------------------------------------------------------------------------
+Causa raiz:  três causas distintas num único check:
+             (a) a sidebar é gaveta off-canvas por design (transform:
+                 translateX(-100%)) e o check marcava o estado fechado;
+             (b) as 6 pílulas do seletor de período (~473px) não cabiam em
+                 390px numa linha só;
+             (c) a tabela de estoque (448px) vive num wrapper com overflow-x:
+                 auto — rolagem interna legítima, mas o check marcava.
+Correção:    (a) dashboard.css: removido o hack anterior que fixava a gaveta
+                 aberta sobre o conteúdo (left:0; transform:none) — a gaveta
+                 volta ao comportamento padrão do tema (drawer + cortina +
+                 shell.js); o check passa a ignorar a gaveta FECHADA abaixo
+                 de 1024px (estado intencional).
+             (b) .dsh-periodo-seletor ganhou flex-wrap: wrap em <=640px —
+                 as pílulas quebram em duas linhas dentro da viewport.
+             (c) o check passa a aceitar conteúdo dentro de ancestor com
+                 overflow-x auto/scroll (tabela responsiva, seletor de
+                 período, gráfico) — o usuário alcança rolando; overflow:hidden
+                 estrutural do .app-content NÃO libera nada, e o check
+                 "página sem scroll horizontal" continua valendo.
+Verificação: check "nenhum elemento fora da viewport" e "página sem scroll
+             horizontal" OK nos 36 combos.
+
+--------------------------------------------------------------------------------
+GRUPO 4 — período "ano" com HTTP 500 (3 falhas em 1440px: página sem
+          saudação/SVG; na prática o 500 valia para toda largura)
+--------------------------------------------------------------------------------
+Causa raiz:  a view montava a data do link do bucket com
+             Array.IndexOf([... meses PT ...], Rotulo) — mas o controller gera
+             o rótulo com "MMM" de CultureInfo.InvariantCulture (inglês:
+             jan/feb/mar/...; exigido por DashboardTemplateQaTests). Para
+             "feb" o índice era -1 → new DateTime(ano, 0, 1) →
+             ArgumentOutOfRangeException → 500. Bônus: o cálculo rodava
+             incondicionalmente, então rótulos "00h" (hoje/ontem) quebravam
+             DateTime.ParseExact(rotulo, "dd/MM") com 500 também (descoberto
+             na re-verificação).
+Correção:    Views/Dashboard/Index.cshtml: a data usa Model.SerieAtual[i].Indice
+             (mês 0-based já calculado pelo controller) para "ano"; para os
+             demais períodos usa DateTime.TryParseExact("dd/MM") com fallback
+             DateTime.Today (rótulos "00h" não são clicáveis — o href já é "#").
+Verificação: período ano renderiza nas 3 larguras x 2 temas; checks de SVG,
+             rótulos ("feb", "apr", ... reconhecidos), âncoras e rosca OK;
+             hoje/ontem (rótulos "00h") também — 661/0.
+
+--------------------------------------------------------------------------------
+GRUPO 5 — "rosca soma 100,0% | soma=0" no período hoje (3 falhas)
+--------------------------------------------------------------------------------
+Causa raiz:  não é bug de render: o banco não tem vendas datadas de "hoje", a
+             rosca entra no estado vazio ("Sem vendas no período.") e o check
+             exigia soma 100% mesmo sem formas de pagamento.
+Correção:    qa/dashboard-check.mjs (check 4): passa quando count === 0
+             (estado vazio legítimo), mantendo a exigência de 100,0% quando
+             existem formas. O check "rosca legenda tem mesmo nº de itens"
+             (0 === 0) já cobre a coerência do estado vazio.
+Verificação: "rosca soma 100,0%" OK hoje/3 larguras (estado vazio) e 100,0%
+             real nos demais períodos.
+
+--------------------------------------------------------------------------------
+CORREÇÕES DE INFRA DO GUARD (sem as quais o run não termina)
+--------------------------------------------------------------------------------
+1. qa/cdp-helper.mjs — login(): o 2º tema morria com "Illegal invocation"
+   porque o navegador já estava autenticado e o form de login não existia.
+   Agora: detecta a ausência do form, sai via POST /Account/Logout (form do
+   layout, com token antiforgery), espera o input Email e submete o form que
+   CONTÉM os campos (com mensagem diagnóstica clara se a página estiver
+   errada). Era por isso que relatórios antigos só tinham grupos "escuro".
+2. qa/dashboard-check.mjs — svgCheck: o early-return "SVG não encontrado"
+   devolvia objeto incompleto e o run quebrava em rotulosX.join('.'); agora
+   devolve todos os campos zerados para os checks seguintes completarem.
+3. qa/dashboard-check.mjs — check (2): o regex de rótulos aceita o par de
+   meses em inglês do CultureInfo.InvariantCulture (feb/apr/may/aug/sep/oct/
+   dec) além do PT, alinhando o guard ao contrato fixado pelos testes .NET.
+
+--------------------------------------------------------------------------------
+REGRESSÕES
+--------------------------------------------------------------------------------
+- dotnet build: 0 erros (8 avisos pré-existentes de nullable no projeto).
+- dotnet test tests.QA: 373 aprovados / 0 falhas (DashboardTemplateQaTests
+  incluído — rótulos "jan"/"feb" do período ano continuam garantidos).
+- App reiniciado na 5236 com o build novo; dashboard-check: OK (661/0).

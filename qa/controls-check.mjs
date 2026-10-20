@@ -81,7 +81,7 @@ function razaoWcag(fg, bg) {
 }
 
 /* Encontra o fundo efetivo (primeiro ancestral com background-color opaco) */
-const FUNDO_EFETIVO = `(() => {
+const FUNDO_EFETIVO = String.raw`(() => {
     function getEffectiveBg(el) {
         while (el && el !== document.body) {
             const bg = getComputedStyle(el).backgroundColor;

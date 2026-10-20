@@ -3487,19 +3487,21 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     html[data-sidebar="fechada"] .app-main { grid-column: 1; }
 }
 
-/* --- GAVETA abaixo de 1024px --- */
-@media (max-width: 1023.98px) {
+/* --- GAVETA abaixo de 70rem (1120px) --- */
+@media (max-width: 70rem) {
     .app-shell { grid-template-columns: 1fr; }
     .app-main { grid-column: 1; }
     .app-sidebar {
         position: fixed;
-        top: 0;
-        left: 0;
+        inset: 0 auto 0 0;
         width: 240px;
         transform: translateX(-100%);
+        transition: transform .22s ease;
         box-shadow: 0 0 40px rgba(0, 0, 0, .4);
     }
     .app-sidebar.aberto { transform: translateX(0); }
+    .app-header__menu { display: inline-flex; }
+    .app-header__center { justify-content: flex-start; }
 }
 
 @media (max-width: 30rem) {
@@ -5260,6 +5262,7 @@ html[data-sidebar="fechada"] .app-hamburguer__barra {
 }
 
 
+
 /* Alinhamento definitivo do filtro do histórico */
 .history-filter .history-filter__form {
     display: flex !important;
@@ -5325,6 +5328,68 @@ html[data-sidebar="fechada"] .app-hamburguer__barra {
     }
 }
 
+/* ================= MOBILE: correcao de sobreposicao de botoes (historico) =================
+   Colocado DEPOIS do "Alinhamento definitivo" para nao ser sobrescrito pelo gap: 8px !important. */
+@media (max-width: 575.98px) {
+  .history-filter .history-filter__form {
+    gap: 6px !important;
+  }
+
+  .history-filter .history-filter__btn {
+    padding: 0 12px !important;
+  }
+
+  .history-filter #btn-buscar {
+    min-width: 60px !important;
+  }
+
+  .history-filter #btn-exportar {
+    min-width: 80px !important;
+  }
+}
+
+/* ================= MOBILE: botoes do Estoque (Novo produto / Exportar Excel) =================
+   Corrigem sobreposicao em telas <= 575.98px sem alterar o desktop. */
+@media (max-width: 575.98px) {
+  .mb-4.d-flex.flex-wrap.gap-2 {
+    gap: 8px !important;
+  }
+
+  .mb-4.d-flex.flex-wrap.gap-2 .btn-novo,
+  .mb-4.d-flex.flex-wrap.gap-2 .btn-exportar {
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    height: 36px !important;
+    min-width: auto !important;
+    white-space: nowrap;
+  }
+}
+
+/* ================= MOBILE: busca - caixa menor + botao ao lado (mesma linha) ================= */
+@media (max-width: 575.98px) {
+  .busca-form {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .busca-form input[name="busca"],
+  .busca-form input[type="text"] {
+    max-width: 150px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .busca-form button {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    height: auto !important;
+    white-space: nowrap !important;
+  }
+}
+
+
+
+
 
 /* SweetAlert2: nunca alterar a altura nem o padding do documento */
 html.swal2-height-auto,
@@ -5348,4 +5413,37 @@ html body.swal2-shown.swal2-height-auto { padding-right: 0 !important; }
   html[data-sidebar="fechada"] .app-sidebar { display: none !important; }
   html[data-sidebar="fechada"] .app-shell { grid-template-columns: 1fr !important; }
   html[data-sidebar="fechada"] .app-main { grid-column: 1 / -1 !important; }
+}
+
+/* ==========================================================================
+   Estoque: tabela com cantos arredondados (padrao --radius-card, 12px).
+   O card (.tabela-card) ja tem raio, mas a tabela dentro dele usa
+   border-collapse: collapse, que ignora border-radius - por isso o cabecalho
+   e as linhas ficavam com cantos quadrados. Com separate + spacing 0 o
+   visual e identico (linhas de 1px mantidas) e os 4 cantos arredondam.
+   Escopo restrito a .tabela-responsiva--estoque: Historico e Usuarios nao
+   mudam. overflow: clip (e nao hidden) para nao virar contêiner de rolagem
+   e nao quebrar a coluna Acoes sticky no mobile.
+   ========================================================================== */
+.tabela-card .tabela-responsiva--estoque {
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: var(--radius-card);
+    overflow: clip;
+}
+
+.tabela-card .tabela-responsiva--estoque thead th:first-child {
+    border-top-left-radius: var(--radius-card);
+}
+
+.tabela-card .tabela-responsiva--estoque thead th:last-child {
+    border-top-right-radius: var(--radius-card);
+}
+
+.tabela-card .tabela-responsiva--estoque tbody tr:last-child td:first-child {
+    border-bottom-left-radius: var(--radius-card);
+}
+
+.tabela-card .tabela-responsiva--estoque tbody tr:last-child td:last-child {
+    border-bottom-right-radius: var(--radius-card);
 }
