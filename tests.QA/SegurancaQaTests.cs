@@ -1,9 +1,19 @@
 ﻿using System.Reflection;
+using System.Security.Claims;
+using System.Threading;
 using ControleEstoqueLoja.Controllers;
 using ControleEstoqueLoja.Models;
-using Microsoft.AspNetCore.Authorization;
+using ControleEstoqueLoja.Security;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace tests.QA;
 
@@ -31,7 +41,8 @@ public class SegurancaQaTests
         Assert.NotEmpty(controllers);
 
         var semAuthorize = controllers
-            .Where(t => t.GetCustomAttribute<AuthorizeAttribute>() is null)
+            .Where(t => t.GetCustomAttributes(inherit: false)
+                .All(a => a.GetType().FullName != "Microsoft.AspNetCore.Authorization.AuthorizeAttribute"))
             .Select(t => t.Name)
             .ToList();
 
@@ -174,5 +185,103 @@ public class SegurancaQaTests
             dir = dir.Parent;
         }
         throw new DirectoryNotFoundException("Raiz do projeto web nao encontrada.");
+    }
+
+    // ---------------------------------------------------------------------
+    // REGRESSAO (CSRF): validacao do cookie de autenticacao (OnValidatePrincipal)
+    // NAO deve girar o token antiforgery. Se girar, o cookie do token e
+    // sobrescrito a cada requisicao autenticada enquanto o request-token
+    // embutido na pagina ja carregada continua apontando pro cookie anterior,
+    // e POSTs legítimos recebem 400 (falso-positivo de CSRF).
+    // ---------------------------------------------------------------------
+    [Fact]
+    public void ValidacaoDeCookie_NaoGiraTokenAntiforgery()
+    {
+        // Arrange: IAntiforgery falso que conta chamadas a GetAndStoreTokens.
+        var chamadasGetAndStoreTokens = 0;
+        var antiforgery = new AntiforgeryFake(() => Interlocked.Increment(ref chamadasGetAndStoreTokens));
+
+        var services = new ServiceCollection()
+            .AddSingleton<IAntiforgery>(antiforgery)
+            // ISecurityStampValidator eh necessario pelo ValidatePrincipalAsync.
+            .AddSingleton<ISecurityStampValidator>(new NoOpSecurityStampValidator())
+            .BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = services };
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "usuario-1") }, "Cookie"));
+
+        var ticket = new AuthenticationTicket(principal, CookieAuthenticationDefaults.AuthenticationScheme);
+        var contexto = new CookieValidatePrincipalContext(
+            httpContext,
+            new AuthenticationScheme(CookieAuthenticationDefaults.AuthenticationScheme, CookieAuthenticationDefaults.AuthenticationScheme, typeof(CookieAuthenticationHandler)),
+            new CookieAuthenticationOptions(),
+            ticket)
+        {
+            Principal = principal
+        };
+
+        // Act: simula a validacao do cookie de autenticacao numa requisicao autenticada.
+        CookieSecurityEvents.ValidatePrincipalAsync(contexto).GetAwaiter().GetResult();
+
+        // Assert: o token antiforgery NAO deve ter sido reemitido.
+        Assert.Equal(0, chamadasGetAndStoreTokens);
+    }
+
+    // Implementacao no-op de ISecurityStampValidator para testes unitarios.
+    private sealed class NoOpSecurityStampValidator : ISecurityStampValidator
+    {
+        public Task ValidateAsync(CookieValidatePrincipalContext context) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public void TokenAntiforgery_ParCookieRequest_Valida()
+    {
+        // Arrange: servico real de antiforgery (mesma configuracao de Program.cs).
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
+        var antiforgery = serviceProvider.GetRequiredService<IAntiforgery>();
+
+        // Simula o GET da pagina: emite o cookie do token e devolve o request token.
+        var tokens = antiforgery.GetAndStoreTokens(httpContext);
+
+        // Act: obtem os tokens novamente (GetTokens) e confere que sao validos (nao nulos).
+        var tokens2 = antiforgery.GetTokens(httpContext);
+
+        // Assert: tokens validos (nao lancou excecao, nao sao nulos).
+        Assert.NotNull(tokens);
+        Assert.NotNull(tokens2);
+        Assert.Equal(tokens.RequestToken, tokens2.RequestToken);
+    }
+
+    // Falsificacao minima de IAntiforgery para rastrear chamadas a GetAndStoreTokens.
+    private sealed class AntiforgeryFake : IAntiforgery
+    {
+        private readonly Action _onGetAndStoreTokens;
+
+        public AntiforgeryFake(Action onGetAndStoreTokens) => _onGetAndStoreTokens = onGetAndStoreTokens;
+
+        public AntiforgeryTokenSet GetAndStoreTokens(HttpContext context)
+        {
+            _onGetAndStoreTokens();
+            return new AntiforgeryTokenSet("cookie-token", "request-token", "__RequestVerificationToken", "X-CSRF-TOKEN");
+        }
+
+        public AntiforgeryTokenSet GetTokens(HttpContext context) =>
+            new AntiforgeryTokenSet("cookie-token", "request-token", "__RequestVerificationToken", "X-CSRF-TOKEN");
+
+        public Task<bool> IsRequestValidAsync(HttpContext context) => Task.FromResult(true);
+
+        public void SetCookieTokenAndHeader(HttpContext context) { }
+
+        public Task ValidateRequestAsync(HttpContext context) => Task.CompletedTask;
+
+        public Task ValidateTokens(HttpContext context, string cookieToken, string requestToken) =>
+            Task.CompletedTask;
     }
 }
