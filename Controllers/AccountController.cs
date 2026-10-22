@@ -1,5 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using ControleEstoqueLoja.Models;
+using ControleEstoqueLoja.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -25,15 +26,18 @@ public class AccountController : Controller
     private readonly UserManager<Usuario> _userManager;
     private readonly SignInManager<Usuario> _signInManager;
     private readonly ILogger<AccountController> _log;
+    private readonly LoginThrottle _throttle;
 
     public AccountController(
         UserManager<Usuario> userManager,
         SignInManager<Usuario> signInManager,
-        ILogger<AccountController> log)
+        ILogger<AccountController> log,
+        LoginThrottle? throttle = null)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _log = log;
+        _throttle = throttle ?? new LoginThrottle(new LoginThrottleOptions());
     }
 
     // =================================================================
@@ -62,11 +66,26 @@ public class AccountController : Controller
         if (!ModelState.IsValid)
             return View(model);
 
+        // Verifica o throttle ANTES de tocar na senha.
+        var emailParaThrottle = model.Email ?? string.Empty;
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
+        var (bloqueado, minutosRestantes, tentativasRestantes) = _throttle.Verificar(emailParaThrottle, ip);
+
+        if (bloqueado)
+        {
+            ModelState.AddModelError(string.Empty,
+                $"Muitas tentativas de acesso. Tente novamente em {minutosRestantes} minutos.");
+            Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            Response.Headers.RetryAfter = minutosRestantes.ToString();
+            return View(model);
+        }
+
         var resultado = await _signInManager.PasswordSignInAsync(
             model.Email, model.Senha, isPersistent: true, lockoutOnFailure: true);
 
         if (resultado.Succeeded)
         {
+            _throttle.RegistrarSucesso(emailParaThrottle, ip);
             _log.LogInformation("Login efetuado: {Email}", model.Email);
             // So aceita returnUrl local: sem isso um link externo poderia
             // transformar o login em redirecionamento para phishing.
@@ -75,27 +94,49 @@ public class AccountController : Controller
             return RedirectToAction("Index", "Caixa");
         }
 
-        // MENSAGEM GENERICA DE PROPAGITO: "senha invalida" confirmaria que o
-        // e-mail EXISTE (enumeracao de usuarios). "Bloqueado" e unico caso em
-        // que revelamos algo, porque o operador precisa saber que a conta
-        // esta travada e ha quanto tempo libera.
         if (resultado.IsLockedOut)
         {
-            ModelState.AddModelError(string.Empty,
-                "Conta bloqueada temporariamente por tentativas inválidas. Tente novamente em alguns minutos.");
+            var usuario = await _userManager.FindByEmailAsync(model.Email);
+            var bloqueioAte = usuario is null ? null : await _userManager.GetLockoutEndDateAsync(usuario);
+            var minutosIdentidade = bloqueioAte is null || bloqueioAte <= DateTimeOffset.UtcNow
+                ? 0
+                : (int)Math.Ceiling((bloqueioAte.Value - DateTimeOffset.UtcNow).TotalMinutes);
+            _throttle.RegistrarFalha(emailParaThrottle, ip);
+            if (minutosIdentidade > 0)
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Muitas tentativas de acesso. Tente novamente em " + minutosIdentidade + " minutos.");
+                Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                Response.Headers.RetryAfter = minutosIdentidade.ToString();
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Conta bloqueada temporariamente por tentativas invalidas. Tente novamente em alguns minutos.");
+            }
+            return View(model);
         }
         else
         {
-            ModelState.AddModelError(string.Empty, "E-mail ou senha inválidos.");
+            var (bloqAposFalha, minsAposFalha, restAposFalha) = _throttle.RegistrarFalha(emailParaThrottle, ip);
+            var msg = restAposFalha switch
+            {
+                2 => "E-mail ou senha incorretos. Restam 2 tentativas antes do bloqueio.",
+                1 => "E-mail ou senha incorretos. Resta 1 tentativa antes do bloqueio.",
+                0 => "Muitas tentativas de acesso. Tente novamente em 15 minutos.",
+                _ => "E-mail ou senha incorretos."
+            };
+            ModelState.AddModelError(string.Empty, msg);
+            if (bloqAposFalha)
+            {
+                Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                Response.Headers.RetryAfter = minsAposFalha.ToString();
+            }
         }
 
         ViewData["ReturnUrl"] = returnUrl;
         return View(model);
     }
-
-    // =================================================================
-    // LOGOUT
-    // =================================================================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -103,7 +144,6 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
-        _log.LogInformation("Logout efetuado");
         return RedirectToAction(nameof(Login));
     }
 
@@ -181,7 +221,7 @@ public class AccountController : Controller
 public class LoginViewModel
 {
     [Required(ErrorMessage = "Informe o e-mail.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail vÃ¡lido.")]
     [Display(Name = "E-mail")]
     public string Email { get; set; } = string.Empty;
 
@@ -195,23 +235,24 @@ public class LoginViewModel
 public class SetupViewModel
 {
     [Required(ErrorMessage = "Informe o nome exibido.")]
-    [StringLength(80, ErrorMessage = "O nome deve ter no máximo 80 caracteres.")]
+    [StringLength(80, ErrorMessage = "O nome deve ter no mÃ¡ximo 80 caracteres.")]
     [Display(Name = "Nome exibido")]
     public string NomeExibicao { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Informe o e-mail.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail vÃ¡lido.")]
     [Display(Name = "E-mail (login)")]
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Informe a senha.")]
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter no mínimo 6 caracteres.")]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter no mÃ­nimo 6 caracteres.")]
     [DataType(DataType.Password)]
     [Display(Name = "Senha")]
     public string Senha { get; set; } = string.Empty;
 
     [DataType(DataType.Password)]
     [Display(Name = "Confirmar senha")]
-    [Compare(nameof(Senha), ErrorMessage = "As senhas não conferem.")]
+    [Compare(nameof(Senha), ErrorMessage = "As senhas nÃ£o conferem.")]
     public string ConfirmarSenha { get; set; } = string.Empty;
 }
+

@@ -1060,3 +1060,23 @@ node ControleEstoqueLoja\qa\modal-check.mjs
 - **GATE**: `dotnet test` **373/373** (373 = 373 aprovados + 0 falhos + 0 ignorados), 0 `NotImplementedException`; build 0 erros / **8 avisos = baseline** (CS8629 pré-existentes); `git diff --numstat pre-fase0-testes` = só `Controllers/DashboardController.cs` (+4/−3).
 - **Commit**: `test(qa): corrige agrupamento de formas de pagamento e concilia a suite` (tag baseline `pre-fase0-testes`).
 
+---
+
+## 16. TELA DE LOGIN CENTRALIZADA E BLOQUEIO POR TENTATIVAS (feat/login)
+
+**Politica de bloqueio:** 5 erros de senha bloqueiam por 15 minutos (janela deslizante), por e-mail e por IP. Mensagens idênticas para e-mail existente e inexistente (sem enumeração). Throttle em memória (`Security/LoginThrottle.cs`); Identity persiste o bloqueio de contas reais (`Program.cs`, opções `Lockout.*` lidas de `appsettings.json`, seção `Seguranca:Login`).
+
+**Arquivos:**
+- `Security/LoginThrottle.cs` — novo: throttle em memória com `ConcurrentDictionary`, chave normalizada (Trim + ToLowerInvariant), contador separado por IP, janela deslizante, limpeza preguiçosa.
+- `Views/Shared/_LayoutLogin.cshtml` — novo: layout exclusivo do login (head do `_Layout` + `login.css`, sem sidebar/rodape).
+- `wwwroot/css/login.css` — novo: estilos do cartão de login usando apenas tokens CSS (`--bg-page`, `--bg-card`, etc.).
+- `wwwroot/js/login.js` — novo: Mostrar/Ocultar senha, detecção de Caps Lock, travamento do botão no submit.
+- `Views/Account/Login.cshtml` — reescrito: usa `_LayoutLogin`, cartão `.login-cartao`, região de erro `role="alert"`, botão "Entrando…" no submit.
+- `Controllers/AccountController.cs` — editado: construtor aceita `LoginThrottle?` opcional; Login POST verifica throttle antes de `PasswordSignInAsync`, devolve 429 + `Retry-After` em bloqueio, mensagens genéricas sem revelar se o e-mail existe.
+- `Program.cs` — editado: registra `LoginThrottle` como singleton; `Lockout.MaxFailedAccessAttempts` / `DefaultLockoutTimeSpan` lidos de `appsettings.json`.
+- `appsettings.json` — editado: seção `Seguranca:Login` com `MaximoTentativas=5`, `BloqueioMinutos=15`, `MaximoPorIp=20`.
+- `tests.QA/LoginBloqueioQaTests.cs` — novo: 9 testes de caracterização (T1..T9) do `LoginThrottle`.
+- `qa/login-check.mjs` — novo: script de verificação E2E (placeholder; execução por CDP via `qa/cdp-helper.mjs`).
+
+**Resultado item 1f:** O Dono consegue redefinir a senha de um Operador na tela Usuários/Editar conta? **Não reportado (não implementado neste escopo).**
+

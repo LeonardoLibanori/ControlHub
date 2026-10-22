@@ -75,13 +75,30 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
         options.Password.RequireNonAlphanumeric = false;
         options.User.RequireUniqueEmail = true;
 
-        // Bloqueio progressivo apos tentativas erradas.
-        options.Lockout.MaxFailedAccessAttempts = 5;
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+        // Bloqueio progressivo apos tentativas erradas: mesma fonte do LoginThrottle
+        // (appsettings.json, secao "Seguranca:Login"). Um so valor de verdade.
+        var secaoLogin = builder.Configuration.GetSection("Seguranca:Login");
+        var maximoTentativas = secaoLogin.GetValue<int>("MaximoTentativas", 5);
+        var bloqueioMinutos = secaoLogin.GetValue<int>("BloqueioMinutos", 15);
+        options.Lockout.MaxFailedAccessAttempts = maximoTentativas;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(bloqueioMinutos);
         options.Lockout.AllowedForNewUsers = true;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+// Registra o LoginThrottle como singleton (mesmas opcoes do appsettings).
+builder.Services.AddSingleton<LoginThrottle>(sp =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var s = cfg.GetSection("Seguranca:Login");
+    return new LoginThrottle(new LoginThrottleOptions
+    {
+        MaximoTentativas = s.GetValue<int>("MaximoTentativas", 5),
+        BloqueioMinutos = s.GetValue<int>("BloqueioMinutos", 15),
+        MaximoPorIp = s.GetValue<int>("MaximoPorIp", 20),
+    });
+});
 
 builder.Services.Configure<SecurityStampValidatorOptions>(
     CookieSecurityEvents.ConfigureSecurityStampValidator);

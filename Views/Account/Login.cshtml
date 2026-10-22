@@ -1,35 +1,53 @@
 @model ControleEstoqueLoja.Controllers.LoginViewModel
 @{
     ViewData["Title"] = "Entrar";
-    Layout = "_Layout";
+    Layout = "_LayoutLogin";
 }
 
-<div class="container auth-shell">
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <h2 class="text-center mb-1">Entrar</h2>
-            <p class="text-center text-muted mb-4">Controle de Estoque</p>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var csrfInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfInput && meta && meta.content) {
+                csrfInput.value = meta.content;
+            }
+        });
+    </script>
+}
 
-            <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+<main class="login-cartao">
+    <div class="login-marca">@(Context.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Marca:Nome"] ?? "ControlHub")</div>
+    <p class="login-subtitulo">Acesse o painel de controle de estoque</p>
 
-            <form method="post" asp-controller="Account" asp-action="Login">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+    @if (!ViewData.ModelState.IsValid)
+    {
+        var erro = ViewData.ModelState[string.Empty]
+            ?.Errors.FirstOrDefault()?.ErrorMessage;
+        var ehBloqueio = !string.IsNullOrEmpty(erro) && erro.Contains("Muitas tentativas");
+        <div role="alert" id="alertaErro" class="@(ehBloqueio ? "alerta-bloqueio" : "alerta-senha")">@erro</div>
+    }
 
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label fw-bold"></label>
-                    <input asp-for="Email" class="form-control" autofocus autocomplete="username" />
-                    <span asp-validation-for="Email" class="text-danger small"></span>
-                </div>
+    <form method="post" asp-controller="Account" asp-action="Login" id="formLogin">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
 
-                <div class="mb-4">
-                    <label asp-for="Senha" class="form-label fw-bold"></label>
-                    <input asp-for="Senha" class="form-control" autocomplete="current-password" />
-                    <span asp-validation-for="Senha" class="text-danger small"></span>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
-            </form>
+        <div class="login-campo">
+            <label class="login-label" for="Email">E-mail</label>
+            <input asp-for="Email" id="Email" type="email" autofocus autocomplete="username" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
         </div>
-    </div>
-</div>
+
+        <div class="login-campo">
+            <label class="login-label" for="Senha">Senha</label>
+            <input asp-for="Senha" id="senha" type="password" autocomplete="current-password" />
+            <span asp-validation-for="Senha" class="text-danger small"></span>
+            <div class="login-botoes-enviar">
+                <button type="button" id="btnMostrarSenha" aria-pressed="false">Mostrar</button>
+            </div>
+            <span id="avisoCaps" class="login-capslock">Caps Lock ativado</span>
+        </div>
+
+        <button type="submit" id="btnEntrar" class="login-botao-entrar">Entrar</button>
+    </form>
+</main>
