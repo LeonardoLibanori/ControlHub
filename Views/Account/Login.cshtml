@@ -20,7 +20,7 @@
     <div class="login-marca">@(Context.RequestServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Marca:Nome"] ?? "ControlHub")</div>
     <p class="login-subtitulo">Acesse o painel de controle de estoque</p>
 
-    @if (!ViewData.ModelState.IsValid)
+    @if (ViewData.ModelState[string.Empty]?.Errors.Any() == true)
     {
         var erro = ViewData.ModelState[string.Empty]
             ?.Errors.FirstOrDefault()?.ErrorMessage;
