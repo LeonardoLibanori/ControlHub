@@ -136,7 +136,7 @@ public class UsuariosController : Controller
             if (donos.Count == 1)
             {
                 ModelState.AddModelError(nameof(model.Papel),
-                    "Esta é a única conta Dono. Crie outro Dono antes de rebaixar esta.");
+                    "Esta é a única conta Administrador. Crie outra conta Administrador antes de rebaixar esta.");
                 return View(model);
             }
         }

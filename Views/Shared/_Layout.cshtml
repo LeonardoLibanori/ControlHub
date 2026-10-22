@@ -1,4 +1,4 @@
-@*
+﻿@*
     ==========================================================================
     BUG-13 (commit 4): MENU POR PAPEL.
     ==========================================================================
@@ -50,6 +50,12 @@
         ("dashboard", _) => ("Gestão", "Dashboard"),
         _ => ((string?)null, (string?)null)
     };
+    if (rotaAtual.Equals("home", StringComparison.OrdinalIgnoreCase)
+        && acaoAtual.Equals("configuracoes", StringComparison.OrdinalIgnoreCase))
+    {
+        grupoAtual = "ConfiguraÃ§Ãµes";
+        paginaAtual = "Atalhos";
+    }
     var caminhoTexto = paginaAtual ?? (ViewData["Title"] as string) ?? "";
 
 
@@ -58,6 +64,7 @@
     var podeRegistrarSuprimento = false;
     var podeRegistrarSangria = false;
     var podeVerFinanceiro = false;
+    var podeVerRelatorioCaixa = false;
     var podeFecharCaixa = false;
     var podeGerenciarVendedores = false;
     var podeGerenciarUsuarios = false;
@@ -70,16 +77,16 @@
         podeRegistrarSuprimento = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSuprimento)).Succeeded;
         podeRegistrarSangria = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSangria)).Succeeded;
         podeVerFinanceiro = (await Autorizacao.AuthorizeAsync(User, Policies.PodeVerFinanceiro)).Succeeded;
+        podeVerRelatorioCaixa = (await Autorizacao.AuthorizeAsync(User, Policies.PodeVerRelatorioCaixa)).Succeeded;
         podeFecharCaixa = (await Autorizacao.AuthorizeAsync(User, Policies.PodeFecharCaixa)).Succeeded;
         podeGerenciarVendedores = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarVendedores)).Succeeded;
         podeGerenciarUsuarios = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarUsuarios)).Succeeded;
         podeAcessarAdmin = (await Autorizacao.AuthorizeAsync(User, Policies.PodeAcessarAdmin)).Succeeded;
     }
 
-    // O modal Alt+M so existe se sobrar pelo menos um item para esta pessoa.
-    var temMenuAtalhos = podeOperarPdv || podeRegistrarSuprimento || podeRegistrarSangria
-                         || podeFecharCaixa || podeVerFinanceiro || podeReimprimirCupom
-                         || podeGerenciarVendedores;
+    // Toda pessoa autenticada pode abrir o guia/menu Alt+M. As aÃ§Ãµes do menu
+    // continuam sendo filtradas pelas permissÃµes do perfil.
+    var temMenuAtalhos = autenticado;
 
     // ---------------------------------------------------------------- "quem esta logado" ---
     // Nome: o login e por e-mail (Usuario.UserName == Email) e o nome bonito mora
@@ -100,7 +107,7 @@
         // Dono primeiro quando houver mais de um papel: e ele que explica tudo
         // o que a pessoa ve na tela.
         var papeis = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
-        papelExibido = papeis.Contains(Roles.Dono) ? Roles.Dono
+        papelExibido = papeis.Contains(Roles.Dono) ? "Administrador"
                      : papeis.Count > 0 ? string.Join(" + ", papeis)
                      : "sem papel";
     }
@@ -190,7 +197,7 @@
 <body>@if (autenticado)
 {
     <div class="app-shell" id="appShell">
-        <aside class="app-sidebar" id="app-sidebar" aria-label="Navegação principal">
+        <aside class="app-sidebar" id="app-sidebar" aria-label="NavegaÃ§Ã£o principal">
             <div class="app-sidebar__top">
                 <a class="app-brand" href="/" title="@marcaNome">@marcaNome</a>
                 @if (!string.IsNullOrWhiteSpace(lojaNome))
@@ -200,7 +207,7 @@
             </div>
             <nav class="app-sidebar__nav">
                 <div class="app-sidebar__grupo">Operação</div>
-                <a class="app-sidebar__item @(MenuAtivo("Home") ? "active" : null)" href="/Home/Index" aria-current="@(MenuAtivo("Home") ? "page" : null)">Estoque</a>
+                <a class="app-sidebar__item @(MenuAtivo("Home", "Index") ? "active" : null)" href="/Home/Index" aria-current="@(MenuAtivo("Home", "Index") ? "page" : null)">Estoque</a>
                 @* BUG menu do Operador: o Caixa e do PDV, que usa PodeOperarPDV
                    (Dono E Operador). Antes estava em PodeVerFinanceiro (so Dono):
                    o Operador caia no Caixa pelo redirect do login, mas ao sair
@@ -215,11 +222,11 @@
                     <a class="app-sidebar__item @(MenuAtivo("Caixa", "Historico") ? "active" : null)" asp-controller="Caixa" asp-action="Historico" asp-route-periodo="hoje" aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)">Histórico</a>
                     <a class="app-sidebar__item @(MenuAtivo("Dashboard") ? "active" : null)" href="/Dashboard" aria-current="@(MenuAtivo("Dashboard") ? "page" : null)">Dashboard</a>
                 }
-            </nav>
-            <div class="app-sidebar__bottom">
-                <div class="app-theme-linha">
+                <div class="app-sidebar__grupo">ConfiguraÃ§Ãµes</div>
+                <a class="app-sidebar__item @(MenuAtivo("Home", "Configuracoes") ? "active" : null)" asp-controller="Home" asp-action="Configuracoes" aria-current="@(MenuAtivo("Home", "Configuracoes") ? "page" : null)">Atalhos</a>
+                <div class="app-theme-linha app-sidebar__tema">
                     <span class="app-theme-linha__rotulo">Tema</span>
-                    <button type="button" class="app-theme" role="switch" aria-checked="true" aria-label="Modo escuro">
+                    <button type="button" class="app-theme" role="switch" aria-checked="true" aria-label="Alternar tema claro ou escuro">
                         <span class="app-theme-knob" aria-hidden="true"></span>
                         <span class="app-theme-ico app-theme-moon" aria-hidden="true">
                             <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -229,6 +236,8 @@
                         </span>
                     </button>
                 </div>
+            </nav>
+            <div class="app-sidebar__bottom">
                 <div class="app-usuario">
                     <button type="button" class="app-usuario__botao" id="btnUsuario" aria-haspopup="menu" aria-expanded="false" aria-controls="menuUsuario">
                         <span class="app-usuario__info">
@@ -306,13 +315,13 @@ else
                         {
                             <li class="nav-item">
                                 @* asp-controller="Home" mantido *@
-                                <a class="nav-link text-dark @(MenuAtivo("Home") ? "active" : null)"
-                                   aria-current="@(MenuAtivo("Home") ? "page" : null)"
+                                <a class="nav-link text-dark @(MenuAtivo("Home", "Index") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Home", "Index") ? "page" : null)"
                                    asp-area="" asp-controller="Home" asp-action="Index">Estoque</a>
                             </li>
                             <li class="nav-item">
                                 @* asp-controller="Caixa" mantido; a acao separa o
-                                   PDV (Index) do Historóico, que sao do mesmo
+                                   PDV (Index) do HistorÃ³ico, que sao do mesmo
                                    controller - sem isso os dois ficariam ativos. *@
                                 <a class="nav-link text-dark @(MenuAtivo("Caixa", "Index") ? "active" : null)"
                                    aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)"
@@ -320,7 +329,7 @@ else
                             </li>
                         }
 
-                        @* Histórico: PodeVerFinanceiro (só Dono) - some para o Operador. *@
+                        @* HistÃ³rico: PodeVerFinanceiro (sÃ³ Dono) - some para o Operador. *@
                         @if (podeVerFinanceiro)
                         {
                             <li class="nav-item">
@@ -337,7 +346,7 @@ else
                            do _Layout, sem uma Authorize nova aqui.
 
                            Mudancas (BUG-32): o item saiu do INICIO da barra para
-                           DEPOIS de Historóico e passou a se chamar "Dashboard"
+                           DEPOIS de HistorÃ³ico e passou a se chamar "Dashboard"
                            (antes "Inicio"). A rota nao mudou - continua
                            Dashboard/Index, que e o que os testes e os atalhos
                            usam. BUG-33: sem icone - a barra usa so o nome. *@
@@ -352,13 +361,13 @@ else
 
                         @* O link /Usuarios saiu da barra: hoje a rota vive dentro do
                            menu de perfil (dropdown a direita), para a navbar ficar
-                           clean. O Operador nao vê a opcao em lugar nenhum (e se
+                           clean. O Operador nao vÃª a opcao em lugar nenhum (e se
                            digitar a URL recebe 403 da propria rota). *@
                     </ul>
 
                     @if (autenticado)
                     {
-                        @* Menu de perfil (clean): na barra fica SO o icone + "Olá, nome";
+                        @* Menu de perfil (clean): na barra fica SO o icone + "OlÃ¡, nome";
                            ao clicar abrem as opcoes - ADMINISTRAR USUARIOS (Dono, a
                            unica rota /Usuarios da interface) e SAIR (POST com token
                            anti-forgery: logout nao pode ser GET que qualquer pagina
@@ -369,7 +378,7 @@ else
                             <button class="btn d-flex align-items-center gap-2 px-2 text-dark user-session-trigger"
                                     type="button" id="btnMenuPerfil" data-bs-toggle="dropdown"
                                     aria-expanded="false" aria-label="Menu do perfil">
-                                <span class="small fw-semibold">Olá, <b class="text-dark">@nomeExibido</b></span>
+                                <span class="small fw-semibold">OlÃ¡, <b class="text-dark">@nomeExibido</b></span>
                                 <i class="bi bi-chevron-down small" aria-hidden="true"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="btnMenuPerfil">
@@ -389,7 +398,7 @@ else
                                     <button type="button" class="dropdown-item" data-tema-opcao="auto"
                                             role="menuitemradio" aria-checked="true"
                                             onclick="aplicarTema('auto')">
-                                        Automático
+                                        AutomÃ¡tico
                                     </button>
                                 </li>
                                 <li>
@@ -453,7 +462,7 @@ else
                             @if (podeRegistrarSangria)
                             {
                             <div class="col-6">
-                                <button class="btn btn-danger w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
+                                <button class="btn btn-danger alt-m-funcao alt-m-funcao--sangria w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
                                     <span style="width: 30px; text-align: left;">1 -</span>
                                     <span>Sangria</span>
                                 </button>
@@ -462,7 +471,7 @@ else
                             @if (podeRegistrarSuprimento)
                             {
                             <div class="col-6">
-                                <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
+                                <button class="btn btn-primary alt-m-funcao alt-m-funcao--suprimento w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
                                     <span style="width: 30px; text-align: left;">2 -</span>
                                     <span>Suprimento</span>
                                 </button>
@@ -471,7 +480,7 @@ else
                             @if (podeFecharCaixa)
                             {
                             <div class="col-6">
-                                <button class="btn btn-secondary w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
+                                <button class="btn btn-secondary alt-m-funcao alt-m-funcao--caixa w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
                                     <span style="width: 30px; text-align: left;">3 -</span>
                                     <span>Caixa</span>
                                 </button>
@@ -480,25 +489,25 @@ else
                             @if (podeFecharCaixa)
                             {
                             <div class="col-6">
-                                <button class="btn btn-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
+                                <button class="btn btn-dark alt-m-funcao alt-m-funcao--fechamento w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
                                     <span style="width: 30px; text-align: left;">4 -</span>
                                     <span>Fechamento</span>
                                 </button>
                             </div>
                             }
-                            @if (podeVerFinanceiro)
+                            @if (podeVerRelatorioCaixa)
                             {
                             <div class="col-6">
-                                <button class="btn btn-info w-100 py-3 fw-bold shadow-sm d-flex align-items-center text-white" data-key="5" onclick="verRelatorioCaixa()">
+                                <button class="btn btn-info alt-m-funcao alt-m-funcao--relatorio w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="5" onclick="verRelatorioCaixa()">
                                     <span style="width: 30px; text-align: left;">5 -</span>
-                                    <span>Relatório</span>
+                                    <span>RelatÃ³rio</span>
                                 </button>
                             </div>
                             }
                             @if (podeReimprimirCupom)
                             {
                             <div class="col-6">
-                                <button class="btn btn-warning w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
+                                <button class="btn btn-warning alt-m-funcao alt-m-funcao--reimprimir w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
                                     <span style="width: 30px; text-align: left;">6 -</span>
                                     <span>Reimprimir</span>
                                 </button>
@@ -507,7 +516,7 @@ else
                             @if (podeOperarPdv || podeGerenciarVendedores)
                             {
                             <div class="col-6">
-                                <button class="btn btn-outline-dark w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
+                                <button class="btn btn-outline-dark alt-m-funcao alt-m-funcao--vendedores w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
                                     <span style="width: 30px; text-align: left;">7 -</span>
                                     <span>Vendedores</span>
                                 </button>
@@ -535,7 +544,7 @@ else
                             <input type="text" id="valorOperacao" class="form-control" oninput="formatarMoedaParaSweet(this)">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-muted small">Observação</label>
+                            <label class="form-label fw-bold text-muted small">ObservaÃ§Ã£o</label>
                             <textarea id="obsOperacao" class="form-control" rows="2"></textarea>
                         </div>
                         <button type="button" id="btnConfirmarOperacao" class="btn btn-lg w-100 fw-bold shadow-sm" onclick="salvarMovimentacao()">Confirmar</button>
@@ -567,7 +576,7 @@ else
                     @if (podeVerFinanceiro)
                     {
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">Histórico de vendas</span>
+                        <span class="fw-bold">HistÃ³rico de vendas</span>
                         <kbd>Alt + H</kbd>
                     </div>
                     }
@@ -607,7 +616,7 @@ else
 
     <script>
         // 1. Corretor de fundo escuro (Backdrop)
-        // Usamos delegação de evento no document para evitar erro caso o modal não exista na página
+        // Usamos delegaÃ§Ã£o de evento no document para evitar erro caso o modal nÃ£o exista na pÃ¡gina
         document.addEventListener('hidden.bs.modal', function (event) {
             if (event.target.id === 'modalAtalhos') {
                 document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
@@ -629,15 +638,45 @@ else
             const code = e.code || '';
             const A = window.LOJA_ACESSO || {};
 
+            const numeroTecladoMatch = /^(?:Digit|Numpad)([1-9])$/.exec(code);
+            const numeroTeclado = numeroTecladoMatch ? numeroTecladoMatch[1] : (/^[1-9]$/.test(e.key) ? e.key : null);
+
+            // A janela de reimpressÃ£o apresenta opÃ§Ãµes numeradas 1â€“3.
+            const popupAberto = document.querySelector('.swal2-container');
+            const entradaOpcaoImpressao = popupAberto && getComputedStyle(popupAberto).display !== 'none'
+                ? popupAberto.querySelector('#swal-input-opcao') : null;
+            if (entradaOpcaoImpressao && !e.altKey && !e.ctrlKey && !e.metaKey
+                && ['1', '2', '3'].includes(numeroTeclado) && !e.repeat) {
+                e.preventDefault();
+                entradaOpcaoImpressao.value = numeroTeclado;
+                if (window.Swal && typeof Swal.clickConfirm === 'function') Swal.clickConfirm();
+                e.stopImmediatePropagation();
+                return;
+            }
+
+            // DiÃ¡logos de escolha do Caixa podem marcar as opÃ§Ãµes com a mesma tecla.
+            if (popupAberto && getComputedStyle(popupAberto).display !== 'none'
+                && !e.altKey && !e.ctrlKey && !e.metaKey && numeroTeclado && !e.repeat) {
+                const botaoOpcao = popupAberto.querySelector(`[data-caixa-opcao="${numeroTeclado}"]`);
+                if (botaoOpcao && !botaoOpcao.disabled) {
+                    e.preventDefault();
+                    botaoOpcao.click();
+                    e.stopImmediatePropagation();
+                    return;
+                }
+            }
+
             // NUMEROS 1..7 com o overlay aberto acionam os MESMOS botoes
             // (data-key), que chamam as mesmas funcoes de admin-caixa.js.
-            if (overlayAberto && !e.altKey && /^Digit[1-7]$/.test(code)) {
-                const botao = modal.querySelector('[data-key="' + code.slice(5) + '"]');
+            if (overlayAberto && !e.altKey && !e.ctrlKey && !e.metaKey
+                && /^[1-7]$/.test(numeroTeclado || '') && !e.repeat) {
+                const botao = modal.querySelector('[data-key="' + numeroTeclado + '"]');
                 if (botao) {
                     e.preventDefault();
                     botao.click();
                     const inst = bootstrap.Modal.getInstance(modal);
                     if (inst) inst.hide();
+                    e.stopImmediatePropagation();
                     return;
                 }
             }
@@ -719,7 +758,7 @@ else
             }
         });
 
-                                // Cole este bloco e verifique se não há nenhum ponto "." perdido antes ou depois dele
+                                // Cole este bloco e verifique se nÃ£o hÃ¡ nenhum ponto "." perdido antes ou depois dele
         function gerenciarVendedores() {
             try {
                 const modalEl = document.getElementById('modalAtalhos');
@@ -728,7 +767,7 @@ else
                     if (mAtalhos) mAtalhos.hide();
                 }
             } catch (e) {
-                console.log("Modal não estava aberto");
+                console.log("Modal nÃ£o estava aberto");
             }
 
             // BUG-13 (commit 4): quem NAO gerencia vendedores (Operador) vai direto
@@ -744,10 +783,14 @@ else
                 title: 'Gestão de vendedores',
                 icon: 'info',
                 showDenyButton: true,
-                confirmButtonText: 'Cadastrar novo',
-                denyButtonText: 'Listar todos',
+                confirmButtonText: '1 - Cadastrar novo',
+                denyButtonText: '2 - Listar todos',
                 confirmButtonColor: '#c2a36d',
                 denyButtonColor: '#548f87',
+                didOpen: () => {
+                    Swal.getConfirmButton()?.setAttribute('data-caixa-opcao', '1');
+                    Swal.getDenyButton()?.setAttribute('data-caixa-opcao', '2');
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     abrirFormularioCadastro();
@@ -765,7 +808,7 @@ else
                 if (m) m.hide();
             }
 
-            // Abre um carregando para você saber que a função disparou
+            // Abre um carregando para vocÃª saber que a funÃ§Ã£o disparou
             Swal.showLoading();
 
             // BUG-13 (commit 4): o Operador consulta cupons, mas nao cadastra nem
@@ -782,7 +825,7 @@ else
                 <tr>
                     <th>Nome</th>
                     <th>Cupom</th>
-                    ${podeMexer ? '<th class="text-end">Ações</th>' : ''}
+                    ${podeMexer ? '<th class="text-end">AÃ§Ãµes</th>' : ''}
                 </tr>
             </thead>
             <tbody>
@@ -807,7 +850,7 @@ else
                 // PodeGerenciarVendedores, entao para o Operador a lista e consulta pura.
                 const opcoes = {
                     title: 'Gestão de vendedores',
-                    html: html, // Sua tabela com o botão de excluir
+                    html: html, // Sua tabela com o botÃ£o de excluir
                     showCancelButton: true,
                     showConfirmButton: podeMexer,
                     confirmButtonText: 'Novo vendedor',
@@ -827,14 +870,14 @@ else
                 // formulario. Corrigido de passagem por estar no mesmo trecho.
                 Swal.fire(opcoes).then((result) => {
                     if (result.isConfirmed) {
-                        abrirFormularioCadastro(); // Faz o botão "Novo Vendedor" da lista funcionar
+                        abrirFormularioCadastro(); // Faz o botÃ£o "Novo Vendedor" da lista funcionar
                     }
                 });
 
             } catch (e) {
                 Swal.fire({
                     title: 'Erro',
-                    text: 'Não foi possível buscar os dados.',
+                    text: 'NÃ£o foi possÃ­vel buscar os dados.',
                     customClass: {
                         popup: 'swal-error'
                     }
@@ -899,7 +942,7 @@ else
                     <div class="text-start">
                         <label class="form-label">Nome completo</label>
                         <input id="nomeV" class="swal2-input m-0 w-100" placeholder="Ex: Leonardo Silva">
-                        <label class="form-label mt-3">Cupom (código)</label>
+                        <label class="form-label mt-3">Cupom (cÃ³digo)</label>
                         <input id="codV" class="swal2-input m-0 w-100" placeholder="Ex: LEO10">
                     </div>
                 `,
@@ -921,7 +964,7 @@ else
                 if (res.isConfirmed) {
                     salvarVendedorNoBanco(res.value);
                 } else if (res.dismiss === Swal.DismissReason.cancel) {
-                    // Se ele clicar em VOLTAR, reabre a lista para não fechar tudo
+                    // Se ele clicar em VOLTAR, reabre a lista para nÃ£o fechar tudo
                     abrirListagemVendedores();
                 }
             });
@@ -964,8 +1007,12 @@ else
 
                 let barcode = "";
         document.addEventListener('keydown', function (e) {
-            // Se estiver em um campo de texto (como o CPF), não bipa
-            if (e.target.tagName === "INPUT") return;
+            // Se estiver em um campo de texto (como o CPF), nÃ£o bipa
+            if ((window.caixaTemModalAtivo && window.caixaTemModalAtivo())
+                || e.target.matches?.('input, textarea, select, [contenteditable="true"]')) {
+                barcode = "";
+                return;
+            }
 
             if (e.key === "Enter") {
                 if (barcode.length > 3) {
@@ -980,7 +1027,7 @@ else
         
 
                         function processarCodigoBalanca(codigo) {
-            // Exemplo código: 2 00123 00500 1
+            // Exemplo cÃ³digo: 2 00123 00500 1
             // idProduto = 123 | valorExtraido = 0.500
             const idProduto = parseInt(codigo.substring(1, 6));
             const pesoExtraido = parseFloat(codigo.substring(6, 12)) / 1000;

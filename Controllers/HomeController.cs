@@ -90,6 +90,13 @@ namespace ControleEstoqueLoja.Controllers
             return View(lista);
         }
 
+        [HttpGet]
+        public IActionResult Configuracoes()
+        {
+            ViewData["Title"] = "Configurações";
+            return View();
+        }
+
         /// <summary>
         /// FASE A - ITEM 3: exporta o estoque em CSV para o dono abrir no Excel.
         ///

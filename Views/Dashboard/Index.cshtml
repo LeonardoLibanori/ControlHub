@@ -35,7 +35,7 @@
     // Saudação
     var hora = DateTime.Now.Hour;
     string saudacaoPrefixo = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
-    string nomeUsuario = "Dono";
+    string nomeUsuario = "Administrador";
     var email = User?.Identity?.Name;
     if (!string.IsNullOrEmpty(email))
     {
@@ -55,7 +55,7 @@
             <p class="dsh-frase-variacao" style="color:@CorVariacao()">@FraseVariacao()</p>
         </div>
 
-        <nav class="dsh-periodo-seletor" aria-label="Período do dashboard" role="tablist">
+        <nav class="dsh-periodo-seletor no-scrollbar" aria-label="Período do dashboard" role="tablist">
             <a href="@Url.Action("Index", "Dashboard", new { periodo = "hoje" })"
                class="dsh-periodo-opcao @(Model.Periodo == "hoje" ? "is-ativo" : "")"
                role="tab" aria-selected="@(Model.Periodo == "hoje".ToString().ToLower())"
@@ -543,6 +543,46 @@
             })
         </section>
     }
+
+    <!-- 6. Vendas por vendedor, seguindo o período selecionado no cabeçalho -->
+    <section class="dsh-vendedores-card" aria-labelledby="dsh-vendedores-titulo">
+        <header class="dsh-secao-header">
+            <div>
+                <h2 class="dsh-secao-titulo" id="dsh-vendedores-titulo">Vendedores</h2>
+                <p class="dsh-vendedores-subtitulo">Quantidade de vendas por cupom no período selecionado</p>
+            </div>
+        </header>
+
+        @if (Model.VendasPorVendedor.Count == 0)
+        {
+            <p class="dsh-vazio">Sem vendas com cupom no período.</p>
+        }
+        else
+        {
+            var maiorQuantidadeVendedor = Model.VendasPorVendedor.Max(v => v.Quantidade);
+            <ol class="dsh-vendedores-lista" aria-label="Quantidade de vendas por vendedor">
+                @for (var i = 0; i < Model.VendasPorVendedor.Count; i++)
+                {
+                    var vendedor = Model.VendasPorVendedor[i];
+                    var barraVendedor = maiorQuantidadeVendedor > 0 ? vendedor.Quantidade * 100m / maiorQuantidadeVendedor : 0m;
+                    <li class="dsh-vendedor-item">
+                        <span class="dsh-vendedor-posicao">@(i + 1)</span>
+                        <div class="dsh-vendedor-info">
+                            <strong>@vendedor.Nome</strong>
+                            @if (!string.IsNullOrWhiteSpace(vendedor.Codigo))
+                            {
+                                <span class="dsh-vendedor-cupom">Cupom: @vendedor.Codigo</span>
+                            }
+                            <div class="dsh-vendedor-barra" role="img" aria-label="@FormatoPtBr.Quantidade(barraVendedor)% do maior número de vendas">
+                                <span style="width:@barraVendedor.ToString("F1", CultureInfo.InvariantCulture)%"></span>
+                            </div>
+                        </div>
+                        <strong class="dsh-vendedor-total">@vendedor.Quantidade @(vendedor.Quantidade == 1 ? "venda" : "vendas")</strong>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
 
 </div>
 

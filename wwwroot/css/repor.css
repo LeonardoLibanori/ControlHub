@@ -33,19 +33,23 @@
     outline-offset: 2px;
 }
 
-/* Sobrescrever largura da coluna Ações (especificidade maior que regra base 190px) */
-.tabela-responsiva--estoque td:nth-child(4).acoes-com-repor,
-.tabela-responsiva--estoque th:nth-child(4).acoes-com-repor {
-    width: 280px !important;
-    min-width: 280px;
+/* Sobrescrever largura da coluna Ações */
+.tabela-responsiva--estoque td:nth-child(4),
+.tabela-responsiva--estoque th:nth-child(4),
+.tabela-responsiva--estoque td.col-acoes,
+.tabela-responsiva--estoque th.col-acoes {
+    width: 270px !important;
+    min-width: 270px !important;
 }
 
+.tabela-responsiva--estoque .acoes,
 .tabela-responsiva--estoque .acoes-com-repor {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: nowrap;
+    display: inline-flex !important;
+    gap: 8px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
 }
 
 .tabela-responsiva--estoque .acoes-com-repor .btn-editar,
@@ -415,4 +419,64 @@
 /* Trava de scroll no body quando modal aberto */
 html.repor-aberto .app-main {
     overflow: hidden;
+}
+
+/* Ações da grade de estoque no tema claro: regras locais carregadas após o tema global. */
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-editar,
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-repor,
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-excluir {
+    opacity: 1 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .16) !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+}
+
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-editar {
+    color: #fff !important;
+    background: #2563EB !important;
+    border: 1px solid #1D4ED8 !important;
+}
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-editar:hover {
+    background: #1D4ED8 !important;
+    border-color: #1E40AF !important;
+}
+
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-repor {
+    color: #422006 !important;
+    background: #FBBF24 !important;
+    border: 1px solid #D97706 !important;
+}
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-repor:hover {
+    background: #F59E0B !important;
+    border-color: #B45309 !important;
+}
+
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-excluir {
+    color: #fff !important;
+    background: #DC2626 !important;
+    border: 1px solid #B91C1C !important;
+}
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-excluir:hover {
+    background: #B91C1C !important;
+    border-color: #991B1B !important;
+}
+
+/* Rótulos pretos com fundos coloridos suaves para a grade de estoque. */
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-editar,
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-editar:hover {
+    color: #1E40AF !important;
+    background: #BFDBFE !important;
+    border-color: #60A5FA !important;
+}
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-repor,
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-repor:hover {
+    color: #92400E !important;
+    background: #FDE68A !important;
+    border-color: #F59E0B !important;
+}
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-excluir,
+html[data-theme="light"] body .app-shell .tabela-responsiva--estoque .acoes-com-repor .btn-excluir:hover {
+    color: #991B1B !important;
+    background: #FECACA !important;
+    border-color: #F87171 !important;
 }

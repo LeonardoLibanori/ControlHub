@@ -158,12 +158,12 @@
 :root[data-theme="light"] {
     color-scheme: light;
 
-    --bg-page: #F3F6FB;
-    --bg-sidebar: #F8FAFC;
+    --bg-page: #DCE4EE;
+    --bg-sidebar: #C9D5E3;
     --bg-card: #FFFFFF;
-    --bg-alt: #E9EEF5;
+    --bg-alt: #D5DEE9;
     --bg-input: #FFFFFF;
-    --line: #E2E8F0;
+    --line: #CBD5E1;
     --line-input: #CBD5E1;
     --text: #0F172A;
     --text-soft: #475569;
@@ -208,12 +208,12 @@
     :root:not([data-theme]) {
         color-scheme: light;
 
-        --bg-page: #F3F6FB;
-        --bg-sidebar: #F8FAFC;
+        --bg-page: #DCE4EE;
+        --bg-sidebar: #C9D5E3;
         --bg-card: #FFFFFF;
-        --bg-alt: #E9EEF5;
+        --bg-alt: #D5DEE9;
         --bg-input: #FFFFFF;
-        --line: #E2E8F0;
+        --line: #CBD5E1;
         --line-input: #CBD5E1;
         --text: #0F172A;
         --text-soft: #475569;
@@ -898,6 +898,22 @@ body.swal2-open {
     width: 1.25rem;
     color: var(--accent);
     text-align: center;
+}
+
+.btn-metodo-sel .metodo-tecla-numero {
+    display: inline-flex;
+    flex: 0 0 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+    border-radius: .4rem;
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+    color: var(--accent-hover);
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .btn-metodo-sel:hover,
@@ -3238,29 +3254,13 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 }
 
 .app-sidebar__item::before {
-    font-family: 'bootstrap-icons' !important;
-    font-size: 1.05rem;
-    line-height: 1;
-    display: inline-block;
-    color: var(--text-soft);
-    opacity: .8;
-    transition: color .15s ease, opacity .15s ease;
+    display: none !important;
 }
-
-.app-sidebar__item[href*="/Home/Index"]::before { content: "\F1C7"; } /* bi-box-seam */
-.app-sidebar__item[href="/Caixa"]::before { content: "\F244"; }        /* bi-cart3 */
-.app-sidebar__item[href*="Historico"]::before { content: "\F292"; }   /* bi-clock-history */
-.app-sidebar__item[href*="/Dashboard"]::before { content: "\F580"; }  /* bi-speedometer2 */
 
 .app-sidebar__item:hover {
     background: var(--bg-alt);
     color: var(--text);
     transform: translateX(2px);
-}
-
-.app-sidebar__item:hover::before {
-    color: var(--text);
-    opacity: 1;
 }
 
 .app-sidebar__item.active {
@@ -3287,12 +3287,13 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
 .app-theme-linha {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: .5rem;
+    justify-content: flex-start;
+    gap: .75rem;
 }
 
 .app-theme-linha__rotulo {
-    font-size: .82rem;
+    font-size: .9rem;
+    font-weight: 600;
     color: var(--text-soft);
 }
 
@@ -5447,3 +5448,877 @@ html body.swal2-shown.swal2-height-auto { padding-right: 0 !important; }
 .tabela-card .tabela-responsiva--estoque tbody tr:last-child td:last-child {
     border-bottom-right-radius: var(--radius-card);
 }
+
+/* ============================================================================
+   REFATORAÇÃO MOBILE RESPONSIVA E USABILIDADE FRONTEND (UX/UI)
+   - Tabelas responsivas com rolagem horizontal suave e alinhamento consistente
+   - white-space: nowrap em IDs, datas, valores, e-mails, badges e ações
+   - Botões de ação bem espaçados, alinhados e sem sobreposição (touch >= 44px)
+   - Filtros e abas de período roláveis horizontalmente sem corte (.no-scrollbar)
+   - Prevenção rigorosa de overflow-x no body/main/container
+   - Dark Mode com alto contraste, legibilidade e suporte a layout de cards
+   ============================================================================ */
+
+/* 1. Utilitário no-scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+.no-scrollbar {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+}
+
+/* 2. Prevenção de Overflow Geral no Shell */
+html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+.app-shell {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+.app-main {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+/* 3. Container de Tabelas com Rolagem Horizontal Suave */
+.tabela-card {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: clip !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+    border-radius: var(--radius-card, 12px) !important;
+    background: var(--surface-1, #1e2329) !important;
+    border: 1px solid var(--border, #2e3640) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3, #2e3640) var(--surface-1, #1e2329);
+}
+
+.tabela-card::-webkit-scrollbar {
+    height: 6px;
+}
+.tabela-card::-webkit-scrollbar-track {
+    background: var(--surface-1, #1e2329);
+    border-radius: 999px;
+}
+.tabela-card::-webkit-scrollbar-thumb {
+    background: var(--surface-3, #2e3640);
+    border-radius: 999px;
+}
+.tabela-card::-webkit-scrollbar-thumb:hover {
+    background: var(--text-soft, #9aa6b2);
+}
+
+/* 4. Tabela Responsiva: Tipografia, Alinhamento e White-space */
+.tabela-responsiva {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.tabela-responsiva th,
+.tabela-responsiva td {
+    overflow-wrap: normal;
+    word-break: normal;
+    vertical-align: middle;
+    padding: 12px 14px;
+}
+
+.tabela-responsiva thead th {
+    background: var(--surface-2, #252c34) !important;
+    color: #c7d0d9 !important;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--border, #2e3640) !important;
+}
+
+.tabela-responsiva tbody td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text, #eef2f6);
+}
+
+.tabela-responsiva tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Colunas com white-space: nowrap obrigatório para impedir quebra silábica */
+.tabela-responsiva .col-id,
+.tabela-responsiva--historico th:nth-child(1),
+.tabela-responsiva--historico td:nth-child(1),
+.tabela-responsiva .col-data,
+.tabela-responsiva--historico th:nth-child(2),
+.tabela-responsiva--historico td:nth-child(2),
+.tabela-responsiva .col-valor,
+.tabela-responsiva--historico th:nth-child(3),
+.tabela-responsiva--historico td:nth-child(3),
+.tabela-responsiva .col-pagamento,
+.tabela-responsiva--historico th:nth-child(4),
+.tabela-responsiva--historico td:nth-child(4),
+.tabela-responsiva .col-tipo,
+.tabela-responsiva--estoque th:nth-child(2),
+.tabela-responsiva--estoque td:nth-child(2),
+.tabela-responsiva .col-estoque,
+.tabela-responsiva--estoque th:nth-child(3),
+.tabela-responsiva--estoque td:nth-child(3),
+.tabela-responsiva .col-email,
+.tabela-responsiva--usuarios th:nth-child(2),
+.tabela-responsiva--usuarios td:nth-child(2),
+.tabela-responsiva .col-papel,
+.tabela-responsiva--usuarios th:nth-child(3),
+.tabela-responsiva--usuarios td:nth-child(3),
+.tabela-responsiva .col-situacao,
+.tabela-responsiva--usuarios th:nth-child(4),
+.tabela-responsiva--usuarios td:nth-child(4),
+.tabela-responsiva .col-acoes,
+.tabela-responsiva th:last-child,
+.tabela-responsiva td:last-child,
+.estoque-quantidade,
+.estoque-minimo-texto,
+.badge {
+    white-space: nowrap !important;
+}
+
+/* Nomes de produtos e usuários: leitura fluida sem estourar */
+.tabela-responsiva--estoque .col-produto,
+.tabela-responsiva--estoque td:first-child,
+.tabela-responsiva--usuarios .col-nome,
+.tabela-responsiva--usuarios td:first-child {
+    min-width: 170px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    line-height: 1.35;
+}
+
+/* 5. Célula de Estoque e Badges com Alinhamento Perfeito */
+.estoque-valor-linha {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+}
+
+.estoque-valor-linha .estoque-quantidade {
+    font-size: 14.5px !important;
+    font-weight: 600 !important;
+    color: var(--text, #eef2f6) !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+
+.estoque-valor-linha .badge-estoque-baixo {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    background: rgba(240, 101, 95, 0.16) !important;
+    color: var(--t-coral, #FFA494) !important;
+    border: 1px solid rgba(240, 101, 95, 0.45) !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+}
+
+.estoque-valor-linha .estoque-minimo-texto {
+    font-size: 12px !important;
+    color: var(--text-soft, #9aa6b2) !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* 6. Botões de Ação ("Editar", "Repor", "Detalhar", "Imprimir", "Excluir") */
+.tabela-responsiva .acoes,
+.tabela-responsiva .acoes-com-repor {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+.tabela-responsiva .btn-editar,
+.tabela-responsiva .btn-repor,
+.tabela-responsiva .btn-excluir,
+.history-action,
+.tabela-responsiva--usuarios .btn-outline-secondary {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 38px !important;
+    padding: 0 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all .15s ease !important;
+}
+
+/* Dark Mode Button Styling */
+.btn-editar {
+    background: rgba(79, 140, 255, 0.12) !important;
+    border: 1px solid rgba(79, 140, 255, 0.4) !important;
+    color: #73A7FF !important;
+}
+.btn-editar:hover {
+    background: rgba(79, 140, 255, 0.25) !important;
+    border-color: #4F8CFF !important;
+    color: #ffffff !important;
+}
+
+.btn-repor {
+    background: rgba(245, 180, 69, 0.14) !important;
+    border: 1px solid rgba(245, 180, 69, 0.45) !important;
+    color: #FFD68A !important;
+}
+.btn-repor:hover {
+    background: rgba(245, 180, 69, 0.28) !important;
+    border-color: #F5B445 !important;
+    color: #ffffff !important;
+}
+
+.btn-excluir {
+    background: rgba(240, 101, 95, 0.12) !important;
+    border: 1px solid rgba(240, 101, 95, 0.4) !important;
+    color: #FFA494 !important;
+}
+.btn-excluir:hover {
+    background: rgba(240, 101, 95, 0.25) !important;
+    border-color: #f0655f !important;
+    color: #ffffff !important;
+}
+
+.history-action,
+.tabela-responsiva--usuarios .btn-outline-secondary {
+    background: var(--surface-2, #252c34) !important;
+    border: 1px solid var(--border, #2e3640) !important;
+    color: var(--text, #eef2f6) !important;
+}
+.history-action:hover,
+.tabela-responsiva--usuarios .btn-outline-secondary:hover {
+    background: var(--surface-3, #2e3640) !important;
+    border-color: var(--saas-blue, #4F8CFF) !important;
+    color: #ffffff !important;
+}
+
+/* 7. REGRAS RESPONSIVAS MOBILE (< 768px) */
+@media (max-width: 767.98px) {
+    /* Padding e layout do container principal */
+    .app-content {
+        padding: 1rem !important; /* 16px (p-4 equivalente) */
+        box-sizing: border-box !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    .main-container,
+    .container,
+    .container-fluid,
+    .dsh-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Evitar sangria das rows do Bootstrap */
+    .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    .row > [class*="col-"] {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    /* Larguras mínimas nas tabelas para manter colunas legíveis e rolagem suave */
+    .tabela-responsiva {
+        table-layout: auto !important;
+    }
+    .tabela-responsiva--historico {
+        min-width: 600px !important;
+    }
+    .tabela-responsiva--estoque {
+        min-width: 660px !important;
+    }
+    .tabela-responsiva--usuarios {
+        min-width: 620px !important;
+    }
+
+    /* Área de toque mínima (44x44px) nos botões no mobile */
+    .tabela-responsiva .btn-editar,
+    .tabela-responsiva .btn-repor,
+    .tabela-responsiva .btn-excluir,
+    .history-action,
+    .tabela-responsiva--usuarios .btn-outline-secondary,
+    .btn-novo,
+    .btn-exportar,
+    .busca-form button {
+        min-height: 44px !important;
+        font-size: 14px !important;
+    }
+
+    .app-hamburguer {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    /* Busca de produtos no mobile */
+    .busca-container .busca-form {
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+    .busca-form input[type="text"],
+    .busca-form input[name="busca"] {
+        flex: 1 1 auto !important;
+        min-height: 44px !important;
+        font-size: 15px !important;
+        background: var(--surface-2, #252c34) !important;
+        border: 1px solid var(--border, #2e3640) !important;
+        color: var(--text, #eef2f6) !important;
+        border-radius: 8px !important;
+        padding: 0 12px !important;
+    }
+    .busca-form button {
+        min-height: 44px !important;
+        padding: 0 16px !important;
+        border-radius: 8px !important;
+    }
+
+    /* Filtro do histórico no mobile: empilhamento limpo e botões acessíveis */
+    .history-filter .history-filter__form {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .history-filter__campo--data,
+    .history-filter #historico-data,
+    .history-filter #btn-buscar,
+    .history-filter #btn-exportar {
+        width: 100% !important;
+        min-height: 44px !important;
+        font-size: 15px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Modal / Popup detalhes da venda em tela pequena */
+    .history-details-modal {
+        width: min(94vw, 480px) !important;
+        padding: 16px !important;
+    }
+}
+
+/* 8. LAYOUT DE CARDS VERTICAIS (MODO OPCIONAL VIA CLASSE .tabela-modo-card) */
+@media (max-width: 767.98px) {
+    .tabela-modo-card,
+    .tabela-modo-card tbody,
+    .tabela-modo-card tr,
+    .tabela-modo-card td {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .tabela-modo-card thead {
+        display: none !important;
+    }
+    .tabela-modo-card tr {
+        margin-bottom: 1rem !important;
+        border-radius: 12px !important;
+        background: var(--surface-1, #1e2329) !important;
+        border: 1px solid var(--border, #2e3640) !important;
+        padding: 14px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    }
+    .tabela-modo-card td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        text-align: right !important;
+    }
+    .tabela-modo-card td:last-child {
+        border-bottom: 0 !important;
+        padding-top: 14px !important;
+        justify-content: flex-end !important;
+    }
+    .tabela-modo-card td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-soft, #9aa6b2);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-right: 12px;
+        text-align: left;
+    }
+}
+
+/* ============================================================================
+   AJUSTE DE DASHBOARD MOBILE: ZERO ESPAÇO EXTRA + PERÍODO FIXO
+   ============================================================================ */
+@media (max-width: 767.98px) {
+    .dsh-cabecalho {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        margin-bottom: 16px !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+    .dsh-boas-vindas {
+        flex: 0 0 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .dsh-periodo-seletor {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        overflow-x: visible !important;
+        border-radius: 12px !important;
+        padding: 6px !important;
+    }
+    .dsh-periodo-opcao {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-height: 40px !important;
+        padding: 6px 2px !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* ============================================================================
+   ESTOQUE MOBILE: INFORMAÇÕES ABAIXO DO NOME E BOTÕES VERTICAIS COMPACTOS
+   - Nada fica 'pra trás' (largura total 100%, sem rolagem lateral forçada)
+   - Vendido por e quantidade ficam logo abaixo do nome do produto
+   - Botões de ação alinhados na vertical à direita, compactos e acessíveis
+   ============================================================================ */
+.estoque-mobile-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.estoque-mobile-linha {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-soft, #9aa6b2);
+    white-space: nowrap;
+}
+
+.estoque-mobile-tipo {
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface-2, #252c34);
+    border: 1px solid var(--border, #2e3640);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-soft, #9aa6b2);
+}
+
+.estoque-mobile-sep {
+    color: var(--border, #2e3640);
+    font-weight: bold;
+}
+
+.estoque-mobile-qtd strong {
+    color: var(--text, #eef2f6);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.estoque-mobile-alerta {
+    margin-top: 2px;
+}
+
+.estoque-mobile-alerta .badge-estoque-baixo {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border-radius: 5px !important;
+    background: rgba(240, 101, 95, 0.16) !important;
+    color: var(--t-coral, #FFA494) !important;
+    border: 1px solid rgba(240, 101, 95, 0.45) !important;
+    white-space: nowrap !important;
+}
+
+@media (max-width: 767.98px) {
+    /* TABELA DE ESTOQUE NO MOBILE: Estrutura de tabela com colunas e botões compactos */
+    .tabela-card:has(.tabela-responsiva--estoque) {
+        overflow-x: hidden !important;
+        border-radius: var(--radius-card, 12px) !important;
+    }
+
+    .tabela-responsiva--estoque {
+        table-layout: fixed !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        border-collapse: collapse !important;
+    }
+
+    /* Cabeçalho da tabela visível no mobile */
+    .tabela-responsiva--estoque thead {
+        display: table-header-group !important;
+    }
+
+    .tabela-responsiva--estoque thead th.col-produto {
+        width: auto !important;
+        padding: 10px 10px !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+    }
+
+    .tabela-responsiva--estoque thead th.col-acoes {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+        padding: 10px 4px !important;
+        text-align: center !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+    }
+
+    /* Linhas e Células da Tabela */
+    .tabela-responsiva--estoque tbody tr {
+        border-bottom: 1px solid var(--border, #2e3640) !important;
+        background: transparent !important;
+    }
+
+    .tabela-responsiva--estoque tbody tr:last-child {
+        border-bottom: none !important;
+    }
+
+    .tabela-responsiva--estoque tbody tr.linha-estoque-baixo td {
+        background: rgba(240, 101, 95, 0.04) !important;
+    }
+
+    .tabela-responsiva--estoque tbody tr.linha-estoque-baixo td.col-produto {
+        border-left: 3px solid var(--t-coral, #FFA494) !important;
+    }
+
+    /* Coluna do Produto: ocupa a maior parte da tela (~80%) */
+    .tabela-responsiva--estoque td.col-produto {
+        width: auto !important;
+        padding: 10px 10px !important;
+        vertical-align: middle !important;
+    }
+
+    .tabela-responsiva--estoque .produto-link {
+        font-size: 14.5px !important;
+        font-weight: 600 !important;
+        color: var(--text, #eef2f6) !important;
+        line-height: 1.3 !important;
+        display: block !important;
+        word-break: break-word !important;
+    }
+
+    /* Coluna de Ações: coluna estreita de 72px na direita */
+    .tabela-responsiva--estoque td.col-acoes {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+        padding: 8px 4px !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    .tabela-responsiva--estoque .acoes,
+    .tabela-responsiva--estoque .acoes-com-repor {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+
+    .tabela-responsiva--estoque .acoes-com-repor form {
+        width: 100% !important;
+        margin: 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    /* Botões reduzidos: compactos, estreitos (62px) e nunca largos */
+    .tabela-responsiva--estoque .btn-editar,
+    .tabela-responsiva--estoque .btn-repor,
+    .tabela-responsiva--estoque .btn-excluir {
+        width: 62px !important;
+        min-width: 62px !important;
+        max-width: 62px !important;
+        height: 25px !important;
+        min-height: 25px !important;
+        padding: 0 4px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        border-radius: 5px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        line-height: 25px !important;
+        margin: 0 auto !important;
+    }
+}
+
+
+/* Configurações: guia dos atalhos e aparência. */
+.app-sidebar__tema {
+    margin: 0;
+    padding: .55rem .75rem;
+    border: 0;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+}
+
+.config-page { width: min(100% - 2rem, 1180px); margin: 0 auto; padding: clamp(1.2rem, 3vw, 2.2rem) 0 2.5rem; color: var(--text); }
+.config-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.35rem; }
+.config-eyebrow { color: var(--t-blue); font-size: .72rem; font-weight: 800; letter-spacing: .1em; }
+.config-header h1 { margin: .25rem 0 .35rem; color: var(--text); font: 800 clamp(1.6rem, 3vw, 2.1rem)/1.2 Manrope, sans-serif; }
+.config-header p, .config-section-heading p { margin: 0; color: var(--text-soft); }
+.config-header-key { display: flex; align-items: center; gap: .35rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 11px; background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, .08); white-space: nowrap; }
+.config-header-key kbd, .config-intro kbd { padding: .18rem .42rem; border: 1px solid var(--line-input); border-radius: 5px; background: var(--bg-alt); color: var(--text); font: 700 .78rem/1.4 "DM Sans", sans-serif; box-shadow: 0 1px 0 var(--line-input); }
+.config-header-key small { margin-left: .4rem; color: var(--text-soft); }
+.config-intro { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.7rem; padding: 1.1rem 1.25rem; border: 1px solid color-mix(in srgb, var(--c-blue) 32%, var(--line)); border-radius: 13px; background: color-mix(in srgb, var(--c-blue) 8%, var(--bg-card)); }
+.config-intro-icon { display: grid; flex: 0 0 2.5rem; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 9px; background: var(--s-blue-fundo); color: var(--t-blue); font-size: 1.25rem; }
+.config-intro h2, .config-section-heading h2 { margin: 0 0 .3rem; color: var(--text); font-size: 1rem; font-weight: 800; }
+.config-intro p { margin: 0; color: var(--text-soft); line-height: 1.65; }
+.config-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
+.config-section-heading p { font-size: .88rem; }
+.config-count, .config-access { display: inline-flex; align-items: center; padding: .22rem .55rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-alt); color: var(--text-soft); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.config-shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.config-shortcut-card { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, .07); }
+.config-shortcut-card--attention { border-left: 3px solid var(--c-amber); }
+.config-number { display: grid; flex: 0 0 2rem; width: 2rem; height: 2rem; place-items: center; border: 1px solid color-mix(in srgb, var(--c-blue) 35%, var(--line)); border-radius: 8px; background: var(--s-blue-fundo); color: var(--t-blue); font-weight: 800; }
+.config-card-content { min-width: 0; }
+.config-card-title { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.config-card-title h3 { margin: 0; color: var(--text); font-size: .98rem; font-weight: 800; }
+.config-card-content p { margin: 0; color: var(--text-soft); font-size: .86rem; line-height: 1.6; }
+.config-access-owner { border-color: color-mix(in srgb, var(--c-amber) 40%, var(--line)); background: var(--s-amber-fundo); color: var(--t-amber); }
+.config-note { display: flex; align-items: flex-start; gap: .65rem; margin-top: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 10px; color: var(--text-soft); font-size: .84rem; }
+.config-note i { color: var(--t-green); font-size: 1.05rem; }
+.config-note p { margin: 0; line-height: 1.55; }
+.config-note strong { color: var(--text); }
+@media (max-width: 760px) {
+    .config-page { width: min(100% - 1.25rem, 1180px); }
+    .config-header { align-items: flex-start; }
+    .config-header-key { flex-wrap: wrap; justify-content: center; max-width: 120px; }
+    .config-header-key small { width: 100%; margin: 0; text-align: center; }
+    .config-shortcut-grid { grid-template-columns: 1fr; }
+    .config-card-title { align-items: flex-start; flex-wrap: wrap; }
+}
+
+/* Uma cor exclusiva e um degradê leve para cada atalho, no menu e na página. */
+.alt-m-funcao--sangria, .config-shortcut-card--sangria { --atalho-cor: #E11D48; }
+.alt-m-funcao--suprimento, .config-shortcut-card--suprimento { --atalho-cor: #059669; }
+.alt-m-funcao--caixa, .config-shortcut-card--caixa { --atalho-cor: #0891B2; }
+.alt-m-funcao--fechamento, .config-shortcut-card--fechamento { --atalho-cor: #7C3AED; }
+.alt-m-funcao--relatorio, .config-shortcut-card--relatorio { --atalho-cor: #2563EB; }
+.alt-m-funcao--reimprimir, .config-shortcut-card--reimprimir { --atalho-cor: #D97706; }
+.alt-m-funcao--vendedores, .config-shortcut-card--vendedores { --atalho-cor: #C026D3; }
+
+.alt-m-funcao,
+.alt-m-funcao:hover,
+.alt-m-funcao:focus-visible {
+    color: var(--text) !important;
+    background: linear-gradient(105deg,
+        color-mix(in srgb, var(--atalho-cor) 22%, var(--bg-card)) 0%,
+        color-mix(in srgb, var(--atalho-cor) 3%, var(--bg-card)) 82%) !important;
+    border: 1px solid color-mix(in srgb, var(--atalho-cor) 48%, var(--line)) !important;
+    box-shadow: 0 2px 5px color-mix(in srgb, var(--atalho-cor) 10%, transparent) !important;
+}
+.alt-m-funcao:hover { filter: saturate(1.12); }
+.alt-m-funcao [style*="width: 30px"] { color: var(--atalho-cor); }
+
+.config-shortcut-card[class*="config-shortcut-card--"] {
+    border-color: color-mix(in srgb, var(--atalho-cor) 42%, var(--line));
+    background: linear-gradient(105deg,
+        color-mix(in srgb, var(--atalho-cor) 14%, var(--bg-card)) 0%,
+        color-mix(in srgb, var(--atalho-cor) 2%, var(--bg-card)) 82%);
+}
+.config-shortcut-card .config-number {
+    border-color: color-mix(in srgb, var(--atalho-cor) 42%, var(--line));
+    background: color-mix(in srgb, var(--atalho-cor) 14%, var(--bg-card));
+    color: color-mix(in srgb, var(--atalho-cor) 78%, var(--text));
+}
+
+
+/* Tema claro: superfícies com contraste suficiente e alertas contidos. */
+:root[data-theme="light"] .app-content,
+:root:not([data-theme]) .app-content { background: var(--bg-page); }
+
+:root[data-theme="light"] .tabela-card,
+:root:not([data-theme]) .tabela-card,
+:root[data-theme="light"] .dsh-tabela-container,
+:root:not([data-theme]) .dsh-tabela-container {
+    background: #fff !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .08) !important;
+}
+
+:root[data-theme="light"] .tabela-responsiva thead th,
+:root:not([data-theme]) .tabela-responsiva thead th,
+:root[data-theme="light"] .dsh-tabela th,
+:root:not([data-theme]) .dsh-tabela th,
+:root[data-theme="light"] .table thead th,
+:root:not([data-theme]) .table thead th {
+    background: #D1DAE5 !important;
+    color: #334155 !important;
+    border-bottom: 1px solid #CBD5E1 !important;
+}
+
+:root[data-theme="light"] .tabela-responsiva tbody tr:nth-child(even) td,
+:root:not([data-theme]) .tabela-responsiva tbody tr:nth-child(even) td,
+:root[data-theme="light"] .dsh-tabela tbody tr:nth-child(even) td,
+:root:not([data-theme]) .dsh-tabela tbody tr:nth-child(even) td { background: #F8FAFC; }
+
+:root[data-theme="light"] .tabela-responsiva tbody td,
+:root:not([data-theme]) .tabela-responsiva tbody td {
+    border-bottom-color: #E2E8F0;
+    color: #1E293B;
+}
+
+:root[data-theme="light"] .dsh-periodo-opcao,
+:root:not([data-theme]) .dsh-periodo-opcao { color: #334155; }
+
+:root[data-theme="light"] .dsh-periodo-opcao.is-ativo,
+:root:not([data-theme]) .dsh-periodo-opcao.is-ativo {
+    color: #fff;
+    background: #2563EB;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, .28);
+}
+
+:root[data-theme="light"] .dsh-periodo-opcao:not(.is-ativo),
+:root:not([data-theme]) .dsh-periodo-opcao:not(.is-ativo) { background: #D5DEE9; }
+
+:root[data-theme="light"] .badge-estoque-baixo,
+:root:not([data-theme]) .badge-estoque-baixo {
+    color: #991B1B;
+    background: #FEE2E2;
+    border-color: #F87171;
+}
+
+:root[data-theme="light"] .linha-estoque-baixo,
+:root:not([data-theme]) .linha-estoque-baixo,
+:root[data-theme="light"] .linha-estoque-baixo:hover,
+:root:not([data-theme]) .linha-estoque-baixo:hover {
+    background: #FEE2E2;
+    box-shadow: inset 3px 0 0 #DC2626;
+}
+
+:root[data-theme="light"] .dsh-linha-zerado,
+:root:not([data-theme]) .dsh-linha-zerado {
+    background: transparent !important;
+}
+:root[data-theme="light"] .tabela-responsiva--estoque tbody tr.linha-estoque-baixo td,
+:root:not([data-theme]) .tabela-responsiva--estoque tbody tr.linha-estoque-baixo td { background: #FEE2E2 !important; }
+:root[data-theme="light"] .tabela-responsiva--estoque tbody tr.linha-estoque-baixo:hover td,
+:root:not([data-theme]) .tabela-responsiva--estoque tbody tr.linha-estoque-baixo:hover td { background: #FECACA !important; }
+
+:root[data-theme="light"] .btn-secondary,
+:root:not([data-theme]) .btn-secondary,
+:root[data-theme="light"] .btn-outline-secondary,
+:root:not([data-theme]) .btn-outline-secondary {
+    color: #334155;
+    background-color: #D5DEE9;
+    border-color: #CBD5E1;
+}
+
+:root[data-theme="light"] .btn-secondary:hover,
+:root:not([data-theme]) .btn-secondary:hover,
+:root[data-theme="light"] .btn-outline-secondary:hover,
+:root:not([data-theme]) .btn-outline-secondary:hover {
+    color: #0F172A;
+    background-color: #C3CEDB;
+    border-color: #94A3B8;
+}
+
+/* Ações da tabela de estoque: preenchimento sólido para boa leitura no claro. */
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-editar,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-editar {
+    color: #fff !important;
+    background: #2563EB !important;
+    border: 1px solid #1D4ED8 !important;
+}
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-editar:hover,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-editar:hover {
+    background: #1D4ED8 !important;
+    border-color: #1E40AF !important;
+}
+
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-repor,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-repor {
+    color: #422006 !important;
+    background: #FBBF24 !important;
+    border: 1px solid #D97706 !important;
+}
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-repor:hover,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-repor:hover {
+    background: #F59E0B !important;
+    border-color: #B45309 !important;
+}
+
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-excluir,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-excluir {
+    color: #fff !important;
+    background: #DC2626 !important;
+    border: 1px solid #B91C1C !important;
+}
+:root[data-theme="light"] .tabela-responsiva--estoque .btn-excluir:hover,
+:root:not([data-theme]) .tabela-responsiva--estoque .btn-excluir:hover {
+    background: #B91C1C !important;
+    border-color: #991B1B !important;
+}
+

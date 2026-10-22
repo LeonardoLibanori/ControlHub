@@ -63,12 +63,12 @@
         <table class="table mb-0 tabela-responsiva tabela-responsiva--estoque">
             <thead>
                 <tr>
-                    <th>Produto</th>
-                    <th>Vendido por</th>
-                    <th>Estoque</th>
+                    <th class="col-produto">Produto</th>
+                    <th class="col-tipo d-none d-md-table-cell">Vendido por</th>
+                    <th class="col-estoque d-none d-md-table-cell">Estoque</th>
                     @if (podeGerenciarEstoque)
                     {
-                        <th class="text-center">Ações</th>
+                        <th class="text-center col-acoes">Ações</th>
                     }
                 </tr>
             </thead>
@@ -76,15 +76,38 @@
                 @foreach (var item in Model)
                 {
                     <tr class="@(item.EstoqueAbaixoDoMinimo ? "linha-estoque-baixo" : null)">
-                        <td>
+                        <td class="col-produto" data-label="Produto">
                             <a asp-controller="Home" asp-action="Produto" asp-route-id="@item.Id" class="produto-link">@item.Nome</a>
+                            
+                            @* SUB-INFO MOBILE: aparece abaixo do nome em telas < 768px *@
+                            <div class="estoque-mobile-meta d-md-none">
+                                <div class="estoque-mobile-linha">
+                                    <span class="estoque-mobile-tipo">@(item.Tipo == TipoProduto.PorPeso ? "Peso (kg)" : "Unidade")</span>
+                                    <span class="estoque-mobile-sep">·</span>
+                                    <span class="estoque-mobile-qtd">
+                                        @if (item.Tipo == TipoProduto.PorPeso)
+                                        {
+                                            <strong>@item.Quantidade.ToString("0.###") kg</strong>
+                                        }
+                                        else
+                                        {
+                                            <strong>@item.Quantidade.ToString("0") un</strong>
+                                        }
+                                    </span>
+                                </div>
+                                @if (item.EstoqueAbaixoDoMinimo)
+                                {
+                                    <div class="estoque-mobile-alerta">
+                                        <span class="badge badge-estoque-baixo">
+                                            Estoque baixo (mín: @item.EstoqueMinimo!.Value.ToString(item.Tipo == TipoProduto.PorPeso ? "0.###" : "0") @(item.Tipo == TipoProduto.PorPeso ? "kg" : "un"))
+                                        </span>
+                                    </div>
+                                }
+                            </div>
                         </td>
-                        <td>@(item.Tipo == TipoProduto.PorPeso ? "Peso (kg)" : "Unidade")</td>
-                        <td>
-                            @* BUG-31: o numero, a unidade, o badge e o "minimo"
-                               ficam dentro de UM container flex. Sem ele o
-                               badge caia para a linha seguinte da celula e
-                               aparecia torto, abaixo do numero. *@
+                        <td class="col-tipo d-none d-md-table-cell" data-label="Vendido por">@(item.Tipo == TipoProduto.PorPeso ? "Peso (kg)" : "Unidade")</td>
+                        <td class="col-estoque d-none d-md-table-cell" data-label="Estoque">
+                            @* BUG-31: no desktop continua em coluna própria *@
                             <div class="estoque-valor-linha">
                                 <span class="estoque-quantidade">
                                     @if (item.Tipo == TipoProduto.PorPeso)
@@ -96,8 +119,6 @@
                                         @item.Quantidade.ToString("0") <span>un</span>
                                     }
                                 </span>
-                                @* Estoque mínimo (item 1): só aparece se o dono configurou
-                                   um mínimo > 0 E o estoque atual caiu abaixo dele. *@
                                 @if (item.EstoqueAbaixoDoMinimo)
                                 {
                                     <span class="badge badge-estoque-baixo" title="Abaixo do estoque mínimo configurado">
@@ -112,7 +133,7 @@
                         </td>
                         @if (podeGerenciarEstoque)
                         {
-                            <td>
+                            <td class="col-acoes" data-label="Ações">
                                 <div class="acoes acoes-com-repor">
                                     <a asp-controller="Home" asp-action="Editar" asp-route-id="@item.Id" class="btn-editar" data-modal-form data-modal-titulo="Editar produto">Editar</a>
                                     <button type="button" class="btn-repor"

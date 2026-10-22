@@ -162,10 +162,44 @@
     }
     .login-cartao {
         padding: 24px 20px;
+        width: 100vw;
+        min-width: 0;
     }
-}
-
-@media (prefers-reduced-motion: reduce) {
+    .login-marca {
+        font-size: 20px;
+    }
+    .login-subtitulo {
+        font-size: 13px;
+        margin-bottom: 18px;
+    }
+    .login-label {
+        font-size: 13px;
+    }
+    .login-campo {
+        margin-bottom: 12px;
+    }
+    .login-campo input[type=email],
+    .login-campo input[type=password],
+    .login-campo input[type=text] {
+        height: 40px;
+        font-size: 15px;
+    }
+    .login-campo input#senha {
+        padding-right: 44px;
+    }
+    .login-botoes-enviar {
+        top: 44px;
+        right: 8px;
+    }
+    .login-botoes-enviar button {
+        padding: 3px 7px;
+        font-size: 13px;
+    }
+    .login-botao-entrar {
+        height: 40px;
+        font-size: 15px;
+    }
+}@media (prefers-reduced-motion: reduce) {
     .login-botao-entrar {
         transition: none;
     }

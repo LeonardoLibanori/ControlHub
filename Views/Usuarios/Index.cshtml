@@ -26,38 +26,38 @@
     else
     {
         <div class="tabela-card">
-            <table class="table table-hover align-middle bg-white tabela-responsiva tabela-responsiva--usuarios">
-                <thead class="table-light">
+            <table class="table table-hover align-middle tabela-responsiva tabela-responsiva--usuarios">
+                <thead>
                     <tr>
-                        <th>Nome</th>
-                        <th>E-mail (login)</th>
-                        <th>Papel</th>
-                        <th>Situação</th>
-                        <th class="text-end">Ações</th>
+                        <th class="col-nome">Nome</th>
+                        <th class="col-email">E-mail (login)</th>
+                        <th class="col-papel">Papel</th>
+                        <th class="col-situacao">Situação</th>
+                        <th class="text-end col-acoes">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var u in Model)
                     {
                         <tr>
-                            <td class="fw-bold">
+                            <td class="fw-bold col-nome" data-label="Nome">
                                 @u.Nome
                                 @if (!string.IsNullOrEmpty(eu) && eu == u.Email)
                                 {
                                     <span class="badge bg-primary">você</span>
                                 }
                             </td>
-                            <td>@u.Email</td>
-                            <td>
+                            <td class="col-email" data-label="E-mail">@u.Email</td>
+                            <td class="col-papel" data-label="Papel">
                                 @foreach (var papel in u.Papeis)
                                 {
                                     @* Papel desconhecido continua aparecendo: melhor
                                        ver o que está gravado do que esconder. *@
                                     var cor = papel == Roles.Dono ? "bg-danger" : "bg-secondary";
-                                    <span class="badge @cor">@papel</span>
+                                    <span class="badge @cor">@(papel == Roles.Dono ? "Administrador" : papel)</span>
                                 }
                             </td>
-                            <td>
+                            <td class="col-situacao" data-label="Situação">
                                 @if (u.Bloqueado)
                                 {
                                     <span class="text-danger fw-bold">Bloqueado (tentativas erradas)</span>
@@ -67,7 +67,7 @@
                                     <span class="text-success">Ativo</span>
                                 }
                             </td>
-                            <td class="text-end">
+                            <td class="text-end col-acoes" data-label="Ações">
                                 <a asp-controller="Usuarios" asp-action="Editar" asp-route-id="@u.Id"
                                    class="btn btn-outline-secondary btn-sm"
                                    data-modal-form data-modal-titulo="Editar conta">Editar</a>

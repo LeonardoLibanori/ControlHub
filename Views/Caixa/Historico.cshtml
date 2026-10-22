@@ -126,11 +126,11 @@
         <table class="table table-hover mb-0 tabela-responsiva tabela-responsiva--historico">
             <thead class="table-dark">
                 <tr>
-                    <th>ID</th>
-                    <th>Data</th>
-                    <th>Total</th>
-                    <th>Pagamento</th>
-                    <th class="text-center">Ações</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-data">Data</th>
+                    <th class="col-valor">Total</th>
+                    <th class="col-pagamento">Pagamento</th>
+                    <th class="text-center col-acoes">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -139,12 +139,12 @@
                     @foreach (var venda in Model)
                     {
                         <tr>
-                            <td>@venda.Id</td>
-                            <td>@venda.DataVenda.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@venda.TotalVenda.ToString("C")</td>
-                            <td>@venda.MetodoPagamento</td>
-                            <td class="text-center" style="vertical-align: middle;">
-                                <div class="d-flex flex-wrap justify-content-center align-items-center gap-1 gap-md-2">
+                            <td class="col-id" data-label="ID">@venda.Id</td>
+                            <td class="col-data" data-label="Data">@venda.DataVenda.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="col-valor" data-label="Total">@venda.TotalVenda.ToString("C")</td>
+                            <td class="col-pagamento" data-label="Pagamento">@venda.MetodoPagamento</td>
+                            <td class="text-center col-acoes" data-label="Ações" style="vertical-align: middle;">
+                                <div class="d-flex flex-nowrap justify-content-center align-items-center gap-2">
                                     <button class="btn btn-outline-secondary btn-sm history-action"
                                             onclick="verDetalhes(@venda.Id)"
                                             title="Ver detalhes" aria-label="Ver detalhes da venda @venda.Id">

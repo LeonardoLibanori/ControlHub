@@ -824,9 +824,14 @@ async function gerenciarCupomVendedor() {
             text: `Vendedor informado: ${codigoVendedorInformado}`,
             showCancelButton: true,
             showDenyButton: true,
-            confirmButtonText: 'MANTER',
-            denyButtonText: 'REMOVER',
-            cancelButtonText: 'CANCELAR'
+            confirmButtonText: '1 - MANTER',
+            denyButtonText: '2 - REMOVER',
+            cancelButtonText: '3 - CANCELAR',
+            didOpen: () => {
+                Swal.getConfirmButton()?.setAttribute('data-caixa-opcao', '1');
+                Swal.getDenyButton()?.setAttribute('data-caixa-opcao', '2');
+                Swal.getCancelButton()?.setAttribute('data-caixa-opcao', '3');
+            }
         });
 
         if (r.isDenied) {

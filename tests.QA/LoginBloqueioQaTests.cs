@@ -97,6 +97,13 @@ public class LoginBloqueioQaTests
     public void T4_ChaveNormalizadaIgnoreCaseEspacos()
     {
         var relogio = new RelogioFake(DateTimeOffset.UtcNow);
+        var throttle = new LoginThrottle(new LoginThrottleOptions { MaximoTentativas = 2, BloqueioMinutos = 15 }, relogio);
+
+        throttle.RegistrarFalha("Admin@Loja.com ", "1.2.3.4");
+        var estado = throttle.Verificar("admin@loja.com", "1.2.3.4");
+        Assert.Equal(1, estado.TentativasRestantes);
+    }
+
     [Fact]
     public void T5_LimitePorIpBloqueiaQualquerChave()
     {
@@ -162,7 +169,7 @@ public class LoginBloqueioQaTests
             .Select(_ => Task.Run(() => throttle.RegistrarFalha("u@l.com", "1.2.3.4")))
             .ToList();
 
-        Assert.DoesNotThrow(() => Task.WaitAll(tarefas.ToArray()));
+        Task.WaitAll(tarefas.ToArray());
 
         var estado = throttle.Verificar("u@l.com", "1.2.3.4");
         Assert.True(estado.Bloqueado);
@@ -187,9 +194,3 @@ public class LoginBloqueioQaTests
         Assert.True(true);
     }
 }
-        var throttle = new LoginThrottle(new LoginThrottleOptions { MaximoTentativas = 2, BloqueioMinutos = 15 }, relogio);
-
-        throttle.RegistrarFalha("Admin@Loja.com ", "1.2.3.4");
-        var estado = throttle.Verificar("admin@loja.com", "1.2.3.4");
-        Assert.Equal(1, estado.TentativasRestantes);
-    }

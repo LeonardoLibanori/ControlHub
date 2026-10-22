@@ -66,7 +66,7 @@ namespace ControleEstoqueLoja.Controllers
             var vendasPeriodo = await _context.Vendas
                 .AsNoTracking()
                 .Where(v => v.DataVenda >= periodoInicio && v.DataVenda < periodoFim)
-                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda, MetodoPagamento = v.MetodoPagamento })
+                .Select(v => new VendaPeriodo { Data = v.DataVenda, Total = v.TotalVenda, MetodoPagamento = v.MetodoPagamento, CodigoVendedor = v.CodigoVendedor })
                 .ToListAsync();
 
             var faturamentoAtual = vendasPeriodo.Sum(v => v.Total);
@@ -102,9 +102,9 @@ namespace ControleEstoqueLoja.Controllers
             else if (faturamentoAnterior == 0m)
                 fraseCabecalho = "Ainda não há vendas no período anterior para comparar.";
             else if (estadoVariacao == "Subiu")
-                fraseCabecalho = $"As vendas subiram {variacaoPercentual.Value.ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+                fraseCabecalho = $"As vendas subiram {variacaoPercentual!.Value.ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
             else if (estadoVariacao == "Caiu")
-                fraseCabecalho = $"As vendas caíram {Math.Abs(variacaoPercentual.Value).ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
+                fraseCabecalho = $"As vendas caíram {Math.Abs(variacaoPercentual!.Value).ToString("F1", CultureInfo.InvariantCulture)}% em relação ao período anterior.";
             else
                 fraseCabecalho = "As vendas ficaram estáveis em relação ao período anterior.";
 
@@ -162,6 +162,28 @@ namespace ControleEstoqueLoja.Controllers
 
             // ---- Formas de pagamento (período atual) ----
             var formasPagamento = MontarFormasPagamento(vendasPeriodo);
+
+            // ---- Vendas por vendedor/cupom (mesmo período ativo do dashboard) ----
+            var vendedoresCadastrados = await _context.Vendedores
+                .AsNoTracking()
+                .ToListAsync();
+            var nomesPorCupom = vendedoresCadastrados
+                .Where(v => !string.IsNullOrWhiteSpace(v.Codigo))
+                .GroupBy(v => v.Codigo.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Nome, StringComparer.OrdinalIgnoreCase);
+            var vendasPorVendedor = vendasPeriodo
+                .GroupBy(v => string.IsNullOrWhiteSpace(v.CodigoVendedor) ? string.Empty : v.CodigoVendedor.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g =>
+                {
+                    var codigo = g.Key;
+                    var nome = string.IsNullOrEmpty(codigo)
+                        ? "Sem vendedor"
+                        : nomesPorCupom.TryGetValue(codigo, out var nomeCadastrado) ? nomeCadastrado : $"Cupom {codigo}";
+                    return new DashboardVendasPorVendedor { Codigo = codigo, Nome = nome, Quantidade = g.Count() };
+                })
+                .OrderByDescending(v => v.Quantidade)
+                .ThenBy(v => v.Nome, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             // ---- Vendas de hoje (para TotalVendasHoje, NumeroVendasHoje, TicketMedio) ----
             var vendasHoje = await _context.Vendas
@@ -255,6 +277,7 @@ namespace ControleEstoqueLoja.Controllers
                 SerieAnterior = serieAnterior,
                 MaisVendidos = maisVendidos,
                 FormasPagamento = formasPagamento,
+                VendasPorVendedor = vendasPorVendedor,
             });
         }
 
@@ -1018,7 +1041,7 @@ return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
 
         /// <summary>
         /// Obtém o nome exibido do usuário logado (mesmo do botão da sidebar).
-        /// Nunca o e-mail, nunca contém "@". Fallback "Dono".
+        /// Nunca o e-mail, nunca contém "@". Fallback "Administrador".
         /// </summary>
         private string ObterNomeExibidoDoUsuario()
         {
@@ -1038,7 +1061,7 @@ return PartialView("_DetalheDiaPartial", new DashboardDetalheDiaViewModel
                     // Se falhar (ex.: banco não inicializado em testes), usa fallback
                 }
             }
-            return "Dono";
+            return "Administrador";
         }
     }
 
@@ -1057,6 +1080,7 @@ public class VendaPeriodo
     public DateTime Data { get; set; }
     public decimal Total { get; set; }
     public string MetodoPagamento { get; set; } = string.Empty;
+    public string? CodigoVendedor { get; set; }
 }
 
 // =====================================================================
@@ -1183,6 +1207,8 @@ public class VendaPeriodo
 
         /// <summary>Top 5 produtos mais vendidos por valor no período atual.</summary>
         public List<DashboardTopProduto> MaisVendidos { get; set; } = new();
+        /// <summary>Contagem de cupons por vendedor no período atual.</summary>
+        public List<DashboardVendasPorVendedor> VendasPorVendedor { get; set; } = new();
 
         /// <summary>Formas de pagamento do período atual (valor, %, cor, dasharray/offset).</summary>
         public List<DashboardFormaPagamento> FormasPagamento { get; set; } = new();
@@ -1406,6 +1432,14 @@ public class VendaPeriodo
         public string Unidade { get; set; } = string.Empty;
         public decimal Valor { get; set; }
         public decimal BarraRelativa { get; set; } // 0..100 relativo ao maior
+    }
+
+    /// <summary>Quantidade de vendas atribuída a um vendedor no período.</summary>
+    public class DashboardVendasPorVendedor
+    {
+        public string Codigo { get; set; } = string.Empty;
+        public string Nome { get; set; } = string.Empty;
+        public int Quantidade { get; set; }
     }
 
     /// <summary>Forma de pagamento para a rosca.</summary>

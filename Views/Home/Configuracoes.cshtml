@@ -1,0 +1,94 @@
+@{
+    ViewData["Title"] = "Configurações";
+}
+
+<div class="config-page">
+    <header class="config-header">
+        <div>
+            <span class="config-eyebrow">AJUDA DO SISTEMA</span>
+            <h1>Atalhos</h1>
+            <p>Consulte os atalhos do caixa e saiba o que cada opção faz antes de usá-la.</p>
+        </div>
+        <div class="config-header-key" aria-label="Atalho para abrir o menu do caixa: Alt mais M">
+            <kbd>Alt</kbd><span>+</span><kbd>M</kbd>
+            <small>abre o menu</small>
+        </div>
+    </header>
+
+    <section class="config-intro" aria-labelledby="config-como-usar">
+        <div class="config-intro-icon" aria-hidden="true"><i class="bi bi-keyboard"></i></div>
+        <div>
+            <h2 id="config-como-usar">Como usar os atalhos do menu</h2>
+            <p>Pressione <kbd>Alt</kbd> + <kbd>M</kbd> para abrir o menu administrativo ou do caixa. Em seguida, pressione o número da opção desejada, de <kbd>1</kbd> a <kbd>7</kbd>. Pressione <kbd>Esc</kbd> para fechar.</p>
+        </div>
+    </section>
+
+    <section class="config-shortcuts" aria-labelledby="config-lista-titulo">
+        <div class="config-section-heading">
+            <div>
+                <h2 id="config-lista-titulo">Opções do Alt + M</h2>
+                <p>As permissões abaixo refletem as regras atuais do sistema.</p>
+            </div>
+            <span class="config-count">7 atalhos</span>
+        </div>
+
+        <div class="config-shortcut-grid">
+            <article class="config-shortcut-card config-shortcut-card--sangria">
+                <span class="config-number">1</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Sangria</h3></div>
+                    <p>Registra dinheiro retirado da gaveta. Informe o valor e, se necessário, uma observação. A movimentação fica registrada no caixa e reduz o saldo disponível.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--suprimento">
+                <span class="config-number">2</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Suprimento</h3></div>
+                    <p>Registra dinheiro colocado na gaveta, como o valor usado para iniciar ou reforçar o caixa. Informe o valor e, opcionalmente, uma observação. O suprimento aumenta o saldo.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--caixa">
+                <span class="config-number">3</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Caixa</h3></div>
+                    <p>Abre uma conferência do saldo em gaveta, mostrando o suprimento de abertura, o total de vendas e as sangrias. O saldo é calculado com as entradas e saídas registradas.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--fechamento">
+                <span class="config-number">4</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Fechamento</h3></div>
+                    <p>Apresenta uma auditoria com saídas de estoque, histórico de vendas, vendas, suprimentos, sangrias e o total esperado em gaveta. Depois de conferir, confirmar <strong>“Tudo ok, zerar dia”</strong> encerra o caixa e o zera para o próximo dia. Cancelar mantém os dados.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--relatorio">
+                <span class="config-number">5</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Relatório</h3></div>
+                    <p>Lista as movimentações do caixa com horário, descrição e valor. Entradas e saídas são diferenciadas; quando há uma venda vinculada, o relatório também oferece a ação de reimprimir o cupom.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--reimprimir">
+                <span class="config-number">6</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Reimprimir</h3></div>
+                    <p>Permite reimprimir a última venda do dia, localizar uma venda pelo ID ou abrir o resumo impresso do dia. A opção escolhida determina qual comprovante será aberto para impressão.</p>
+                </div>
+            </article>
+
+            <article class="config-shortcut-card config-shortcut-card--vendedores">
+                <span class="config-number">7</span>
+                <div class="config-card-content">
+                    <div class="config-card-title"><h3>Vendedores</h3></div>
+                    <p>O Administrador pode escolher entre cadastrar um vendedor ou abrir a listagem. O Operador vai direto à consulta da listagem; cadastro e gerenciamento continuam restritos ao Administrador.</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+</div>

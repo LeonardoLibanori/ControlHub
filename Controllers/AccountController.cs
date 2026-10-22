@@ -81,7 +81,7 @@ public class AccountController : Controller
         }
 
         var resultado = await _signInManager.PasswordSignInAsync(
-            model.Email, model.Senha, isPersistent: true, lockoutOnFailure: true);
+            model.Email ?? string.Empty, model.Senha, isPersistent: true, lockoutOnFailure: true);
 
         if (resultado.Succeeded)
         {

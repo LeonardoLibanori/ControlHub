@@ -46,7 +46,7 @@
                     <label asp-for="Papel" class="form-label fw-bold"></label>
                     <select asp-for="Papel" class="form-select">
                         <option value="@Roles.Operador">@Roles.Operador - só o PDV (vender e suprimento)</option>
-                        <option value="@Roles.Dono">@Roles.Dono - acesso total (financeiro, estoque, usuários)</option>
+                        <option value="@Roles.Dono">Administrador - acesso total (financeiro, estoque, usuários)</option>
                     </select>
                     <span asp-validation-for="Papel" class="text-danger small"></span>
                 </div>

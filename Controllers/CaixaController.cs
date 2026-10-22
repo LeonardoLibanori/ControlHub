@@ -921,7 +921,7 @@ namespace ControleEstoqueLoja.Controllers
             return View(venda);
         }
 
-        [Authorize(Policy = Policies.PodeVerFinanceiro)]
+        [Authorize(Policy = Policies.PodeVerRelatorioCaixa)]
         public IActionResult ImprimirRelatorioHoje()
         {
             // Pega o início e o fim do dia de hoje
@@ -938,7 +938,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = Policies.PodeVerFinanceiro)]
+        [Authorize(Policy = Policies.PodeVerRelatorioCaixa)]
         public JsonResult ObterRelatorioResumido()
         {
             try
@@ -979,7 +979,7 @@ namespace ControleEstoqueLoja.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = Policies.PodeVerFinanceiro)]
+        [Authorize(Policy = Policies.PodeFecharCaixa)]
         public JsonResult ObterDadosFechamento()
         {
             try

@@ -164,11 +164,11 @@
         <div id="secaoPagamento">
             <h3 class="fw-bold mb-4 payment-title">Pagamento</h3>
             <div class="d-grid gap-2 mb-4">
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de crédito')">Cartão de crédito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Cartão de débito')">Cartão de débito</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'PIX')">PIX</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Voucher')">Voucher</button>
-                <button type="button" class="btn-metodo-sel" onclick="marcarMetodo(this, 'Dinheiro')">Dinheiro</button>
+                <button type="button" class="btn-metodo-sel" data-tecla-pagamento="1" onclick="marcarMetodo(this, 'Cartão de crédito')"><span class="metodo-tecla-numero" aria-hidden="true">1</span><span>Cartão de crédito</span></button>
+                <button type="button" class="btn-metodo-sel" data-tecla-pagamento="2" onclick="marcarMetodo(this, 'Cartão de débito')"><span class="metodo-tecla-numero" aria-hidden="true">2</span><span>Cartão de débito</span></button>
+                <button type="button" class="btn-metodo-sel" data-tecla-pagamento="3" onclick="marcarMetodo(this, 'PIX')"><span class="metodo-tecla-numero" aria-hidden="true">3</span><span>PIX</span></button>
+                <button type="button" class="btn-metodo-sel" data-tecla-pagamento="4" onclick="marcarMetodo(this, 'Voucher')"><span class="metodo-tecla-numero" aria-hidden="true">4</span><span>Voucher</span></button>
+                <button type="button" class="btn-metodo-sel" data-tecla-pagamento="5" onclick="marcarMetodo(this, 'Dinheiro')"><span class="metodo-tecla-numero" aria-hidden="true">5</span><span>Dinheiro</span></button>
             </div>
             <div class="d-flex gap-2">
                 @* BUG-30: o CONFIRMAR comeca habilitado porque, sem metodo escolhido,
@@ -264,7 +264,11 @@
             let inputBuffer = "";
     document.addEventListener('keydown', function (e) {
         // Se você estiver digitando no CPF ou Cupom, ignora o bip
-        if (e.target.tagName === "INPUT") return;
+        if ((window.caixaTemModalAtivo && window.caixaTemModalAtivo())
+            || e.target.matches?.('input, textarea, select, [contenteditable="true"]')) {
+            inputBuffer = "";
+            return;
+        }
 
         if (e.key === "Enter") {
             if (inputBuffer.length > 0) {
@@ -631,6 +635,52 @@ async function enviarVendaDeVez() {
         Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
     }
 }
+</script>
+
+<script>
+    (() => {
+        const obterNumero = (event, maximo) => {
+            const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || '');
+            const numero = match ? match[1] : (/^[1-9]$/.test(event.key) ? event.key : null);
+            return numero && Number(numero) <= maximo ? numero : null;
+        };
+
+        window.caixaTemModalAtivo = () => {
+            const pagamento = document.getElementById('modalPagamento');
+            const pagamentoAberto = pagamento && getComputedStyle(pagamento).display !== 'none';
+            const swal = document.querySelector('.swal2-container');
+            const swalAberto = swal && getComputedStyle(swal).display !== 'none';
+            return !!(pagamentoAberto || swalAberto || document.querySelector('#modalVendaConfirmacao.show, #modalAtalhos.show'));
+        };
+
+        // Números 1–5 escolhem o método e avançam à próxima etapa quando for possível.
+        // Em campos de valor, CPF e cupom, as teclas continuam digitando normalmente.
+        document.addEventListener('keydown', event => {
+            const pagamento = document.getElementById('modalPagamento');
+            const secao = document.getElementById('secaoPagamento');
+            if (!pagamento || getComputedStyle(pagamento).display === 'none'
+                || !secao || getComputedStyle(secao).display === 'none') return;
+
+            const swal = document.querySelector('.swal2-container');
+            if (swal && getComputedStyle(swal).display !== 'none') return;
+
+            const alvo = event.target;
+            if (alvo instanceof HTMLElement && (alvo.matches('input, textarea, select, [contenteditable="true"]')
+                || alvo.closest('input, textarea, select, [contenteditable="true"]'))) return;
+
+            const numero = obterNumero(event, 5);
+            if (!numero || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+
+            const botao = pagamento.querySelector(`[data-tecla-pagamento="${numero}"]`);
+            if (!botao) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            botao.click();
+            // Dinheiro exige informar um valor recebido. Os demais métodos
+            // podem seguir imediatamente para a etapa do CPF.
+            if (numero !== 5 || podeConfirmarPagamento()) irParaCPF();
+        }, true);
+    })();
 </script>
 
 <script>

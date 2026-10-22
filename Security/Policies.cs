@@ -10,7 +10,7 @@ public static class Roles
     /// <summary>Acesso total: financeiro, estoque, caixa e vendedores.</summary>
     public const string Dono = "Dono";
 
-    /// <summary>Somente PDV: vender, reimprimir cupom e registrar suprimento.</summary>
+    /// <summary>Operação do PDV e do caixa: vendas, movimentações e fechamento.</summary>
     public const string Operador = "Operador";
 }
 
@@ -44,14 +44,17 @@ public static class Policies
     /// <summary>Registrar SUPRIMENTO (dinheiro que ENTRA na gaveta).</summary>
     public const string PodeRegistrarSuprimento = "PodeRegistrarSuprimento";
 
-    /// <summary>Registrar SANGRIA (dinheiro que SAI da gaveta). Dono apenas.</summary>
+    /// <summary>Registrar SANGRIA (dinheiro que SAI da gaveta). Dono e Operador.</summary>
     public const string PodeRegistrarSangria = "PodeRegistrarSangria";
 
-    /// <summary>Ver saldo, fechamento e relatorios financeiros. Dono apenas.</summary>
+    /// <summary>Ver histórico, dashboard e relatórios financeiros. Dono apenas.</summary>
     public const string PodeVerFinanceiro = "PodeVerFinanceiro";
 
-    /// <summary>Zerar/encerrar o dia (ZerarCaixaParaProximoDia). Dono apenas.</summary>
+    /// <summary>Consultar e encerrar o caixa do dia. Dono e Operador.</summary>
     public const string PodeFecharCaixa = "PodeFecharCaixa";
+
+    /// <summary>Consultar/imprimir o resumo do caixa do dia. Dono e Operador.</summary>
+    public const string PodeVerRelatorioCaixa = "PodeVerRelatorioCaixa";
 
     // ---------- Estoque e cadastros ----------
 

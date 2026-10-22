@@ -183,11 +183,13 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Policies.PodeRegistrarSuprimento, p =>
         p.RequireRole(Roles.Operador, Roles.Dono))
     .AddPolicy(Policies.PodeRegistrarSangria, p =>
-        p.RequireRole(Roles.Dono))
+        p.RequireRole(Roles.Operador, Roles.Dono))
     .AddPolicy(Policies.PodeVerFinanceiro, p =>
         p.RequireRole(Roles.Dono))
     .AddPolicy(Policies.PodeFecharCaixa, p =>
-        p.RequireRole(Roles.Dono))
+        p.RequireRole(Roles.Operador, Roles.Dono))
+    .AddPolicy(Policies.PodeVerRelatorioCaixa, p =>
+        p.RequireRole(Roles.Operador, Roles.Dono))
     .AddPolicy(Policies.PodeGerenciarEstoque, p =>
         p.RequireRole(Roles.Dono))
     .AddPolicy(Policies.PodeGerenciarVendedores, p =>
