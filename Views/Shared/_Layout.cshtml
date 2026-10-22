@@ -53,7 +53,7 @@
     if (rotaAtual.Equals("home", StringComparison.OrdinalIgnoreCase)
         && acaoAtual.Equals("configuracoes", StringComparison.OrdinalIgnoreCase))
     {
-        grupoAtual = "ConfiguraÃ§Ãµes";
+        grupoAtual = "Configurações";
         paginaAtual = "Atalhos";
     }
     var caminhoTexto = paginaAtual ?? (ViewData["Title"] as string) ?? "";
@@ -197,7 +197,7 @@
 <body>@if (autenticado)
 {
     <div class="app-shell" id="appShell">
-        <aside class="app-sidebar" id="app-sidebar" aria-label="NavegaÃ§Ã£o principal">
+        <aside class="app-sidebar" id="app-sidebar" aria-label="Navegação principal">
             <div class="app-sidebar__top">
                 <a class="app-brand" href="/" title="@marcaNome">@marcaNome</a>
                 @if (!string.IsNullOrWhiteSpace(lojaNome))
@@ -222,7 +222,7 @@
                     <a class="app-sidebar__item @(MenuAtivo("Caixa", "Historico") ? "active" : null)" asp-controller="Caixa" asp-action="Historico" asp-route-periodo="hoje" aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)">Histórico</a>
                     <a class="app-sidebar__item @(MenuAtivo("Dashboard") ? "active" : null)" href="/Dashboard" aria-current="@(MenuAtivo("Dashboard") ? "page" : null)">Dashboard</a>
                 }
-                <div class="app-sidebar__grupo">ConfiguraÃ§Ãµes</div>
+                <div class="app-sidebar__grupo">Configurações</div>
                 <a class="app-sidebar__item @(MenuAtivo("Home", "Configuracoes") ? "active" : null)" asp-controller="Home" asp-action="Configuracoes" aria-current="@(MenuAtivo("Home", "Configuracoes") ? "page" : null)">Atalhos</a>
                 <div class="app-theme-linha app-sidebar__tema">
                     <span class="app-theme-linha__rotulo">Tema</span>
@@ -378,7 +378,7 @@ else
                             <button class="btn d-flex align-items-center gap-2 px-2 text-dark user-session-trigger"
                                     type="button" id="btnMenuPerfil" data-bs-toggle="dropdown"
                                     aria-expanded="false" aria-label="Menu do perfil">
-                                <span class="small fw-semibold">OlÃ¡, <b class="text-dark">@nomeExibido</b></span>
+                                <span class="small fw-semibold">Olá, <b class="text-dark">@nomeExibido</b></span>
                                 <i class="bi bi-chevron-down small" aria-hidden="true"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="btnMenuPerfil">
@@ -398,7 +398,7 @@ else
                                     <button type="button" class="dropdown-item" data-tema-opcao="auto"
                                             role="menuitemradio" aria-checked="true"
                                             onclick="aplicarTema('auto')">
-                                        AutomÃ¡tico
+                                        Automático
                                     </button>
                                 </li>
                                 <li>
@@ -500,7 +500,7 @@ else
                             <div class="col-6">
                                 <button class="btn btn-info alt-m-funcao alt-m-funcao--relatorio w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="5" onclick="verRelatorioCaixa()">
                                     <span style="width: 30px; text-align: left;">5 -</span>
-                                    <span>RelatÃ³rio</span>
+                                    <span>Relatório</span>
                                 </button>
                             </div>
                             }
@@ -544,7 +544,7 @@ else
                             <input type="text" id="valorOperacao" class="form-control" oninput="formatarMoedaParaSweet(this)">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-muted small">ObservaÃ§Ã£o</label>
+                            <label class="form-label fw-bold text-muted small">Observação</label>
                             <textarea id="obsOperacao" class="form-control" rows="2"></textarea>
                         </div>
                         <button type="button" id="btnConfirmarOperacao" class="btn btn-lg w-100 fw-bold shadow-sm" onclick="salvarMovimentacao()">Confirmar</button>
@@ -576,7 +576,7 @@ else
                     @if (podeVerFinanceiro)
                     {
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="fw-bold">HistÃ³rico de vendas</span>
+                        <span class="fw-bold">Histórico de vendas</span>
                         <kbd>Alt + H</kbd>
                     </div>
                     }
@@ -825,7 +825,7 @@ else
                 <tr>
                     <th>Nome</th>
                     <th>Cupom</th>
-                    ${podeMexer ? '<th class="text-end">AÃ§Ãµes</th>' : ''}
+                    ${podeMexer ? '<th class="text-end">Ações</th>' : ''}
                 </tr>
             </thead>
             <tbody>
@@ -850,7 +850,7 @@ else
                 // PodeGerenciarVendedores, entao para o Operador a lista e consulta pura.
                 const opcoes = {
                     title: 'Gestão de vendedores',
-                    html: html, // Sua tabela com o botÃ£o de excluir
+                    html: html, // Sua tabela com o botão de excluir
                     showCancelButton: true,
                     showConfirmButton: podeMexer,
                     confirmButtonText: 'Novo vendedor',
@@ -870,14 +870,14 @@ else
                 // formulario. Corrigido de passagem por estar no mesmo trecho.
                 Swal.fire(opcoes).then((result) => {
                     if (result.isConfirmed) {
-                        abrirFormularioCadastro(); // Faz o botÃ£o "Novo Vendedor" da lista funcionar
+                        abrirFormularioCadastro(); // Faz o botão "Novo Vendedor" da lista funcionar
                     }
                 });
 
             } catch (e) {
                 Swal.fire({
                     title: 'Erro',
-                    text: 'NÃ£o foi possÃ­vel buscar os dados.',
+                    text: 'Não foi possível buscar os dados.',
                     customClass: {
                         popup: 'swal-error'
                     }
@@ -941,9 +941,9 @@ else
                 html: `
                     <div class="text-start">
                         <label class="form-label">Nome completo</label>
-                        <input id="nomeV" class="swal2-input m-0 w-100" placeholder="Ex: Leonardo Silva">
-                        <label class="form-label mt-3">Cupom (cÃ³digo)</label>
-                        <input id="codV" class="swal2-input m-0 w-100" placeholder="Ex: LEO10">
+                        <input id="nomeV" class="swal2-input m-0 w-100">
+                        <label class="form-label mt-3">Cupom (código)</label>
+                        <input id="codV" class="swal2-input m-0 w-100">
                     </div>
                 `,
                 showCancelButton: true,

@@ -6123,36 +6123,36 @@ html, body {
     background: transparent;
 }
 
-.config-page { width: min(100% - 2rem, 1180px); margin: 0 auto; padding: clamp(1.2rem, 3vw, 2.2rem) 0 2.5rem; color: var(--text); }
+.config-page { width: 100%; max-width: none; margin: 0; padding: clamp(1.25rem, 2.5vw, 2.5rem) 0 2.5rem; color: var(--text); }
 .config-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.35rem; }
-.config-eyebrow { color: var(--t-blue); font-size: .72rem; font-weight: 800; letter-spacing: .1em; }
-.config-header h1 { margin: .25rem 0 .35rem; color: var(--text); font: 800 clamp(1.6rem, 3vw, 2.1rem)/1.2 Manrope, sans-serif; }
-.config-header p, .config-section-heading p { margin: 0; color: var(--text-soft); }
+.config-eyebrow { color: var(--t-blue); font-size: .82rem; font-weight: 800; letter-spacing: .1em; }
+.config-header h1 { margin: .25rem 0 .35rem; color: var(--text); font: 800 clamp(2rem, 3vw, 2.5rem)/1.2 Manrope, sans-serif; }
+.config-header p, .config-section-heading p { margin: 0; color: var(--text-soft); font-size: 1rem; }
 .config-header-key { display: flex; align-items: center; gap: .35rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: 11px; background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, .08); white-space: nowrap; }
 .config-header-key kbd, .config-intro kbd { padding: .18rem .42rem; border: 1px solid var(--line-input); border-radius: 5px; background: var(--bg-alt); color: var(--text); font: 700 .78rem/1.4 "DM Sans", sans-serif; box-shadow: 0 1px 0 var(--line-input); }
 .config-header-key small { margin-left: .4rem; color: var(--text-soft); }
 .config-intro { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.7rem; padding: 1.1rem 1.25rem; border: 1px solid color-mix(in srgb, var(--c-blue) 32%, var(--line)); border-radius: 13px; background: color-mix(in srgb, var(--c-blue) 8%, var(--bg-card)); }
 .config-intro-icon { display: grid; flex: 0 0 2.5rem; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 9px; background: var(--s-blue-fundo); color: var(--t-blue); font-size: 1.25rem; }
-.config-intro h2, .config-section-heading h2 { margin: 0 0 .3rem; color: var(--text); font-size: 1rem; font-weight: 800; }
-.config-intro p { margin: 0; color: var(--text-soft); line-height: 1.65; }
+.config-intro h2, .config-section-heading h2 { margin: 0 0 .3rem; color: var(--text); font-size: 1.2rem; font-weight: 800; }
+.config-intro p { margin: 0; color: var(--text-soft); font-size: 1rem; line-height: 1.65; }
 .config-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
-.config-section-heading p { font-size: .88rem; }
-.config-count, .config-access { display: inline-flex; align-items: center; padding: .22rem .55rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-alt); color: var(--text-soft); font-size: .7rem; font-weight: 700; white-space: nowrap; }
-.config-shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
-.config-shortcut-card { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, .07); }
+.config-section-heading p { font-size: .98rem; }
+.config-count, .config-access { display: inline-flex; align-items: center; padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-alt); color: var(--text-soft); font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.config-shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.config-shortcut-card { display: flex; align-items: flex-start; gap: 1rem; min-width: 0; padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, .07); }
 .config-shortcut-card--attention { border-left: 3px solid var(--c-amber); }
-.config-number { display: grid; flex: 0 0 2rem; width: 2rem; height: 2rem; place-items: center; border: 1px solid color-mix(in srgb, var(--c-blue) 35%, var(--line)); border-radius: 8px; background: var(--s-blue-fundo); color: var(--t-blue); font-weight: 800; }
+.config-number { display: grid; flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; place-items: center; border: 1px solid color-mix(in srgb, var(--c-blue) 35%, var(--line)); border-radius: 8px; background: var(--s-blue-fundo); color: var(--t-blue); font-size: 1.05rem; font-weight: 800; }
 .config-card-content { min-width: 0; }
 .config-card-title { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
-.config-card-title h3 { margin: 0; color: var(--text); font-size: .98rem; font-weight: 800; }
-.config-card-content p { margin: 0; color: var(--text-soft); font-size: .86rem; line-height: 1.6; }
+.config-card-title h3 { margin: 0; color: var(--text); font-size: 1.12rem; font-weight: 800; }
+.config-card-content p { margin: 0; color: var(--text-soft); font-size: .98rem; line-height: 1.65; }
 .config-access-owner { border-color: color-mix(in srgb, var(--c-amber) 40%, var(--line)); background: var(--s-amber-fundo); color: var(--t-amber); }
 .config-note { display: flex; align-items: flex-start; gap: .65rem; margin-top: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 10px; color: var(--text-soft); font-size: .84rem; }
 .config-note i { color: var(--t-green); font-size: 1.05rem; }
 .config-note p { margin: 0; line-height: 1.55; }
 .config-note strong { color: var(--text); }
 @media (max-width: 760px) {
-    .config-page { width: min(100% - 1.25rem, 1180px); }
+    .config-page { width: 100%; }
     .config-header { align-items: flex-start; }
     .config-header-key { flex-wrap: wrap; justify-content: center; max-width: 120px; }
     .config-header-key small { width: 100%; margin: 0; text-align: center; }
