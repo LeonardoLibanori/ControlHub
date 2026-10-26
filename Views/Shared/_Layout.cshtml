@@ -46,6 +46,8 @@
     {
         ("home", _) => ("Operação", "Estoque"),
         ("caixa", "historico") => ("Gestão", "Histórico"),
+        ("caixa", "kardex") => ("Gestão", "Kardex"),
+        ("caixa", "auditoria") => ("Gestão", "Auditoria"),
         ("caixa", _) => ("Operação", "Caixa"),
         ("dashboard", _) => ("Gestão", "Dashboard"),
         _ => ((string?)null, (string?)null)
@@ -220,6 +222,11 @@
                 {
                     <div class="app-sidebar__grupo">Gestão</div>
                     <a class="app-sidebar__item @(MenuAtivo("Caixa", "Historico") ? "active" : null)" asp-controller="Caixa" asp-action="Historico" asp-route-periodo="hoje" aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)">Histórico</a>
+                    @if ((await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarEstoque)).Succeeded)
+                    {
+                        <a class="app-sidebar__item @(MenuAtivo("Kardex", "Index") ? "active" : null)" asp-controller="Kardex" asp-action="Index" aria-current="@(MenuAtivo("Kardex", "Index") ? "page" : null)">Kardex</a>
+                        <a class="app-sidebar__item @(MenuAtivo("Kardex", "Auditoria") ? "active" : null)" asp-controller="Kardex" asp-action="Auditoria" aria-current="@(MenuAtivo("Kardex", "Auditoria") ? "page" : null)">Auditoria</a>
+                    }
                     <a class="app-sidebar__item @(MenuAtivo("Dashboard") ? "active" : null)" href="/Dashboard" aria-current="@(MenuAtivo("Dashboard") ? "page" : null)">Dashboard</a>
                 }
                 <div class="app-sidebar__grupo">Configurações</div>
@@ -1047,3 +1054,4 @@ else
 
 </body>
 </html>
+

@@ -26,6 +26,8 @@ namespace ControleEstoqueLoja.Data
         public DbSet<CaixaMovimentacao> CaixaMovimentacoes { get; set; }
         public DbSet<Vendedor> Vendedores { get; set; } // Adicione esta linha
         public DbSet<HistoricoPreco> HistoricoPrecos { get; set; }
+        public DbSet<MovimentacaoEstoque> MovimentacoesEstoque { get; set; }
+        public DbSet<RegistroAuditoria> RegistrosAuditoria { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -62,6 +64,9 @@ namespace ControleEstoqueLoja.Data
             var centavos = ConversorCentavos.ParaBanco;
 
             modelBuilder.Entity<Produto>().Property(p => p.Preco).HasConversion(centavos);
+
+            // Custo de aquisição: mesmo padrao que preco (centavos).
+            modelBuilder.Entity<Produto>().Property(p => p.CustoAquisicao).HasConversion(centavos);
 
             modelBuilder.Entity<Venda>().Property(v => v.TotalVenda).HasConversion(centavos);
             modelBuilder.Entity<Venda>().Property(v => v.ValorRecebido).HasConversion(centavos).HasDefaultValue(0m);

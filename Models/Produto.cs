@@ -50,5 +50,11 @@ namespace ControleEstoqueLoja.Models
 
         /// <summary>Itens de venda que referenciam este produto (histórico financeiro).</summary>
         public List<VendaItem> VendaItems { get; set; } = new List<VendaItem>();
+
+        /// <summary>
+        /// Custo de aquisição do produto em centavos (valor inteiro).
+        /// Ex: 500 = R$ 5,00. Usa o mesmo conversao do Preco.
+        /// </summary>
+        public decimal CustoAquisicao { get; set; } = 0m;
     }
 }

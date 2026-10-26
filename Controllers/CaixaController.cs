@@ -65,7 +65,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeOperarPDV)]
-        public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string? cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens)
+        public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string? cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens, string? chave = null)
         {
             // CUPOM DO VENDEDOR E OPCIONAL (programa de recompensa por venda):
             // valida somente quando informado; sem cupom a venda segue com o

@@ -1,0 +1,1049 @@
+﻿@*
+    ==========================================================================
+    BUG-13 (commit 4): MENU POR PAPEL.
+    ==========================================================================
+    O menu NAO decide permissao: ele apenas PERGUNTA, para as MESMAS policies
+    que cada rota ja exige (Security/Policies.cs). E o mesmo
+    IAuthorizationService do [Authorize(Policy = ...)] das actions, entao nao
+    existe uma segunda regra escrita a mao que possa divergir da primeira.
+
+    IMPORTANTE: esconder o botao e cortesia com o usuario, NAO seguranca. Quem
+    barra de verdade continua sendo o [Authorize] da action - um Operador que
+    digite /Usuarios na barra de enderecos recebe 403 do mesmo jeito.
+    ==========================================================================
+*@
+@inject IAuthorizationService Autorizacao
+@inject UserManager<Usuario> GerenciadorDeUsuarios
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuracao
+@{
+    var autenticado = User.Identity?.IsAuthenticated == true;
+
+    // BUG-34: aba ATIVA do menu. O operador precisa saber em qual tela esta
+    // sem clicar: por isso o item da rota atual recebe a classe "active" e o
+    // aria-current="page". Sao as MESMAS strings de rota usadas nos links
+    // abaixo, entao nao existe uma segunda lista de nomes para divergir.
+    var rotaAtual = ViewContext.RouteData.Values["controller"] as string ?? "";
+    var acaoAtual = ViewContext.RouteData.Values["action"] as string ?? "";
+
+    // Um item do menu esta ativo quando o controller bate. A acao so entra
+    // para separar as duas telas do MESMO controller: Caixa/Index (o PDV) e
+    // Caixa/Historico nao podem ficar os dois destacados ao mesmo tempo.
+    bool MenuAtivo(string controller, string? acao = null)
+    {
+        if (!string.Equals(rotaAtual, controller, StringComparison.OrdinalIgnoreCase)) return false;
+        return acao is null || string.Equals(acaoAtual, acao, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Marca (Marca:Nome, padrao "ControlHub") e loja (Loja:Nome, vazio).
+    // Mesma fonte das exportacoes - a tela e o Excel falam a mesma coisa.
+    var marcaNome = Configuracao["Marca:Nome"];
+    if (string.IsNullOrWhiteSpace(marcaNome)) { marcaNome = "ControlHub"; }
+    var lojaNome = Configuracao["Loja:Nome"] ?? string.Empty;
+
+    // Caminho da faixa superior: "grupo / pagina". Mapeia a rota atual para
+    // um dos grupos do menu; fora do menu, cai no titulo da pagina.
+    var (grupoAtual, paginaAtual) = (rotaAtual.ToLowerInvariant(), acaoAtual.ToLowerInvariant()) switch
+    {
+        ("home", _) => ("Operação", "Estoque"),
+        ("caixa", "historico") => ("Gestão", "Histórico"),
+        ("caixa", _) => ("Operação", "Caixa"),
+        ("dashboard", _) => ("Gestão", "Dashboard"),
+        _ => ((string?)null, (string?)null)
+    };
+    if (rotaAtual.Equals("home", StringComparison.OrdinalIgnoreCase)
+        && acaoAtual.Equals("configuracoes", StringComparison.OrdinalIgnoreCase))
+    {
+        grupoAtual = "Configurações";
+        paginaAtual = "Atalhos";
+    }
+    var caminhoTexto = paginaAtual ?? (ViewData["Title"] as string) ?? "";
+
+
+    var podeOperarPdv = false;
+    var podeReimprimirCupom = false;
+    var podeRegistrarSuprimento = false;
+    var podeRegistrarSangria = false;
+    var podeVerFinanceiro = false;
+    var podeVerRelatorioCaixa = false;
+    var podeFecharCaixa = false;
+    var podeGerenciarVendedores = false;
+    var podeGerenciarUsuarios = false;
+    var podeAcessarAdmin = false;
+
+    if (autenticado)
+    {
+        podeOperarPdv = (await Autorizacao.AuthorizeAsync(User, Policies.PodeOperarPDV)).Succeeded;
+        podeReimprimirCupom = (await Autorizacao.AuthorizeAsync(User, Policies.PodeReimprimirCupom)).Succeeded;
+        podeRegistrarSuprimento = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSuprimento)).Succeeded;
+        podeRegistrarSangria = (await Autorizacao.AuthorizeAsync(User, Policies.PodeRegistrarSangria)).Succeeded;
+        podeVerFinanceiro = (await Autorizacao.AuthorizeAsync(User, Policies.PodeVerFinanceiro)).Succeeded;
+        podeVerRelatorioCaixa = (await Autorizacao.AuthorizeAsync(User, Policies.PodeVerRelatorioCaixa)).Succeeded;
+        podeFecharCaixa = (await Autorizacao.AuthorizeAsync(User, Policies.PodeFecharCaixa)).Succeeded;
+        podeGerenciarVendedores = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarVendedores)).Succeeded;
+        podeGerenciarUsuarios = (await Autorizacao.AuthorizeAsync(User, Policies.PodeGerenciarUsuarios)).Succeeded;
+        podeAcessarAdmin = (await Autorizacao.AuthorizeAsync(User, Policies.PodeAcessarAdmin)).Succeeded;
+    }
+
+    // Toda pessoa autenticada pode abrir o guia/menu Alt+M. As aÃ§Ãµes do menu
+    // continuam sendo filtradas pelas permissÃµes do perfil.
+    var temMenuAtalhos = autenticado;
+
+    // ---------------------------------------------------------------- "quem esta logado" ---
+    // Nome: o login e por e-mail (Usuario.UserName == Email) e o nome bonito mora
+    // em Usuario.NomeExibicao, que NAO esta no cookie. Uma consulta por pagina
+    // (indice de UserName) em um SQLite local e irrelevante; se algum dia virar
+    // caminho quente, o certo e gravar o NomeExibicao como claim no login.
+    var nomeExibido = User.Identity?.Name;
+    var papelExibido = "sem papel";
+
+    if (autenticado)
+    {
+        var conta = await GerenciadorDeUsuarios.FindByNameAsync(User.Identity!.Name!);
+        if (!string.IsNullOrWhiteSpace(conta?.NomeExibicao))
+        {
+            nomeExibido = conta!.NomeExibicao;
+        }
+
+        // Dono primeiro quando houver mais de um papel: e ele que explica tudo
+        // o que a pessoa ve na tela.
+        var papeis = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        papelExibido = papeis.Contains(Roles.Dono) ? "Administrador"
+                     : papeis.Count > 0 ? string.Join(" + ", papeis)
+                     : "sem papel";
+    }
+}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @* BUG-05: token anti-forgery para os POSTs feitos por fetch() no admin-caixa.js.
+       Os <form> normais ja emitem @Html.AntiForgeryToken(); este <meta> atende o JS,
+       que envia o token no header X-CSRF-TOKEN (configurado em Program.cs).
+       GetAndStoreTokens devolve o token em texto puro (o cookie continua sendo
+       emitido, entao a validacao do [ValidateAntiForgeryToken] funciona). *@
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+
+    @* BUG-13 (commit 4): o JS do painel (atalhos Alt+X e a gestao de vendedores)
+       le daqui o que ESTE usuario pode fazer. Sai do mesmo IAuthorizationService
+       das policies - nao e uma segunda regra escrita a mao no JavaScript. *@
+    <script>
+        window.LOJA_ACESSO = {
+            pdv: @(podeOperarPdv ? "true" : "false"),
+            financeiro: @(podeVerFinanceiro ? "true" : "false"),
+            vendedores: @(podeGerenciarVendedores ? "true" : "false"),
+            usuarios: @(podeGerenciarUsuarios ? "true" : "false"),
+            admin: @(podeAcessarAdmin ? "true" : "false")
+        };
+    </script>
+    @* PASSO 2 DO REDESIGN - CHAVE DE TEMA (unica) + estado da sidebar.
+       Roda ANTES de qualquer <link> de CSS: a pagina nasce com o data-theme
+       certo e nao pisca no tema errado. Chave no localStorage:
+       controlhub-tema ("auto" padrao, "claro" ou "escuro"). O estado de
+       "recolher" a sidebar (desktop) vem de controlhub-sidebar. *@
+    <script>
+        (function () {
+            var chave = 'controlhub-tema';
+            var raiz = document.documentElement;
+            var tema = 'auto';
+            try {
+                var salvo = localStorage.getItem(chave);
+                if (salvo === 'claro' || salvo === 'escuro' || salvo === 'auto') { tema = salvo; }
+            } catch (e) { tema = 'auto'; }
+
+            // tema EFETIVO: com "auto" segue o sistema.
+            var efetivo = tema;
+            if (tema === 'auto') {
+                efetivo = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'escuro' : 'claro';
+            }
+            if (efetivo === 'claro') { raiz.setAttribute('data-theme', 'light'); }
+            else { raiz.setAttribute('data-theme', 'dark'); }
+
+            // estado de recolher da sidebar (desktop)
+            try {
+                if (localStorage.getItem('controlhub-sidebar') === 'fechada') {
+                    raiz.setAttribute('data-sidebar', 'fechada');
+                }
+            } catch (e) { }
+
+            window.CONTROLHUB_TEMA = { chave: chave, valor: tema };
+            window.aplicarTema = function (novo) {
+                if (novo !== 'auto' && novo !== 'claro' && novo !== 'escuro') { return; }
+                tema = novo;
+                window.CONTROLHUB_TEMA.valor = novo;
+                try { localStorage.setItem(chave, novo); } catch (e) { }
+                var efi = novo;
+                if (novo === 'auto') {
+                    efi = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'escuro' : 'claro';
+                }
+                if (efi === 'claro') { raiz.setAttribute('data-theme', 'light'); }
+                else { raiz.setAttribute('data-theme', 'dark'); }
+                document.dispatchEvent(new CustomEvent('controlhub-tema', { detail: novo }));
+            };
+        })();
+    </script>
+    @* Nome do produto: generico de proposito. A identidade visual da loja
+       (CNPJ, endereco, telefone) ainda nao esta parametrizada - ver
+       Views/Caixa/GerarCupom.cshtml e a secao "Dados da empresa" do README. *@
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/corporate-theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/perfil-seta.css" asp-append-version="true" />
+</head>
+<body>@if (autenticado)
+{
+    <div class="app-shell" id="appShell">
+        <aside class="app-sidebar" id="app-sidebar" aria-label="Navegação principal">
+            <div class="app-sidebar__top">
+                <a class="app-brand" href="/" title="@marcaNome">@marcaNome</a>
+                @if (!string.IsNullOrWhiteSpace(lojaNome))
+                {
+                    <span class="app-brand__loja">@lojaNome</span>
+                }
+            </div>
+            <nav class="app-sidebar__nav">
+                <div class="app-sidebar__grupo">Operação</div>
+                <a class="app-sidebar__item @(MenuAtivo("Home", "Index") ? "active" : null)" href="/Home/Index" aria-current="@(MenuAtivo("Home", "Index") ? "page" : null)">Estoque</a>
+                @* BUG menu do Operador: o Caixa e do PDV, que usa PodeOperarPDV
+                   (Dono E Operador). Antes estava em PodeVerFinanceiro (so Dono):
+                   o Operador caia no Caixa pelo redirect do login, mas ao sair
+                   nao tinha link para voltar - o item nao existia no menu. *@
+                @if (podeOperarPdv)
+                {
+                    <a class="app-sidebar__item @(MenuAtivo("Caixa", "Index") ? "active" : null)" href="/Caixa" aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)">Caixa</a>
+                }
+                @if (podeVerFinanceiro)
+                {
+                    <div class="app-sidebar__grupo">Gestão</div>
+                    <a class="app-sidebar__item @(MenuAtivo("Caixa", "Historico") ? "active" : null)" asp-controller="Caixa" asp-action="Historico" asp-route-periodo="hoje" aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)">Histórico</a>
+                    <a class="app-sidebar__item @(MenuAtivo("Dashboard") ? "active" : null)" href="/Dashboard" aria-current="@(MenuAtivo("Dashboard") ? "page" : null)">Dashboard</a>
+                }
+                <div class="app-sidebar__grupo">Configurações</div>
+                <a class="app-sidebar__item @(MenuAtivo("Home", "Configuracoes") ? "active" : null)" asp-controller="Home" asp-action="Configuracoes" aria-current="@(MenuAtivo("Home", "Configuracoes") ? "page" : null)">Atalhos</a>
+                <div class="app-theme-linha app-sidebar__tema">
+                    <span class="app-theme-linha__rotulo">Tema</span>
+                    <button type="button" class="app-theme" role="switch" aria-checked="true" aria-label="Alternar tema claro ou escuro">
+                        <span class="app-theme-knob" aria-hidden="true"></span>
+                        <span class="app-theme-ico app-theme-moon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        </span>
+                        <span class="app-theme-ico app-theme-sun" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                        </span>
+                    </button>
+                </div>
+            </nav>
+            <div class="app-sidebar__bottom">
+                <div class="app-usuario">
+                    <button type="button" class="app-usuario__botao" id="btnUsuario" aria-haspopup="menu" aria-expanded="false" aria-controls="menuUsuario">
+                        <span class="app-usuario__info">
+                            <span class="app-usuario__nome">@nomeExibido</span>
+                            <span class="app-usuario__papel">@papelExibido</span>
+                        </span>
+                        <span class="app-usuario__chevron" aria-hidden="true"></span>
+                    </button>
+                    <div class="app-menu" id="menuUsuario" role="menu" aria-hidden="true">
+                        @if (podeGerenciarUsuarios)
+                        {
+                            <a class="app-menu__item" role="menuitem" asp-controller="Usuarios" asp-action="Index">Usuários</a>
+                        }
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0" role="none">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="app-menu__item app-menu__item--sair" role="menuitem">Sair</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <div class="app-main" id="appMain">
+            <header class="app-header">
+                <button class="app-hamburguer" id="btnMenu" type="button" aria-controls="app-sidebar" aria-expanded="true" aria-label="Abrir ou fechar o menu">
+                    <span class="app-hamburguer__barra"></span>
+                    <span class="app-hamburguer__barra"></span>
+                    <span class="app-hamburguer__barra"></span>
+                </button>
+                <div class="app-caminho">
+                    @if (grupoAtual != null)
+                    {
+                        <span class="app-caminho__grupo">@grupoAtual</span>
+                        <span class="app-caminho__sep" aria-hidden="true">/</span>
+                        <span class="app-caminho__pagina">@paginaAtual</span>
+                    }
+                    else
+                    {
+                        <span class="app-caminho__pagina">@caminhoTexto</span>
+                    }
+                </div>
+            </header>
+            <main class="app-content" id="appContent">@RenderBody()</main>
+            
+        </div>
+        <div class="cortina-sidebar" id="cortinaSidebar" aria-hidden="true"></div>
+    </div>
+    <script src="~/js/shell.js" asp-append-version="true"></script>
+}
+else
+{
+    
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom shadow-sm mb-0">
+            <div class="container-fluid">
+                @* BUG-33: a marca agora e SO o nome "ControlHub" (era "ESTOQUE &
+                   CAIXA" com um icone de caixa). O nome vem do mesmo lugar que a
+                   marca das exportacoes (Marca:Nome, padrao "ControlHub"), entao
+                   a tela e o arquivo Excel passam a falar a mesma coisa.
+                   O icone foi removido de proposito: a marca fica com o nome
+                   sozinho, mais limpa e legivel. *@
+                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">
+                    <span>ControlHub</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        @* Estoque e Caixa: PodeOperarPDV (Dono e Operador).
+                           BUG-33: os icones foram removidos (o nome sozinho ja
+                           diz tudo); os demais itens do menu mantem o icone. *@
+                        @if (podeOperarPdv)
+                        {
+                            <li class="nav-item">
+                                @* asp-controller="Home" mantido *@
+                                <a class="nav-link text-dark @(MenuAtivo("Home", "Index") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Home", "Index") ? "page" : null)"
+                                   asp-area="" asp-controller="Home" asp-action="Index">Estoque</a>
+                            </li>
+                            <li class="nav-item">
+                                @* asp-controller="Caixa" mantido; a acao separa o
+                                   PDV (Index) do HistorÃ³ico, que sao do mesmo
+                                   controller - sem isso os dois ficariam ativos. *@
+                                <a class="nav-link text-dark @(MenuAtivo("Caixa", "Index") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Caixa", "Index") ? "page" : null)"
+                                   asp-controller="Caixa" asp-action="Index">Caixa</a>
+                            </li>
+                        }
+
+                        @* HistÃ³rico: PodeVerFinanceiro (sÃ³ Dono) - some para o Operador. *@
+                        @if (podeVerFinanceiro)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark @(MenuAtivo("Caixa", "Historico") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Caixa", "Historico") ? "page" : null)"
+                                   href="/Caixa/Historico?periodo=hoje">Histórico</a>
+                                <a class="d-none" href="/Caixa/Historico" aria-hidden="true" tabindex="-1"></a>
+                            </li>
+                        }
+
+                        @* Dashboard: PodeVerFinanceiro (so Dono) - o painel mostra
+                           faturamento e saldo da gaveta, que nao sao negocio do
+                           Operador. Reaproveita a variavel ja resolvida no topo
+                           do _Layout, sem uma Authorize nova aqui.
+
+                           Mudancas (BUG-32): o item saiu do INICIO da barra para
+                           DEPOIS de HistorÃ³ico e passou a se chamar "Dashboard"
+                           (antes "Inicio"). A rota nao mudou - continua
+                           Dashboard/Index, que e o que os testes e os atalhos
+                           usam. BUG-33: sem icone - a barra usa so o nome. *@
+                        @if (podeVerFinanceiro)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark @(MenuAtivo("Dashboard") ? "active" : null)"
+                                   aria-current="@(MenuAtivo("Dashboard") ? "page" : null)"
+                                   asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                            </li>
+                        }
+
+                        @* O link /Usuarios saiu da barra: hoje a rota vive dentro do
+                           menu de perfil (dropdown a direita), para a navbar ficar
+                           clean. O Operador nao vÃª a opcao em lugar nenhum (e se
+                           digitar a URL recebe 403 da propria rota). *@
+                    </ul>
+
+                    @if (autenticado)
+                    {
+                        @* Menu de perfil (clean): na barra fica SO o icone + "OlÃ¡, nome";
+                           ao clicar abrem as opcoes - ADMINISTRAR USUARIOS (Dono, a
+                           unica rota /Usuarios da interface) e SAIR (POST com token
+                           anti-forgery: logout nao pode ser GET que qualquer pagina
+                           dispararia). O papel fica DENTRO do menu: no balcao o PC e
+                           compartilhado e saber quem entrou evita vender no cupom
+                           errado, sem poluir a barra. *@
+<div class="dropdown">
+                            <button class="btn d-flex align-items-center gap-2 px-2 text-dark user-session-trigger"
+                                    type="button" id="btnMenuPerfil" data-bs-toggle="dropdown"
+                                    aria-expanded="false" aria-label="Menu do perfil">
+                                <span class="small fw-semibold">Olá, <b class="text-dark">@nomeExibido</b></span>
+                                <i class="bi bi-chevron-down small" aria-hidden="true"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="btnMenuPerfil">
+                                <li>
+                                    <span class="dropdown-item-text small text-muted d-flex align-items-center justify-content-between">
+                                        <span>Papel</span>
+                                        <span class="badge bg-secondary">@papelExibido</span>
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <span class="dropdown-item-text small text-muted">
+                                        Tema
+                                    </span>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="auto"
+                                            role="menuitemradio" aria-checked="true"
+                                            onclick="aplicarTema('auto')">
+                                        Automático
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="claro"
+                                            role="menuitemradio" aria-checked="false"
+                                            onclick="aplicarTema('claro')">
+                                        <i class="bi bi-sun me-2" aria-hidden="true"></i>Claro
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-tema-opcao="escuro"
+                                            role="menuitemradio" aria-checked="false"
+                                            onclick="aplicarTema('escuro')">
+                                        <i class="bi bi-moon-stars me-2" aria-hidden="true"></i>Escuro
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @if (podeGerenciarUsuarios)
+                                {
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Usuarios" asp-action="Index">
+                                        Usuários
+                                    </a>
+                                </li>
+                                }
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item text-danger">Sair</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    
+    <main role="main">
+
+        @RenderBody()
+    </main>
+
+
+}
+
+        @* Modal Atalhos (Mantido) *@
+        @if (temMenuAtalhos)
+        {
+        <div class="modal fade" id="modalAtalhos" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title">@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa") (ALT + M)</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            @if (podeRegistrarSangria)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-danger alt-m-funcao alt-m-funcao--sangria w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="1" onclick="prepararSangria()">
+                                    <span style="width: 30px; text-align: left;">1 -</span>
+                                    <span>Sangria</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeRegistrarSuprimento)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-primary alt-m-funcao alt-m-funcao--suprimento w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="2" onclick="prepararSuprimento()">
+                                    <span style="width: 30px; text-align: left;">2 -</span>
+                                    <span>Suprimento</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeFecharCaixa)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-secondary alt-m-funcao alt-m-funcao--caixa w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="3" onclick="verStatusCaixa()">
+                                    <span style="width: 30px; text-align: left;">3 -</span>
+                                    <span>Caixa</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeFecharCaixa)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-dark alt-m-funcao alt-m-funcao--fechamento w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="4" onclick="realizarFechamento()">
+                                    <span style="width: 30px; text-align: left;">4 -</span>
+                                    <span>Fechamento</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeVerRelatorioCaixa)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-info alt-m-funcao alt-m-funcao--relatorio w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="5" onclick="verRelatorioCaixa()">
+                                    <span style="width: 30px; text-align: left;">5 -</span>
+                                    <span>Relatório</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeReimprimirCupom)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-warning alt-m-funcao alt-m-funcao--reimprimir w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="6" onclick="reimprimirUltimaVenda()">
+                                    <span style="width: 30px; text-align: left;">6 -</span>
+                                    <span>Reimprimir</span>
+                                </button>
+                            </div>
+                            }
+                            @if (podeOperarPdv || podeGerenciarVendedores)
+                            {
+                            <div class="col-6">
+                                <button class="btn btn-outline-dark alt-m-funcao alt-m-funcao--vendedores w-100 py-3 fw-bold shadow-sm d-flex align-items-center" data-key="7" onclick="gerenciarVendedores()">
+                                    <span style="width: 30px; text-align: left;">7 -</span>
+                                    <span>Vendedores</span>
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+
+        @* Modal Admin (Mantido) *@
+        <div class="modal fade" id="modalOperacao" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div id="headerOperacao" class="modal-header text-white">
+                        <h5 class="modal-title" id="tituloOperacao">Operação</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="tipoOperacao">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Valor</label>
+                            <input type="text" id="valorOperacao" class="form-control" oninput="formatarMoedaParaSweet(this)">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Observação</label>
+                            <textarea id="obsOperacao" class="form-control" rows="2"></textarea>
+                        </div>
+                        <button type="button" id="btnConfirmarOperacao" class="btn btn-lg w-100 fw-bold shadow-sm" onclick="salvarMovimentacao()">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modalAjudaAtalhos" class="modal-overlay shortcut-help-overlay">
+            <div class="shortcut-help-panel">
+                <h3>Atalhos do sistema</h3>
+                <hr>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="fw-bold">Ajuda / atalhos</span>
+                        <kbd>ESC</kbd>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="fw-bold">@(podeAcessarAdmin ? "Menu administrativo" : "Menu do caixa")</span>
+                        <kbd>Alt + M</kbd>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="fw-bold">Ir para o caixa</span>
+                        <kbd>Alt + C</kbd>
+                    </div>
+
+                    @if (podeVerFinanceiro)
+                    {
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="fw-bold">Histórico de vendas</span>
+                        <kbd>Alt + H</kbd>
+                    </div>
+                    }
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="fw-bold">Controle de estoque</span>
+                        <kbd>Alt + E</kbd>
+                    </div>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-primary w-100" onclick="document.getElementById('modalAjudaAtalhos').classList.remove('aberto')">Entendi (ESC)</button>
+            </div>
+        </div>
+
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script src="~/js/admin-caixa.js" asp-append-version="true"></script>
+
+   
+
+    @if (Context.Request.Query.ContainsKey("imprimirId"))
+    {
+        <script>
+            window.addEventListener('load', function() {
+                var url = '@Url.Action("GerarCupom", "Caixa")' + '?id=' + '@Context.Request.Query["imprimirId"]';
+                window.open(url, '_blank');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // 1. Corretor de fundo escuro (Backdrop)
+        // Usamos delegaÃ§Ã£o de evento no document para evitar erro caso o modal nÃ£o exista na pÃ¡gina
+        document.addEventListener('hidden.bs.modal', function (event) {
+            if (event.target.id === 'modalAtalhos') {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+
+            // AJUSTE DE SHELL 2: atalhos agora casam por event.code (KeyM/KeyC/
+            // KeyE/KeyH, Digit1..7), que e IDENTICO em qualquer layout de teclado.
+            // O codigo antigo comparava e.key ('m','c'...): em layout nao-US o
+            // Alt+letra devolve outro caractere e o atalho simplesmente nao vinha.
+            const modal = document.getElementById('modalAtalhos');
+            // Estado REAL do overlay: a classe 'show' do Bootstrap, e nao
+            // "getInstance() !== null" (que so diz que a instancia existe, mesmo
+            // escondida - bug que fazia o Alt+M parar de abrir depois do 1o uso).
+            const overlayAberto = !!(modal && modal.classList.contains('show'));
+            const code = e.code || '';
+            const A = window.LOJA_ACESSO || {};
+
+            const numeroTecladoMatch = /^(?:Digit|Numpad)([1-9])$/.exec(code);
+            const numeroTeclado = numeroTecladoMatch ? numeroTecladoMatch[1] : (/^[1-9]$/.test(e.key) ? e.key : null);
+
+            // A janela de reimpressÃ£o apresenta opÃ§Ãµes numeradas 1â€“3.
+            const popupAberto = document.querySelector('.swal2-container');
+            const entradaOpcaoImpressao = popupAberto && getComputedStyle(popupAberto).display !== 'none'
+                ? popupAberto.querySelector('#swal-input-opcao') : null;
+            if (entradaOpcaoImpressao && !e.altKey && !e.ctrlKey && !e.metaKey
+                && ['1', '2', '3'].includes(numeroTeclado) && !e.repeat) {
+                e.preventDefault();
+                entradaOpcaoImpressao.value = numeroTeclado;
+                if (window.Swal && typeof Swal.clickConfirm === 'function') Swal.clickConfirm();
+                e.stopImmediatePropagation();
+                return;
+            }
+
+            // DiÃ¡logos de escolha do Caixa podem marcar as opÃ§Ãµes com a mesma tecla.
+            if (popupAberto && getComputedStyle(popupAberto).display !== 'none'
+                && !e.altKey && !e.ctrlKey && !e.metaKey && numeroTeclado && !e.repeat) {
+                const botaoOpcao = popupAberto.querySelector(`[data-caixa-opcao="${numeroTeclado}"]`);
+                if (botaoOpcao && !botaoOpcao.disabled) {
+                    e.preventDefault();
+                    botaoOpcao.click();
+                    e.stopImmediatePropagation();
+                    return;
+                }
+            }
+
+            // NUMEROS 1..7 com o overlay aberto acionam os MESMOS botoes
+            // (data-key), que chamam as mesmas funcoes de admin-caixa.js.
+            if (overlayAberto && !e.altKey && !e.ctrlKey && !e.metaKey
+                && /^[1-7]$/.test(numeroTeclado || '') && !e.repeat) {
+                const botao = modal.querySelector('[data-key="' + numeroTeclado + '"]');
+                if (botao) {
+                    e.preventDefault();
+                    botao.click();
+                    const inst = bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
+                    e.stopImmediatePropagation();
+                    return;
+                }
+            }
+
+            // ATALHOS DE NAVEGACAO - mesmas policies de antes (window.LOJA_ACESSO,
+            // gerado pelo Razor a partir de IAuthorizationService). Atalho sem
+            // policy = atalho que nao navega: o Operador nao chega no Historico
+            // por teclado, assim como nao ve o item no menu.
+            if (e.altKey && code === 'KeyC' && A.pdv) {           // Caixa (Dono e Operador)
+                e.preventDefault();
+                window.location.href = '/Caixa';
+                return;
+            }
+            if (e.altKey && code === 'KeyH' && A.financeiro) {    // Historico de hoje (so Dono)
+                e.preventDefault();
+                window.location.href = '/Caixa/Historico?periodo=hoje';
+                return;
+            }
+            if (e.altKey && code === 'KeyE' && A.pdv) {           // Estoque / Home
+                e.preventDefault();
+                window.location.href = '/Home/Index';
+                return;
+            }
+
+            // ATALHO ALT + M - abre o menu (administrativo p/ Dono, do caixa p/
+            // Operador). O modal so e renderizado quando temMenuAtalhos; quem nao
+            // tem nenhum item simplesmente nao tem overlay para abrir.
+            if (e.altKey && code === 'KeyM') {
+                e.preventDefault();
+                if (modal && !overlayAberto) {
+                    bootstrap.Modal.getOrCreateInstance(modal).show();
+                }
+                return;
+            }
+
+            // LOGICA DO ESC - com o overlay do menu aberto, Esc o FECHA antes de
+            // qualquer coisa (no PDV o campo de busca recebe foco e, se a limpeza
+            // viesse primeiro, o Esc esvaziaria a busca em vez de fechar o menu).
+            // Sem overlay: limpa a busca se ela esta em foco; senao, fecha o ajuda.
+            if (code === 'Escape' || e.key === 'Escape') {
+                if (window.Swal && Swal.isVisible()) return;
+
+                if (overlayAberto) {
+                    const inst = bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
+                    return;
+                }
+
+                const campoBusca = document.getElementById("campoBusca");
+                if (campoBusca && campoBusca === document.activeElement) {
+                    campoBusca.value = "";
+                    const sug = document.getElementById("sugestoes");
+                    if (sug) sug.style.display = "none";
+                    campoBusca.blur();
+                    return;
+                }
+
+                const modalAjuda = document.getElementById("modalAjudaAtalhos");
+                if (modalAjuda && modalAjuda.classList.contains("aberto")) {
+                    // BUG-35: o overlay dos atalhos esconde por CSS com !important;
+                    // a classe "aberto" e o caminho unico (mesmo peso do !important).
+                    modalAjuda.classList.remove("aberto");
+                }
+            }
+        });
+
+        // Clique FORA (no backdrop ou fora do dialog) fecha o overlay do menu.
+        // Em clique real o Bootstrap ja fecha (data-bs-backdrop padrao); este
+        // handler cobre tambem o clique sintetico dos testes, que nao dispara o
+        // mousedown que o Bootstrap observa.
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('modalAtalhos');
+            if (!modal || !modal.classList.contains('show')) return;
+            const noBackdrop = e.target && e.target.classList && e.target.classList.contains('modal-backdrop');
+            const dentroDoDialog = e.target && e.target.closest && e.target.closest('#modalAtalhos .modal-dialog');
+            if (noBackdrop || !dentroDoDialog) {
+                const inst = bootstrap.Modal.getInstance(modal);
+                if (inst) inst.hide();
+            }
+        });
+
+                                // Cole este bloco e verifique se nÃ£o hÃ¡ nenhum ponto "." perdido antes ou depois dele
+        function gerenciarVendedores() {
+            try {
+                const modalEl = document.getElementById('modalAtalhos');
+                if (modalEl) {
+                    const mAtalhos = bootstrap.Modal.getInstance(modalEl);
+                    if (mAtalhos) mAtalhos.hide();
+                }
+            } catch (e) {
+                console.log("Modal nÃ£o estava aberto");
+            }
+
+            // BUG-13 (commit 4): quem NAO gerencia vendedores (Operador) vai direto
+            // para a CONSULTA. O menu de dois passos ("Cadastrar Novo" / "Listar
+            // Todos") ofereceria um cadastro que a rota recusa com 403 - nao se
+            // oferece botao que nao funciona.
+            if (!window.LOJA_ACESSO || !window.LOJA_ACESSO.vendedores) {
+                abrirListagemVendedores();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Gestão de vendedores',
+                icon: 'info',
+                showDenyButton: true,
+                confirmButtonText: '1 - Cadastrar novo',
+                denyButtonText: '2 - Listar todos',
+                confirmButtonColor: '#c2a36d',
+                denyButtonColor: '#548f87',
+                didOpen: () => {
+                    Swal.getConfirmButton()?.setAttribute('data-caixa-opcao', '1');
+                    Swal.getDenyButton()?.setAttribute('data-caixa-opcao', '2');
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    abrirFormularioCadastro();
+                } else if (result.isDenied) {
+                    abrirListagemVendedores();
+                }
+            });
+        }
+
+                async function abrirListagemVendedores() {
+            // Tenta fechar o modal de atalhos se ele existir
+            const el = document.getElementById('modalAtalhos');
+            if (el) {
+                const m = bootstrap.Modal.getInstance(el);
+                if (m) m.hide();
+            }
+
+            // Abre um carregando para vocÃª saber que a funÃ§Ã£o disparou
+            Swal.showLoading();
+
+            // BUG-13 (commit 4): o Operador consulta cupons, mas nao cadastra nem
+            // exclui vendedor (PodeGerenciarVendedores e so do Dono).
+            const podeMexer = !!(window.LOJA_ACESSO && window.LOJA_ACESSO.vendedores);
+
+            try {
+                const resp = await fetch('/Caixa/ListarVendedores');
+                const vendedores = await resp.json();
+
+                    let html = `
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Cupom</th>
+                    ${podeMexer ? '<th class="text-end">Ações</th>' : ''}
+                </tr>
+            </thead>
+            <tbody>
+                ${vendedores.map(v => `
+                    <tr>
+                        <td>${v.nome}</td>
+                        <td><b>${v.codigo}</b></td>
+                        ${podeMexer ? `<td class="text-end">
+                            <button class="btn btn-sm btn-danger" title="Desativar vendedor" aria-label="Desativar vendedor ${v.nome}" onclick="confirmarExclusaoVendedor('${v.codigo}')">
+                                Desativar
+                            </button>
+                        </td>` : ''}
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>`;
+
+                if(vendedores.length === 0) html = "Nenhum vendedor cadastrado.";
+
+                // BUG-13 (commit 4): o objeto e o MESMO para os dois papeis. O que
+                // muda e o botao de confirmar (cadastrar): so o Dono tem
+                // PodeGerenciarVendedores, entao para o Operador a lista e consulta pura.
+                const opcoes = {
+                    title: 'Gestão de vendedores',
+                    html: html, // Sua tabela com o botão de excluir
+                    showCancelButton: true,
+                    showConfirmButton: podeMexer,
+                    confirmButtonText: 'Novo vendedor',
+                    cancelButtonText: 'Fechar',
+                    confirmButtonColor: '#c2a36d',
+                    cancelButtonColor: '#39444a',
+                    reverseButtons: true,          // Coloca o cancelar na esquerda e o confirmar na direita
+                    width: '600px',
+                    customClass: {
+                        popup: 'swal-info'
+                    }
+                };
+
+                // O ".then" tem de estar NA MESMA expressao do Swal.fire: aqui ele
+                // estava solto depois do try/catch, o navegador acusava
+                // "then is not defined" e o botao "NOVO VENDEDOR" nunca abria o
+                // formulario. Corrigido de passagem por estar no mesmo trecho.
+                Swal.fire(opcoes).then((result) => {
+                    if (result.isConfirmed) {
+                        abrirFormularioCadastro(); // Faz o botão "Novo Vendedor" da lista funcionar
+                    }
+                });
+
+            } catch (e) {
+                Swal.fire({
+                    title: 'Erro',
+                    text: 'Não foi possível buscar os dados.',
+                    customClass: {
+                        popup: 'swal-error'
+                    }
+                });
+            }
+        }
+
+                function confirmarExclusaoVendedor(codigo) {
+            Swal.fire({
+                title: 'Excluir cupom?',
+                text: `Deseja realmente remover o vendedor com cupom ${codigo}?`,
+                customClass: {
+                    popup: 'swal-warning'
+                },
+                showCancelButton: true,
+                confirmButtonColor: '#9d4f55',
+                cancelButtonColor: '#39444a',
+                confirmButtonText: 'Sim, excluir!',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const params = new URLSearchParams();
+                    params.append('codigo', codigo);
+
+                    const resp = await fetch('/Caixa/ExcluirVendedor', {
+                        method: 'POST',
+                        body: params,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    const res = await resp.json();
+
+                    if (res.success) {
+                        Swal.fire({
+                            title: 'Removido!',
+                            text: 'O cupom foi desativado.',
+                            customClass: {
+                                popup: 'swal-success'
+                            }
+                        })
+                            .then(() => abrirListagemVendedores()); // Recarrega a lista atualizada
+                    } else {
+                        Swal.fire({
+                            title: 'Erro',
+                            text: res.message,
+                            customClass: {
+                                popup: 'swal-error'
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+
+                function abrirFormularioCadastro() {
+            Swal.fire({
+                title: 'Cadastrar vendedor',
+                html: `
+                    <div class="text-start">
+                        <label class="form-label">Nome completo</label>
+                        <input id="nomeV" class="swal2-input m-0 w-100">
+                        <label class="form-label mt-3">Cupom (código)</label>
+                        <input id="codV" class="swal2-input m-0 w-100">
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Salvar registro',
+                cancelButtonText: 'Voltar',
+                confirmButtonColor: '#c2a36d',
+                cancelButtonColor: '#9d4f55',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const nome = document.getElementById('nomeV').value.toUpperCase();
+                    const codigo = document.getElementById('codV').value.toUpperCase();
+                    if (!nome || !codigo) {
+                        Swal.showValidationMessage('Por favor, preencha todos os campos!');
+                    }
+                    return { nome, codigo };
+                }
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    salvarVendedorNoBanco(res.value);
+                } else if (res.dismiss === Swal.DismissReason.cancel) {
+                    // Se ele clicar em VOLTAR, reabre a lista para nÃ£o fechar tudo
+                    abrirListagemVendedores();
+                }
+            });
+        }
+
+        async function salvarVendedorNoBanco(dados) {
+            const params = new URLSearchParams();
+            params.append('nome', dados.nome);
+            params.append('codigo', dados.codigo);
+
+            const resp = await fetch('/Caixa/CadastrarVendedor', {
+                method: 'POST',
+                body: params,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Vendedor cadastrado com sucesso.',
+                    customClass: {
+                        popup: 'swal-success'
+                    }
+                })
+                    .then(() => abrirListagemVendedores()); // Recarrega a lista
+            } else {
+                Swal.fire({
+                    title: 'Erro',
+                    text: res.message,
+                    customClass: {
+                        popup: 'swal-error'
+                    }
+                });
+            }
+        }
+
+                let barcode = "";
+        document.addEventListener('keydown', function (e) {
+            // Se estiver em um campo de texto (como o CPF), nÃ£o bipa
+            if ((window.caixaTemModalAtivo && window.caixaTemModalAtivo())
+                || e.target.matches?.('input, textarea, select, [contenteditable="true"]')) {
+                barcode = "";
+                return;
+            }
+
+            if (e.key === "Enter") {
+                if (barcode.length > 3) {
+                    buscarProdutoPorCodigo(barcode);
+                }
+                barcode = "";
+            } else {
+                barcode += e.key;
+            }
+        });
+
+        
+
+                        function processarCodigoBalanca(codigo) {
+            // Exemplo cÃ³digo: 2 00123 00500 1
+            // idProduto = 123 | valorExtraido = 0.500
+            const idProduto = parseInt(codigo.substring(1, 6));
+            const pesoExtraido = parseFloat(codigo.substring(6, 12)) / 1000;
+
+            fetch(`/Caixa/BuscarPorId?id=${idProduto}`).then(async r => {
+                const p = await r.json();
+                if(p.success) {
+                    // Aqui passamos o pesoExtraido como a QUANTIDADE da venda
+                    adicionarAoCarrinho(p.id, p.nome, p.preco, pesoExtraido);
+                }
+            });
+        }
+
+
+
+    </script>
+
+</body>
+</html>

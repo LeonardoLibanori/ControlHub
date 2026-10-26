@@ -133,6 +133,172 @@
     --danger: var(--t-coral);
     --info: var(--t-cyan);
 
+/* --- filtros de lista horizontal ----------------------------------------------- */
+.filtros-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+.campo-filtro {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+    flex: 1;
+    margin-bottom: 0;
+}
+.campo-filtro .form-label {
+    font-size: .8rem;
+    font-weight: 600;
+    margin-bottom: .25rem;
+    color: var(--t-text);
+}
+.campo-filtro .form-control,
+.campo-filtro select {
+    font-size: .85rem;
+    height: calc(1.5em + .75rem + 2px);
+}
+.campo-filtro .form-control:focus,
+.campo-filtro select:focus {
+    border-color: var(--s-primary-borda);
+    box-shadow: 0 0 0 1px var(--p-primary);
+}
+/* --- responsiva: em telas estreitas, quebra para coluna --- */
+@media (max-width: 576px) {
+    .filtros-grid {
+        flex-direction: column;
+    }
+    .campo-filtro {
+        min-width: 100%;
+        flex: none;
+    }
+}
+
+/* --- botão Filtrar: destaque azul, pílula, estados --- */
+.btn-filtrar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    height: calc(1.5em + .75rem + 2px);
+    padding: .375rem .75rem;
+    font-size: .875rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--c-blue);
+    border: 1px solid var(--c-blue);
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.btn-filtrar:hover {
+    background-color: color-mix(in srgb, var(--c-blue) 20%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--c-blue) 20%, var(--bg-card));
+}
+.btn-filtrar:focus-visible {
+    outline: 2px solid var(--p-primary);
+    outline-offset: 2px;
+}
+.btn-filtrar:active {
+    background-color: color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--c-blue) 30%, var(--bg-card));
+}
+/* --- badges de tipo de movimentação Kardex ----------------------------------------------- */
+    /* Classe base para todos as badges de tipo */
+    .badge-tipo {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .35em .6em;
+        font-size: .75rem;
+        font-weight: 600;
+        border-radius: 999px;
+    }
+
+    /* Entrada - verde */
+    .badge-tipo-entrada {
+        color: var(--t-green) !important;
+        background: color-mix(in srgb, var(--c-green) 12%, var(--bg-card)) !important;
+        border: 1px solid var(--s-green-borda) !important;
+    }
+
+    /* Saída - coral */
+    .badge-tipo-saida {
+        color: var(--t-coral) !important;
+        background: color-mix(in srgb, var(--c-coral) 12%, var(--bg-card)) !important;
+        border: 1px solid var(--s-coral-borda) !important;
+    }
+
+    /* Ajuste - âmbar */
+    .badge-tipo-ajuste {
+        color: var(--t-amber) !important;
+        background: color-mix(in srgb, var(--c-amber) 12%, var(--bg-card)) !important;
+        border: 1px solid var(--s-amber-borda) !important;
+    }
+
+    /* Neutro - slate */
+    .badge-tipo-neutro {
+        color: var(--t-slate) !important;
+        background: color-mix(in srgb, var(--c-slate) 12%, var(--bg-card)) !important;
+        border: 1px solid var(--s-slate-borda) !important;
+    }
+
+/* --- badges de ação de auditoria ----------------------------------------------- */
+    /* Classe base para badges de ação de auditoria */
+    .badge-acao {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .35em .6em;
+        font-size: .75rem;
+        font-weight: 600;
+        border-radius: 999px;
+        border: 1px solid transparent;
+    }
+
+    /* Ação: Preço - violeta */
+    .badge-acao-preco {
+        color: var(--t-violet) !important;
+        background: color-mix(in srgb, var(--c-violet) 12%, var(--bg-card)) !important;
+        border-color: var(--s-violet-borda) !important;
+    }
+
+    /* Ação: Estoque - verde */
+    .badge-acao-estoque {
+        color: var(--t-green) !important;
+        background: color-mix(in srgb, var(--c-green) 12%, var(--bg-card)) !important;
+        border-color: var(--s-green-borda) !important;
+    }
+
+    /* Ação: Caixa - âmbar */
+    .badge-acao-caixa {
+        color: var(--t-amber) !important;
+        background: color-mix(in srgb, var(--c-amber) 12%, var(--bg-card)) !important;
+        border-color: var(--s-amber-borda) !important;
+    }
+
+    /* Ação: Contas - azul */
+    .badge-acao-contas {
+        color: var(--t-blue) !important;
+        background: color-mix(in srgb, var(--c-blue) 12%, var(--bg-card)) !important;
+        border-color: var(--s-blue-borda) !important;
+    }
+
+    /* Ação: Neutro */
+    .badge-acao-neutro {
+        color: var(--text-soft) !important;
+        background: var(--bg-alt) !important;
+        border-color: var(--line) !important;
+    }
+
+/* --- ícones de badge via atributo data-icon ----------------------------------------------- */
+    .badge[data-icon]::before {
+        content: attr(data-icon);
+        font-size: .7em;
+        margin-right: .15rem;
+        vertical-align: middle;
+    }
+
     /* --- variaveis do Bootstrap consumidas pelo tema --- */
     --bs-body-bg: var(--bg-page);
     --bs-body-color: var(--text);

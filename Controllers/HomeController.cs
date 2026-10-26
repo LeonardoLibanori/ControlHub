@@ -336,11 +336,19 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras, string? estoqueMinimo = null)
+        public IActionResult Novo(string nome, string tipo, string quantidade, string preco, string? codigoBarras, string? estoqueMinimo = null, string? custoAquisicao = null, string? unidadeMedida = null)
         {
             // 1. Preço: O JS envia "500" para R$ 5,00. Dividimos por 100.
             decimal.TryParse(preco, out decimal valorBruto);
             decimal precoFinal = valorBruto / 100;
+
+            // 2. Custo de aquisição: mesmo padrao que preco (centavos).
+            decimal? custoFinal = null;
+            if (!string.IsNullOrWhiteSpace(custoAquisicao))
+            {
+                decimal.TryParse(custoAquisicao, out decimal custoBruto);
+                custoFinal = custoBruto / 100;
+            }
 
             // BUG-10: o cadastro aceitava preço NEGATIVO (o valor era só dividido por 100).
             if (precoFinal < 0m)
@@ -411,6 +419,7 @@ namespace ControleEstoqueLoja.Controllers
                     : TipoProduto.Prateleira,
                 Quantidade = qtd,
                 Preco = precoFinal,
+                CustoAquisicao = (custoFinal ?? 0m),
                 CodigoBarras = codigoBarras,
                 EstoqueMinimo = minimo
             };
@@ -435,7 +444,7 @@ namespace ControleEstoqueLoja.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = Policies.PodeGerenciarEstoque)]
-        public IActionResult Editar(int id, string nome, string tipo, string? quantidade, string preco, string? estoqueMinimo = null)
+        public IActionResult Editar(int id, string nome, string tipo, string? quantidade, string preco, string? estoqueMinimo = null, string? custoAquisicao = null)
         {
             var produto = _context.Produtos.FirstOrDefault(p => p.Id == id && p.Ativo);
             if (produto == null) return NotFound();
@@ -445,6 +454,20 @@ namespace ControleEstoqueLoja.Controllers
             string apenasNumeros = new string((preco ?? "0").Where(char.IsDigit).ToArray());
             decimal.TryParse(apenasNumeros, out decimal precoBruto);
             decimal precoFinal = precoBruto / 100;
+
+            // Custo de aquisição (mesmo padrao que preco).
+            decimal? custoFinal = null;
+            if (!string.IsNullOrWhiteSpace(custoAquisicao))
+            {
+                decimal.TryParse(custoAquisicao, out decimal custoBruto);
+                custoFinal = custoBruto / 100;
+            }
+
+            // Atualiza custo de aquisição no produto
+            if (custoFinal.HasValue)
+            {
+                produto.CustoAquisicao = custoFinal.Value;
+            }
 
             if (precoFinal < 0m)
             {

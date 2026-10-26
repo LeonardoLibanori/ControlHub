@@ -96,7 +96,8 @@ public class AccountController : Controller
 
         if (resultado.IsLockedOut)
         {
-            var usuario = await _userManager.FindByEmailAsync(model.Email);
+            var email = model.Email ?? string.Empty;
+            var usuario = await _userManager.FindByEmailAsync(email);
             var bloqueioAte = usuario is null ? null : await _userManager.GetLockoutEndDateAsync(usuario);
             var minutosIdentidade = bloqueioAte is null || bloqueioAte <= DateTimeOffset.UtcNow
                 ? 0

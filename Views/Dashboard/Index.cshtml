@@ -195,8 +195,14 @@
                     var gAnt = Model.SerieAnterior;
                     int gQtd = gSerie.Count;
 
-                    var gMaxAtual = gSerie.Where(s => s.ValorAtual.HasValue).Select(s => s.ValorAtual.Value).DefaultIfEmpty(0m).Max();
-                    var gMaxAnterior = gAnt.Where(s => s.ValorAnterior.HasValue).Select(s => s.ValorAnterior.Value).DefaultIfEmpty(0m).Max();
+                    // Usa GetValueOrDefault() em vez de .Value para evitar aviso CS8629
+                    // quando o HasValue ja foi verificado acima
+                    var gMaxAtual = gSerie.Where(s => s.ValorAtual.HasValue)
+                        .Select(s => s.ValorAtual.GetValueOrDefault())
+                        .DefaultIfEmpty(0m).Max();
+                    var gMaxAnterior = gAnt.Where(s => s.ValorAnterior.HasValue)
+                        .Select(s => s.ValorAnterior.GetValueOrDefault())
+                        .DefaultIfEmpty(0m).Max();
                     var gMaxGeral = gMaxAtual > gMaxAnterior ? gMaxAtual : gMaxAnterior;
                     var gTicks = ControleEstoqueLoja.Data.GraficoSvg.NiceTicks(gMaxGeral).ToList();
                     double gTopoValor = gTicks.Count > 0 ? Convert.ToDouble(gTicks[gTicks.Count - 1]) : 0d;
@@ -282,7 +288,7 @@
                     @for (var gi = 0; gi < gQtd; gi++)
                     {
                         if (!gSerie[gi].ValorAtual.HasValue) { continue; }
-                        var gValor = gSerie[gi].ValorAtual.Value;
+                        var gValor = gSerie[gi].ValorAtual.GetValueOrDefault();
                         var gRotulo = RotuloPt(gSerie[gi].Rotulo);
                         var gCx = GPx(gi);
                         var gCy = GPy(gValor);
@@ -342,7 +348,7 @@
                         {
                             var atual = Model.SerieAtual[i].ValorAtual?.ToString("F2", br) ?? "—";
                             var anterior = Model.SerieAnterior.Count > i && Model.SerieAnterior[i].ValorAnterior.HasValue
-                                ? Model.SerieAnterior[i].ValorAnterior.Value.ToString("F2", br)
+                                ? Model.SerieAnterior[i].ValorAnterior.GetValueOrDefault().ToString("F2", br)
                                 : "—";
                             <tr>
                                 <th scope="row">@Model.SerieAtual[i].Rotulo</th>
