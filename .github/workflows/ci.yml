@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore tests.QA/tests.QA.csproj
+
+      - name: Build
+        run: dotnet build tests.QA/tests.QA.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests.QA/tests.QA.csproj --configuration Release --no-build --no-restore --logger "trx;LogFileName=controlhub-tests.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: controlhub-test-results
+          path: TestResults/*.trx
+          if-no-files-found: warn

@@ -1,0 +1,110 @@
+﻿@model IReadOnlyList<ControleEstoqueLoja.Models.RegistroAuditoria>
+@using ControleEstoqueLoja.Data
+@{
+    var nomes = ViewBag.NomesUsuarios as Dictionary<string, string> ?? new Dictionary<string, string>();
+    var de = ViewBag.De as DateTime?;
+    var ate = ViewBag.Ate as DateTime?;
+    var acao = ViewBag.Acao as string;
+    var entidade = ViewBag.Entidade as string;
+    var pagina = ViewBag.Pagina as int? ?? 1;
+    var totalPaginas = ViewBag.TotalPaginas as int? ?? 1;
+    var total = ViewBag.TotalRegistros as int? ?? 0;
+
+    string NomeExibicaoEntidade(ControleEstoqueLoja.Models.RegistroAuditoria linha)
+    {
+        if (!string.IsNullOrWhiteSpace(linha.EntidadeNome))
+            return $"{linha.EntidadeNome}{(string.IsNullOrWhiteSpace(linha.EntidadeId) ? "" : $" #{linha.EntidadeId}")}";
+        return $"{linha.Entidade}{(string.IsNullOrWhiteSpace(linha.EntidadeId) ? "" : $" {linha.EntidadeId}")}";
+    }
+}
+
+<div class="main-container">
+    <h1 class="fw-bold">Auditoria</h1>
+    <p class="text-muted">Trilha de quem alterou preço, estoque, caixa e contas. Sem senhas, CPF ou cookies.</p>
+
+    <form method="get" asp-action="Auditoria" class="mb-4">
+        <div class="filtros-grid">
+            <div class="campo-filtro">
+                <label class="form-label" for="aud-acao">Ação</label>
+                <input id="aud-acao" type="text" name="acao" class="form-control" value="@acao" />
+            </div>
+            <div class="campo-filtro">
+                <label class="form-label" for="aud-entidade">Entidade</label>
+                <input id="aud-entidade" type="text" name="entidade" class="form-control" value="@entidade" />
+            </div>
+            <div class="campo-filtro">
+                <label class="form-label" for="aud-de">De</label>
+                <input id="aud-de" type="date" name="de" class="form-control" value="@(de?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="campo-filtro">
+                <label class="form-label" for="aud-ate">Até</label>
+                <input id="aud-ate" type="date" name="ate" class="form-control" value="@(ate?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <button type="submit" class="btn-filtrar">Filtrar</button>
+        </div>
+    </form>
+
+    <p class="text-muted">@total registro(s) · página @pagina de @totalPaginas</p>
+
+    <div class="tabela-card">
+        <table class="table mb-0 tabela-responsiva">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Ação</th>
+                    <th>Entidade</th>
+                    <th>Antes</th>
+                    <th>Depois</th>
+                    <th>Usuário</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr>
+                    <td colspan="7" class="estado-vazio">
+                        Nenhum evento neste filtro.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (var linha in Model)
+                {
+                    var nomeUsuario = linha.UsuarioId != null && nomes.TryGetValue(linha.UsuarioId, out var nome)
+                        ? nome
+                        : (linha.UsuarioId ?? "—");
+                    var apresentacao = AuditoriaComercial.ObterApresentacao(linha.Acao);
+                    <tr>
+                        <td data-label="Data">@linha.DataHora.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td data-label="Ação">
+                            <span class="badge-acao @apresentacao.ClasseCss" data-icon="@apresentacao.Icone">@apresentacao.Rotulo</span>
+                        </td>
+                        <td data-label="Entidade">@NomeExibicaoEntidade(linha)</td>
+                        <td data-label="Antes" class="td-antes">@(linha.ValorAnterior ?? "—")</td>
+                        <td data-label="Depois" class="td-depois">@(linha.ValorNovo ?? "—")</td>
+                        <td data-label="Usuário">@nomeUsuario</td>
+                        <td data-label="Motivo">@(linha.Motivo ?? "—")</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPaginas > 1)
+    {
+        <div class="d-flex gap-2 mt-3">
+            @if (pagina > 1)
+            {
+                <a class="btn-voltar-borda" asp-action="Auditoria" asp-route-de="@(de?.ToString("yyyy-MM-dd"))" asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))" asp-route-acao="@acao" asp-route-entidade="@entidade" asp-route-pagina="@(pagina - 1)">Anterior</a>
+            }
+            @if (pagina < totalPaginas)
+            {
+                <a class="btn-voltar-borda" asp-action="Auditoria" asp-route-de="@(de?.ToString("yyyy-MM-dd"))" asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))" asp-route-acao="@acao" asp-route-entidade="@entidade" asp-route-pagina="@(pagina + 1)">Próxima</a>
+            }
+        </div>
+    }
+
+</div>
