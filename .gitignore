@@ -423,6 +423,18 @@ _artefatos/
 *.db-*
 *.bak
 *.backup
+# Arquivos temporarios de desenvolvedor (nao versionados)
+_fix_editar.ps1
+_update_editar.ps1
+_qa_probe.py
+_dump.html
+_count-qa.ps1
+
+# Scripts de ajustes de CSS (ferramentas de desenvolvedor)
+wwwroot/css/cleanup_css.py
+wwwroot/css/cleanup2.py
+wwwroot/css/fix_a_coluna.py
+wwwroot/css/fix_graphic.py
 # Os sidecars de runtime NAO sao versionados: sao artefato temporario de quem
 # ---------------------------------------------------------------------------
 # Backups locais do banco (criados por sincronizar.ps1 antes de cada pull/push).
@@ -432,3 +444,12 @@ backups-banco/
 
 # abriu o arquivo e nao fazem sentido longe da maquina. O .gitattributes marca
 # os dois como binarios; aqui eles ficam de fora do repositorio de proposito.
+b u i l d - i n i t i a l - w a r n . t x t  
+  
+ #   A r q u i v o   t e m p o r á r i o   v a z i o   -   n a o   v e r s i o n a d o  
+ b u i l d - i n i t i a l - w a r n . t x t  
+  
+ _ w r i t e - b t e s t . p s 1  
+ f i x _ d a s h b o a r d . p y  
+ b u i l d - i n i t i a l - w a r n . t x t  
+ 
