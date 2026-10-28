@@ -1,4 +1,8 @@
-﻿# Visual Studio / dotnet
+﻿# Arquivos temporários de desenvolvimento
+/temp_env.txt
+/fix_tests.bat
+
+# Visual Studio / dotnet
 [Bb]in/
 [Oo]bj/
 *.user
@@ -444,12 +448,20 @@ backups-banco/
 
 # abriu o arquivo e nao fazem sentido longe da maquina. O .gitattributes marca
 # os dois como binarios; aqui eles ficam de fora do repositorio de proposito.
-b u i l d - i n i t i a l - w a r n . t x t  
-  
- #   A r q u i v o   t e m p o r � r i o   v a z i o   -   n a o   v e r s i o n a d o  
- b u i l d - i n i t i a l - w a r n . t x t  
-  
- _ w r i t e - b t e s t . p s 1  
- f i x _ d a s h b o a r d . p y  
- b u i l d - i n i t i a l - w a r n . t x t  
+b u i l d - i n i t i a l - w a r n . t x t 
+ 
+ 
+ 
+ #   A r q u i v o   t e m p o r � r i o   v a z i o   -   n a o   v e r s i o n a d o 
+ 
+ b u i l d - i n i t i a l - w a r n . t x t 
+ 
+ 
+ 
+ _ w r i t e - b t e s t . p s 1 
+ 
+ f i x _ d a s h b o a r d . p y 
+ 
+ b u i l d - i n i t i a l - w a r n . t x t 
+ 
  
