@@ -1,20 +1,19 @@
-
 # ControlHub — Controle de Estoque e Caixa
 
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![Entity Framework Core](https://img.shields.io/badge/EF%20Core-10.0-3178C6)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57)
-![Testes](https://img.shields.io/badge/testes-373-brightgreen)
+![Testes](https://img.shields.io/badge/testes-400%2B-brightgreen)
 
-Sistema web de **gestão de estoque e ponto de venda (PDV)** para pequenas lojas: vender no balcão, controlar estoque (por unidade ou por peso), acompanhar o faturamento e fechar o caixa — tudo em português, com tema claro/escuro e atalhos de teclado.
+Sistema web de **gestão de estoque e ponto de venda (PDV)** para pequenas lojas. Permite registrar vendas, controlar estoque por unidade ou peso, acompanhar faturamento, fechar o caixa e consultar movimentações comerciais em uma interface em português, com tema claro/escuro e atalhos de teclado.
 
-Desenvolvido em **ASP.NET Core MVC + Entity Framework Core (SQLite)**, com suíte de **373 testes automatizados**.
+Desenvolvido com **ASP.NET Core MVC, Entity Framework Core e SQLite**, com autenticação, controle de acesso por perfil, histórico de movimentações e testes automatizados.
 
 ---
 
-## 🔑 Acesso de teste
+## 🔑 Acesso de demonstração
 
-**Demo on-line:** <https://controle-estoque-loja.runasp.net>
+**Demo on-line:** https://controle-estoque-loja.runasp.net
 
 Contas de demonstração para avaliação do projeto:
 
@@ -23,139 +22,179 @@ Contas de demonstração para avaliação do projeto:
 | **Administrador (Dono)** | `admin@loja.com` | `Admin@321` |
 | **Operador** | `operador1@loja.com` | `Operador1@321` |
 
-> O **Dono** acessa tudo (financeiro, estoque, usuários e dashboard). O **Operador** acessa o PDV e a consulta de estoque — o restante é bloqueado por política de autorização, de propósito: dá para ver a separação de permissões funcionando em tempo real.
+> O **Dono** possui acesso às funcionalidades administrativas, financeiras e de estoque. O **Operador** tem acesso ao PDV e às consultas permitidas pelas políticas de autorização.
 
-> Rodando localmente: em um clone novo, o banco nasce vazio. Se as contas ainda não existirem, crie o Dono em `/Account/Setup` (a tela só aparece com o banco vazio) e o Operador em **Usuários**.
+> **Importante:** confirme se essas credenciais ainda existem no ambiente publicado antes de disponibilizá-las publicamente. Em um clone novo, o banco nasce vazio; a conta inicial pode ser criada em `/Account/Setup`, enquanto a configuração inicial estiver disponível.
 
 ---
 
-## ▶️ Rodando localmente
+## ▶️ Executando localmente
 
 **Pré-requisito:** [.NET SDK 10](https://dotnet.microsoft.com/download).
 
 ```powershell
-git clone <url-do-repositorio>
-cd <pasta-do-repositorio>
+git clone https://github.com/LeonardoLibanori/ControlHub.git
+cd ControlHub
 dotnet run
 ```
 
-Abra <http://localhost:5236> e entre com as credenciais acima.
+Abra o endereço local exibido pela aplicação no terminal. No ambiente de desenvolvimento utilizado pelo projeto, a porta padrão é `5236`.
 
-- Na **primeira execução** o banco `controleestoque.db` é criado automaticamente (migrations) — nenhum arquivo de banco precisa ser baixado ou copiado.
-- Com o banco vazio, o sistema redireciona para `/Account/Setup`, onde você cria a conta do Dono. A tela some assim que existe pelo menos um usuário.
+- Na primeira execução, o Entity Framework Core utiliza as migrations para preparar o banco SQLite `controleestoque.db`.
+- O banco de dados não é versionado pelo Git.
+- Em um banco vazio, crie a conta do Dono em `/Account/Setup`, caso a tela de configuração inicial esteja disponível.
+- Após criar o usuário administrador, cadastre os demais usuários e produtos conforme necessário.
 
 ---
 
-## ✨ O que o sistema faz
+## ✨ Funcionalidades
 
-### 🛒 Caixa (PDV)
+### 🛒 Caixa e ponto de venda (PDV)
 
-- Carrinho de vendas com busca por descrição, código e **código de barras / balança**
-- Venda **por unidade ou por peso** (preço em R$/kg)
-- Cinco formas de pagamento — Dinheiro, Pix, Débito, Crédito e Voucher — com troco e resumo por forma
-- CPF na nota e **cupom do vendedor** validado no campo (verde quando aceito, vermelho quando não)
-- Impressão e **reimpressão de cupom** de qualquer venda
-- Sangria, suprimento, status e fechamento de caixa
-- Menu administrativo completo no atalho **Alt+M**
+- Carrinho de vendas com busca por descrição, código e código de barras.
+- Venda de produtos por unidade ou peso, com cálculo baseado no preço por quilograma quando aplicável.
+- Formas de pagamento: dinheiro, Pix, débito, crédito e voucher.
+- Cálculo de troco e resumo por forma de pagamento.
+- Registro de CPF do cliente e validação do cupom do vendedor.
+- Impressão e reimpressão de cupons de venda.
+- Operações de sangria e suprimento.
+- Acompanhamento do estado e fechamento do caixa.
+- Atalho `Alt+M` para o menu administrativo.
 
-### 📦 Estoque
+### 📦 Estoque e produtos
 
-- Cadastro de produtos com unidade, estoque mínimo e código de barras
-- Alerta de **estoque baixo** e destaque para produtos zerados
-- **Exclusão lógica** — nada é apagado fisicamente do histórico
-- Exportação **CSV e Excel** com linha de totais
+- Cadastro e edição de produtos com código de barras, unidade de medida, estoque mínimo e custo de aquisição.
+- Controle de produtos vendidos por unidade ou peso.
+- Alertas de estoque baixo e identificação de produtos sem saldo.
+- Exclusão lógica de produtos, preservando os registros históricos relacionados.
+- Exportação de dados para CSV e Excel, incluindo totais.
+- Registro de entradas, saídas e ajustes no histórico de movimentações de estoque.
 
-### 📊 Dashboard
+### 📚 Kardex e auditoria comercial
 
-- Faturamento do período com comparação ao período anterior
-- Série diária em **SVG puro** (7/30 dias, mês, ano)
-- **Rosca de formas de pagamento** — cor por forma, fatias começando no topo e soma conferida em 100,0%
-- Estoque baixo e top 5 mais vendidos
-- Detalhe de cada dia com um clique
+- Histórico de movimentações de estoque por produto.
+- Registro de entradas, saídas e ajustes de estoque.
+- Associação das movimentações aos eventos comerciais que as originam, conforme o fluxo implementado.
+- Registro de auditoria de ações comerciais relevantes.
+- Consulta de registros com filtros e paginação.
 
-### 🔐 Acesso e interface
+O Kardex ajuda a rastrear as alterações de estoque, enquanto a auditoria comercial mantém registros das ações relevantes realizadas no sistema.
 
-- Papéis **Dono** e **Operador** com políticas de autorização em fonte única
-- Tema claro/escuro e layout responsivo (gaveta lateral no celular)
-- Atalhos: `Alt+M` menu · `Alt+C` caixa · `Alt+H` histórico · `Alt+E` estoque · `ESC` ajuda
+### 📈 Dashboard e rentabilidade
+
+- Faturamento do período com comparação ao período anterior.
+- Gráfico diário em SVG, com diferentes intervalos de consulta.
+- Distribuição das vendas por forma de pagamento.
+- Indicadores de estoque baixo e produtos mais vendidos.
+- Detalhamento das vendas por dia.
+- Cadastro do custo de aquisição para apoiar análises de rentabilidade.
+
+### 🔐 Autenticação, autorização e interface
+
+- Perfis **Dono** e **Operador**, com políticas de autorização centralizadas.
+- Autenticação baseada em ASP.NET Core Identity.
+- Bloqueio de conta após tentativas de login malsucedidas.
+- Proteção antifalsificação (anti-forgery) em formulários e requisições compatíveis.
+- Cookies e cabeçalhos de segurança configurados para o ambiente de execução.
+- Tratamento global de erros e registro estruturado de exceções.
+- Verificação de saúde da aplicação e persistência de chaves do Data Protection.
+- Tema claro/escuro e layout responsivo, incluindo navegação lateral em telas menores.
+- Atalhos: `Alt+M` menu · `Alt+C` caixa · `Alt+H` histórico · `Alt+E` estoque · `ESC` ajuda.
 
 ---
 
 ## 🎯 Diferenciais técnicos
 
-| Diferencial | Como é feito |
+| Diferencial | Implementação |
 |---|---|
-| **Permissões em fonte única** | Policies nomeadas em `Security/Policies.cs` — o mesmo nome usado em action, teste e view; “o Operador vê X?” tem **uma** resposta |
-| **Dinheiro sem ponto flutuante** | Cálculos em **centavos** (inteiro) — nada de erro de arredondamento em operação de caixa |
-| **Servidor é a autoridade** | Todas as validações no back-end; o front só informa — o cliente nunca decide |
-| **CSRF em todo POST** | Token anti-forgery no header de todas as chamadas `fetch()` e nos formulários Razor |
-| **Bloqueio de conta** | 5 tentativas erradas = 5 minutos de bloqueio (Identity) |
-| **Testes de caracterização** | 373 testes xUnit com SQLite descartável em `%TEMP%` — o banco real nunca é tocado |
-| **QA visual automatizado** | Guards em Node/PowerShell (`qa/`): contraste WCAG, encoding, CSS balanceado, menu por papel |
-| **Números e acentos** | SVG com `InvariantCulture` (vírgula brasileira garantida) e textos em pt-BR |
+| **Autorização centralizada** | Policies nomeadas em `Security/Policies.cs`, reutilizadas nos pontos de autorização da aplicação. |
+| **Valores monetários consistentes** | Cálculos financeiros baseados em centavos inteiros nos fluxos implementados, reduzindo problemas de arredondamento. |
+| **Validação no servidor** | Regras de negócio e validações críticas executadas no back-end, sem depender exclusivamente dos dados do navegador. |
+| **Proteção contra CSRF** | Tokens antifalsificação em formulários e requisições que exigem essa proteção. |
+| **Autenticação e bloqueio** | ASP.NET Core Identity, configuração de cookies e política de bloqueio de login. |
+| **Persistência com EF Core** | Modelo Code-First, migrations e armazenamento SQLite. |
+| **Kardex e auditoria** | Registro de movimentações de estoque e ações comerciais relevantes. |
+| **Testes automatizados** | Suíte xUnit com banco SQLite descartável para isolar os testes do banco de dados da aplicação. |
+| **Integração contínua** | Workflow do GitHub Actions para restaurar dependências, compilar, executar testes e publicar o relatório de testes como artefato. |
+| **QA visual automatizado** | Scripts e verificações auxiliares em `qa/` para aspectos de interface, codificação e permissões. |
+| **Localização brasileira** | Interface em português, formatação monetária e apresentação de números compatíveis com pt-BR. |
 
 ---
 
 ## 🛠 Tecnologias
 
-- **.NET 10** / ASP.NET Core MVC
-- **Entity Framework Core 10** (Code-First, migrations)
+- **C# e .NET 10**
+- **ASP.NET Core MVC**
+- **Entity Framework Core 10**
 - **SQLite**
-- **ASP.NET Core Identity** (papéis, lockout, cookies)
-- Razor Views com Runtime Compilation
-- Bootstrap + SweetAlert2 no front
-- **xUnit** na suíte de testes
+- **ASP.NET Core Identity**
+- **Razor Views**
+- **Bootstrap**
+- **SweetAlert2**
+- **JavaScript e CSS**
+- **xUnit**
+- **GitHub Actions**
+- **Node.js e PowerShell** para verificações auxiliares de QA
 
 ---
 
-## 🧪 Testes
+## 🧪 Testes e qualidade
+
+Execute a suíte automatizada com:
 
 ```powershell
-dotnet test tests.QA\tests.QA.csproj
+dotnet test tests.QA/tests.QA.csproj -c Release
 ```
 
-- **373 testes**: regras de negócio, dashboard, formas de pagamento, autorização, exportações e mais
-- Cada teste cria um SQLite descartável em `%TEMP%`
-- Achados de QA: [`qa/RELATORIO-QA.md`](qa/RELATORIO-QA.md) e [`qa/falhas.csv`](qa/falhas.csv)
+A suíte cobre regras de negócio, operações de estoque, vendas, autorização, dashboard e outros comportamentos da aplicação.
+
+- Os testes utilizam bancos SQLite descartáveis para evitar alterações no banco de dados real.
+- O workflow de integração contínua executa as etapas de restauração, compilação e testes.
+- Verificações auxiliares de qualidade estão organizadas no diretório `qa/`.
+- Relatórios e achados de QA podem ser consultados em [`qa/RELATORIO-QA.md`](qa/RELATORIO-QA.md) e [`qa/falhas.csv`](qa/falhas.csv), caso esses arquivos continuem presentes na versão atual do repositório.
+
+**Contagem de testes:** atualize o badge e esta seção com o número efetivamente confirmado na última execução da suíte completa. Não use a contagem histórica de 373 testes sem verificá-la.
 
 ---
 
-## 🗂 Estrutura
+## 🗂 Estrutura do projeto
 
-```
-├── Controllers/       Home (estoque), Caixa (PDV), Dashboard, Usuários...
-├── Models/            Produto, Venda, VendaItem, Vendedor, movimentações
-├── Security/          Policies.cs (papéis e permissões) e eventos de cookie
-├── Data/              ApplicationDbContext
-├── Migrations/        migrations do EF Core
-├── Views/             Razor (Caixa, Dashboard, Home, Shared...)
-├── wwwroot/           CSS/JS próprios (corporate-theme, dashboard, shell)
-├── tests.QA/          suíte xUnit (373 testes)
-├── qa/                guards visuais, scripts HTTP e relatórios de QA
-└── .github/           instruções do Copilot
+```text
+├── Controllers/       Controllers de estoque, PDV, dashboard e usuários
+├── Models/            Produtos, vendas e entidades comerciais
+├── Security/          Policies de autorização e componentes de segurança
+├── Data/              Contexto do Entity Framework Core
+├── Migrations/        Migrations do EF Core
+├── Services/           Regras de negócio, Kardex, auditoria e rentabilidade
+├── Views/              Views Razor da aplicação
+├── wwwroot/            CSS, JavaScript e recursos estáticos
+├── tests.QA/           Suíte de testes automatizados
+├── qa/                 Scripts e relatórios auxiliares de QA
+└── .github/workflows/  Workflows de integração contínua
 ```
 
 ---
 
 ## 🔮 Próximos passos — Copiloto de IA
 
-O próximo passo é um **copiloto de IA** para o Dono conversar com os próprios dados — “quanto vendi esta semana?”, “o que está parado no estoque?”, “qual a forma de pagamento mais usada este mês?”.
+Uma evolução planejada é um **copiloto de IA para o Dono**, capaz de responder perguntas com base nos dados da própria loja, como:
 
-O caminho já está trilhado **sem mexer no que existe**:
+- Quanto vendi nesta semana?
+- Quais produtos estão há mais tempo sem movimentação?
+- Qual forma de pagamento foi mais utilizada no período?
+- Quais produtos apresentam maior diferença entre custo de aquisição e preço de venda?
 
-1. A policy **`PodeUsarIA`** já está declarada e registrada em `Program.cs` (somente Dono). Hoje **nenhuma action a usa** — é a trava de espera.
-2. Os endpoints de IA virão protegidos por `[Authorize(Policy = Policies.PodeUsarIA)]`, seguindo o mesmo padrão das demais rotas.
-3. **Nenhuma rota de produção existente muda** e nenhum dado de financeiro/estoque fica acessível sem a permissão nova passar primeiro pela revisão.
+A implementação deverá respeitar as políticas de autorização existentes e limitar o acesso às informações comerciais conforme o perfil do usuário. Essa funcionalidade é uma proposta de evolução, não uma capacidade já disponível na aplicação.
 
 ---
 
 ## ⚠️ Observações
 
-- Os **dados fiscais impressos no cupom** (CNPJ, endereço, telefone) são fictícios e precisam ser parametrizados antes de qualquer uso comercial.
-- O **banco de dados não é versionado** pelo Git: ele nasce vazio na primeira execução e os dados ficam em cada máquina.
-- O histórico deste repositório foi reescrito — SHAs antigos não existem mais.
+- Os dados fiscais apresentados nos cupons de demonstração, como CNPJ, endereço e telefone, são fictícios e precisam ser parametrizados antes de qualquer utilização comercial.
+- O banco de dados não é versionado pelo Git. Cada ambiente mantém sua própria base SQLite.
+- As credenciais de demonstração devem ser verificadas e alteradas quando necessário, especialmente antes de disponibilizar o sistema publicamente.
+- O uso em ambiente comercial exige validação das regras fiscais, operacionais, de segurança e de implantação aplicáveis ao estabelecimento.
 
 ---
 
 <p align="center">Desenvolvido com C# e .NET 10 🚀</p>
-
