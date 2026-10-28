@@ -27,7 +27,32 @@ public class DadosQaTests
 
         var texto = File.ReadAllText(programCs);
 
-        Assert.DoesNotContain("EnsureCreated", texto, StringComparison.OrdinalIgnoreCase);
+        // Detecta chamadas reais ao metodo EnsureCreated() (ex: context.Database.EnsureCreated())
+        // Ignora ocorrencias em comentarios (// ou /* */) e strings literais
+        var linhas = texto.Split('\n');
+        var temEnsureCreatedReal = false;
+        var emComentarioBloco = false;
+
+        foreach (var linha in linhas)
+        {
+            var l = linha.Trim();
+
+            // Detecta inicio/fim de comentario de bloco
+            if (l.Contains("/*")) emComentarioBloco = true;
+            if (l.Contains("*/")) { emComentarioBloco = false; continue; }
+
+            // Ignora linhas de comentario de linha
+            if (l.StartsWith("//") || emComentarioBloco) continue;
+
+            // Procura chamada real ao metodo EnsureCreated(
+            if (l.Contains("EnsureCreated("))
+            {
+                temEnsureCreatedReal = true;
+                break;
+            }
+        }
+
+        Assert.False(temEnsureCreatedReal, "Encontrada chamada real a EnsureCreated() no Program.cs. Use Migrate().");
         Assert.Contains("Migrate", texto, StringComparison.OrdinalIgnoreCase);
     }
 

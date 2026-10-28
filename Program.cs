@@ -239,24 +239,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // --- GARANTE QUE O BANCO E AS TABELAS EXISTAM ---
-// BUG-19: a criação direta do schema a partir do MODELO ATUAL ignorava as
-// migrations. Numa base já existente ela não altera nada: colunas, índices e FKs
-// criados por migrations posteriores nunca eram aplicados e a aplicação quebrava
-// em runtime. Migrate() aplica as migrations pendentes e cria a base do zero
-// apenas quando ela ainda não existe.
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
+    // MigrateAsync() aplica todas as migrations pendentes e cria o banco se não existir.
+    using (var scope = app.Services.CreateScope())
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Erro ao iniciar o banco: " + ex.Message);
+            throw; // Falha de migração impede inicialização
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine("Erro ao iniciar o banco: " + ex.Message);
-    }
-}
 
 // Cria os PAPEIS (Dono/Operador) se ainda nao existirem. Sem usuario e sem
 // senha aqui: o primeiro Dono nasce na tela /Account/Setup.
