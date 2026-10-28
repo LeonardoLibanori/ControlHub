@@ -1,5 +1,6 @@
-ï»¿@model IReadOnlyList<ControleEstoqueLoja.Models.RegistroAuditoria>
+ @model IReadOnlyList<ControleEstoqueLoja.Models.RegistroAuditoria>
 @using ControleEstoqueLoja.Data
+
 @{
     var nomes = ViewBag.NomesUsuarios as Dictionary<string, string> ?? new Dictionary<string, string>();
     var de = ViewBag.De as DateTime?;
@@ -13,98 +14,455 @@
     string NomeExibicaoEntidade(ControleEstoqueLoja.Models.RegistroAuditoria linha)
     {
         if (!string.IsNullOrWhiteSpace(linha.EntidadeNome))
-            return $"{linha.EntidadeNome}{(string.IsNullOrWhiteSpace(linha.EntidadeId) ? "" : $" #{linha.EntidadeId}")}";
-        return $"{linha.Entidade}{(string.IsNullOrWhiteSpace(linha.EntidadeId) ? "" : $" {linha.EntidadeId}")}";
+        {
+            // Evita duplicação do ID: EntidadeNome já costuma vir como "Venda #25"
+            var nome = linha.EntidadeNome.Trim();
+            if (!string.IsNullOrWhiteSpace(linha.EntidadeId) &&
+                !nome.EndsWith(" #" + linha.EntidadeId, StringComparison.OrdinalIgnoreCase) &&
+                !nome.EndsWith(" " + linha.EntidadeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{nome} #{linha.EntidadeId}";
+            }
+            return nome;
+        }
+
+        return $"{linha.Entidade}{(string.IsNullOrWhiteSpace(linha.EntidadeId) ? "" : $" #{linha.EntidadeId}")}";
     }
 }
 
-<div class="main-container">
-    <h1 class="fw-bold">Auditoria</h1>
-    <p class="text-muted">Trilha de quem alterou preÃ§o, estoque, caixa e contas. Sem senhas, CPF ou cookies.</p>
+<style>
+    /* Auditoria — padrão visual do Kardex */
+.auditoria-page {
+    width: 100%;
+    min-width: 0;
+}
 
-    <form method="get" asp-action="Auditoria" class="mb-4">
+/* Painel de filtros */
+.auditoria-page .auditoria-filter-card {
+    padding: 20px;
+    margin-bottom: 18px;
+    border: 1px solid #2d3742;
+    border-radius: 14px;
+    background: #171c23;
+}
+
+.auditoria-page .filtros-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.2fr)
+        minmax(150px, .85fr) minmax(150px, .85fr) auto;
+    gap: 14px;
+    align-items: end;
+}
+
+.auditoria-page .campo-filtro {
+    min-width: 0;
+}
+
+.auditoria-page .campo-filtro label {
+    display: block;
+    margin-bottom: 7px;
+    color: #94a3b8 !important;
+    font-size: .875rem;
+    font-weight: 600;
+}
+
+.auditoria-page .campo-filtro input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 12px;
+    color: #f1f5f9 !important;
+    background: #11161b !important;
+    border: 1px solid #3b4652 !important;
+    border-radius: 8px;
+    -webkit-text-fill-color: #f1f5f9;
+}
+
+.auditoria-page .campo-filtro input::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8;
+    opacity: 1;
+}
+
+.auditoria-page .campo-filtro input:focus {
+    border-color: #60a5fa !important;
+    outline: 2px solid rgb(96 165 250 / 20%);
+    outline-offset: 1px;
+}
+
+.auditoria-page .campo-filtro input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+/* Botão de filtro */
+.auditoria-page .btn-filtrar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auditoria-page .btn-filtrar:hover {
+    background: #1d4ed8;
+}
+
+/* Resumo */
+.auditoria-page .auditoria-resumo {
+    margin: 0 0 14px;
+    color: #64748b;
+    font-size: .875rem;
+}
+
+/* Cartão e tabela */
+.auditoria-page .auditoria-table-card {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #2d3742;
+    border-radius: 14px;
+    background: #171c23;
+}
+
+.auditoria-page .auditoria-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.auditoria-page .auditoria-table {
+    width: 100%;
+    min-width: 1050px;
+    margin: 0;
+    border-collapse: collapse;
+    color: #f1f5f9;
+}
+
+.auditoria-page .auditoria-table th,
+.auditoria-page .auditoria-table td {
+    padding: 14px 12px;
+    text-align: center !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #2d3742;
+}
+
+.auditoria-page .auditoria-table th {
+    background: #20272f;
+    color: #cbd5e1;
+    font-size: .8125rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.auditoria-page .auditoria-table td {
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+}
+
+.auditoria-page .auditoria-table th:first-child,
+.auditoria-page .auditoria-table td:first-child {
+    padding-left: 16px;
+    text-align: left !important;
+    white-space: nowrap;
+}
+
+.auditoria-page .auditoria-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.auditoria-page .auditoria-table tbody tr:hover {
+    background: #20272f;
+}
+
+.auditoria-page .td-antes,
+.auditoria-page .td-depois {
+    max-width: 220px;
+    overflow-wrap: anywhere;
+}
+
+.auditoria-page .estado-vazio {
+    padding: 30px 16px;
+    color: #94a3b8;
+    text-align: center !important;
+}
+
+/* Paginação */
+.auditoria-page .auditoria-paginacao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.auditoria-page .btn-voltar-borda {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid #3b4652;
+    border-radius: 8px;
+    color: #f1f5f9;
+    background: #171c23;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auditoria-page .btn-voltar-borda:hover {
+    border-color: #60a5fa;
+    color: #93c5fd;
+}
+
+/* Responsividade */
+@@media (max-width: 1200px) {
+    .auditoria-page .filtros-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .auditoria-page .btn-filtrar {
+        width: 100%;
+    }
+}
+
+@@media (max-width: 600px) {
+    .auditoria-page .auditoria-filter-card {
+        padding: 14px;
+    }
+
+    .auditoria-page .filtros-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+}
+
+/* Auditoria — correção do tema claro */
+html:not([data-theme="dark"]) .auditoria-page .auditoria-filter-card,
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table-card {
+    background: #ffffff !important;
+    border-color: #d1d5db !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .campo-filtro label {
+    color: #334155 !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .campo-filtro input {
+    color: #1e293b !important;
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    -webkit-text-fill-color: #1e293b !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .campo-filtro input::placeholder {
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table {
+    color: #1e293b !important;
+    background: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table th {
+    color: #334155 !important;
+    background: #f1f5f9 !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table td {
+    color: #1e293b !important;
+    background: #ffffff !important;
+    border-bottom-color: #e2e8f0 !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table tbody tr:nth-child(even) td {
+    background: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-table tbody tr:hover td {
+    background: #f8fafc !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .auditoria-resumo {
+    color: #64748b !important;
+}
+
+html:not([data-theme="dark"]) .auditoria-page .btn-voltar-borda {
+    color: #334155 !important;
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+}
+/* Cores semânticas das ações de auditoria */
+
+/* Tema claro */
+.auditoria-page .badge-acao-reposicao,
+.auditoria-page .badge-acao-suprimento,
+.auditoria-page .badge-acao-cadastro {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+.auditoria-page .badge-acao-exclusao,
+.auditoria-page .badge-acao-sangria {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.auditoria-page .badge-acao-ajuste {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fde68a;
+}
+
+.auditoria-page .badge-acao-neutro {
+    color: #374151;
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+/* Tema escuro */
+html[data-theme="dark"] .auditoria-page .badge-acao-reposicao,
+html[data-theme="dark"] .auditoria-page .badge-acao-suprimento,
+html[data-theme="dark"] .auditoria-page .badge-acao-cadastro {
+    color: #86efac;
+    background: #143326;
+    border-color: #24543b;
+}
+
+html[data-theme="dark"] .auditoria-page .badge-acao-exclusao,
+html[data-theme="dark"] .auditoria-page .badge-acao-sangria {
+    color: #fca5a5;
+    background: #3b1d22;
+    border-color: #633039;
+}
+
+html[data-theme="dark"] .auditoria-page .badge-acao-ajuste {
+    color: #fcd34d;
+    background: #3b2e15;
+    border-color: #655023;
+}
+
+html[data-theme="dark"] .auditoria-page .badge-acao-neutro {
+    color: #cbd5e1;
+    background: #29313a;
+    border-color: #414b57;
+}
+</style>
+
+<div class="main-container auditoria-page">
+    <h1 class="fw-bold">Auditoria</h1>
+
+
+    <form method="get" asp-action="Auditoria" class="auditoria-filter-card">
         <div class="filtros-grid">
             <div class="campo-filtro">
-                <label class="form-label" for="aud-acao">AÃ§Ã£o</label>
-                <input id="aud-acao" type="text" name="acao" class="form-control" value="@acao" />
+                <label for="aud-acao">Ação</label>
+                <input id="aud-acao" type="text" name="acao" value="@acao" />
             </div>
+
             <div class="campo-filtro">
-                <label class="form-label" for="aud-entidade">Entidade</label>
-                <input id="aud-entidade" type="text" name="entidade" class="form-control" value="@entidade" />
+                <label for="aud-entidade">Entidade</label>
+                <input id="aud-entidade" type="text" name="entidade" value="@entidade" />
             </div>
+
             <div class="campo-filtro">
-                <label class="form-label" for="aud-de">De</label>
-                <input id="aud-de" type="date" name="de" class="form-control" value="@(de?.ToString("yyyy-MM-dd"))" />
+                <label for="aud-de">De</label>
+                <input id="aud-de" type="date" name="de" value="@(de?.ToString("yyyy-MM-dd"))" />
             </div>
+
             <div class="campo-filtro">
-                <label class="form-label" for="aud-ate">AtÃ©</label>
-                <input id="aud-ate" type="date" name="ate" class="form-control" value="@(ate?.ToString("yyyy-MM-dd"))" />
+                <label for="aud-ate">Até</label>
+                <input id="aud-ate" type="date" name="ate" value="@(ate?.ToString("yyyy-MM-dd"))" />
             </div>
+
             <button type="submit" class="btn-filtrar">Filtrar</button>
         </div>
     </form>
 
-    <p class="text-muted">@total registro(s) Â· pÃ¡gina @pagina de @totalPaginas</p>
+    <p class="text-muted auditoria-resumo">
+        @total registro(s) · página @pagina de @totalPaginas
+    </p>
 
-    <div class="tabela-card">
-        <table class="table mb-0 tabela-responsiva">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>AÃ§Ã£o</th>
-                    <th>Entidade</th>
-                    <th>Antes</th>
-                    <th>Depois</th>
-                    <th>UsuÃ¡rio</th>
-                    <th>Motivo</th>
-                </tr>
-            </thead>
-            <tbody>
-            @if (Model.Count == 0)
-            {
-                <tr>
-                    <td colspan="7" class="estado-vazio">
-                        Nenhum evento neste filtro.
-                    </td>
-                </tr>
-            }
-            else
-            {
-                foreach (var linha in Model)
-                {
-                    var nomeUsuario = linha.UsuarioId != null && nomes.TryGetValue(linha.UsuarioId, out var nome)
-                        ? nome
-                        : (linha.UsuarioId ?? "â€”");
-                    var apresentacao = AuditoriaComercial.ObterApresentacao(linha.Acao);
+    <div class="auditoria-table-card">
+        <div class="auditoria-table-scroll">
+            <table class="table mb-0 tabela-responsiva auditoria-table">
+                <thead>
                     <tr>
-                        <td data-label="Data">@linha.DataHora.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td data-label="AÃ§Ã£o">
-                            <span class="badge-acao @apresentacao.ClasseCss" data-icon="@apresentacao.Icone">@apresentacao.Rotulo</span>
+                        <th>Data</th>
+                        <th>Ação</th>
+                        <th>Entidade</th>
+                        <th>Antes</th>
+                        <th>Depois</th>
+                        <th>Usuário</th>
+                        <th>Motivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="estado-vazio">
+                            Nenhum evento neste filtro.
                         </td>
-                        <td data-label="Entidade">@NomeExibicaoEntidade(linha)</td>
-                        <td data-label="Antes" class="td-antes">@(linha.ValorAnterior ?? "â€”")</td>
-                        <td data-label="Depois" class="td-depois">@(linha.ValorNovo ?? "â€”")</td>
-                        <td data-label="UsuÃ¡rio">@nomeUsuario</td>
-                        <td data-label="Motivo">@(linha.Motivo ?? "â€”")</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
+                else
+                {
+                    foreach (var linha in Model)
+                    {
+                        var nomeUsuario = linha.UsuarioId != null && nomes.TryGetValue(linha.UsuarioId, out var nome)
+                            ? nome
+                            : (linha.UsuarioId ?? "—");
+                        var apresentacao = AuditoriaComercial.ObterApresentacao(linha.Acao);
+
+                        <tr>
+                            <td data-label="Data">@linha.DataHora.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td data-label="Ação">
+                                <span class="badge-acao @apresentacao.ClasseCss" data-icon="@apresentacao.Icone">@apresentacao.Rotulo</span>
+                            </td>
+                            <td data-label="Entidade">@NomeExibicaoEntidade(linha)</td>
+                            <td data-label="Antes" class="td-antes">@(linha.ValorAnterior ?? "—")</td>
+                            <td data-label="Depois" class="td-depois">@(linha.ValorNovo ?? "—")</td>
+                            <td data-label="Usuário">@nomeUsuario</td>
+                            <td data-label="Motivo">@(linha.Motivo ?? "—")</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
     </div>
 
     @if (totalPaginas > 1)
     {
-        <div class="d-flex gap-2 mt-3">
+        <nav class="auditoria-paginacao" aria-label="Paginação da auditoria">
             @if (pagina > 1)
             {
-                <a class="btn-voltar-borda" asp-action="Auditoria" asp-route-de="@(de?.ToString("yyyy-MM-dd"))" asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))" asp-route-acao="@acao" asp-route-entidade="@entidade" asp-route-pagina="@(pagina - 1)">Anterior</a>
+                <a class="btn-voltar-borda" asp-action="Auditoria"
+                   asp-route-de="@(de?.ToString("yyyy-MM-dd"))"
+                   asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))"
+                   asp-route-acao="@acao"
+                   asp-route-entidade="@entidade"
+                   asp-route-pagina="@(pagina - 1)">Anterior</a>
             }
+
             @if (pagina < totalPaginas)
             {
-                <a class="btn-voltar-borda" asp-action="Auditoria" asp-route-de="@(de?.ToString("yyyy-MM-dd"))" asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))" asp-route-acao="@acao" asp-route-entidade="@entidade" asp-route-pagina="@(pagina + 1)">PrÃ³xima</a>
+                <a class="btn-voltar-borda" asp-action="Auditoria"
+                   asp-route-de="@(de?.ToString("yyyy-MM-dd"))"
+                   asp-route-ate="@(ate?.ToString("yyyy-MM-dd"))"
+                   asp-route-acao="@acao"
+                   asp-route-entidade="@entidade"
+                   asp-route-pagina="@(pagina + 1)">Próxima</a>
             }
-        </div>
+        </nav>
     }
-
 </div>

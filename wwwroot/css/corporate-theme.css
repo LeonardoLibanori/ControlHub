@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    PASSO 1 DO REDESIGN - CORES POR TOKENS (tema claro e escuro)
    --------------------------------------------------------------------------
    Regra do arquivo: toda cor vive nos blocos de paleta abaixo; as regras so
@@ -1289,6 +1289,73 @@ footer .container {
     box-shadow: var(--shadow);
 }
 
+/* =============================================================================
+   Campos com unidade integrada (Quantidade inicial / Estoque mínimo)
+   Estrutura: <div class="input-group input-group-unidade">
+                <input class="form-control">
+                <span class="input-group-text">un</span>
+              </div>
+   A regra global (linha ~3868) já define height:40px e border-radius em todos
+   os .form-control e .input-group-text; aqui sobrescrevemos com especificidade
+   maior para que o par input+badge forme um único controle visual.
+   ============================================================================= */
+
+/* Container: flex em linha, altura determinada pelos filhos */
+.product-form-panel .input-group-unidade,
+.app-modal__corpo .input-group-unidade {
+    display: flex !important;
+    align-items: stretch !important;
+    width: 100%;
+    /* borda e raio ficam no wrapper; filhos não têm borda própria */
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-control, 8px);
+    overflow: hidden;
+    background: var(--bg-input);
+}
+
+/* Foco: anel azul ao redor do wrapper inteiro */
+.product-form-panel .input-group-unidade:focus-within,
+.app-modal__corpo .input-group-unidade:focus-within {
+    border-color: var(--accent, var(--c-blue));
+    box-shadow: 0 0 0 0.2rem var(--foco-anel, rgba(94,162,255,.25));
+}
+
+/* Input numérico: ocupa todo o espaço disponível; sem borda própria */
+.product-form-panel .input-group-unidade input.form-control,
+.app-modal__corpo .input-group-unidade input.form-control {
+    flex: 1 1 auto !important;
+    width: 1% !important;          /* hack Bootstrap: deixa o flex crescer */
+    min-width: 0 !important;
+    height: 40px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: var(--bg-input) !important;
+    color: var(--text) !important;
+    padding: 0 0.65rem !important;
+}
+
+/* Badge da unidade (un / kg / R$): colado à ESQUERDA do campo, divisor visível */
+.product-form-panel .input-group-unidade .input-group-text,
+.app-modal__corpo .input-group-unidade .input-group-text {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 40px !important;
+    min-width: 3.2rem;
+    padding: 0 0.85rem !important;
+    border: 0 !important;
+    /* divisor vertical destacado à direita do badge */
+    border-right: 2px solid var(--line-input) !important;
+    border-radius: 0 !important;
+    background: color-mix(in srgb, var(--c-blue) 8%, var(--bg-input)) !important;
+    color: var(--accent-hover) !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: none !important;
+}
 .product-detail-title {
     color: var(--text) !important;
 }
@@ -3139,6 +3206,42 @@ a.dash-coluna.dash-coluna-vazia .dash-coluna-barra {
     .tabela-responsiva--estoque th:nth-child(4),
     .tabela-responsiva--estoque td:nth-child(4) {
         width: 190px;
+    }
+
+    /* Kardex: Data 160, Produto (resto min 180), Tipo 130, Quantidade 130, Saldo 170, Origem 200, Usuario 140 */
+    .tabela-responsiva--kardex th:nth-child(1),
+    .tabela-responsiva--kardex td:nth-child(1) {
+        width: 160px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(2),
+    .tabela-responsiva--kardex td:nth-child(2) {
+        min-width: 180px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(3),
+    .tabela-responsiva--kardex td:nth-child(3) {
+        width: 130px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(4),
+    .tabela-responsiva--kardex td:nth-child(4) {
+        width: 130px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(5),
+    .tabela-responsiva--kardex td:nth-child(5) {
+        width: 170px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(6),
+    .tabela-responsiva--kardex td:nth-child(6) {
+        width: 200px;
+    }
+
+    .tabela-responsiva--kardex th:nth-child(7),
+    .tabela-responsiva--kardex td:nth-child(7) {
+        width: 140px;
     }
 
     /* Historico: ID 90, Data 170, Total 130, Pagamento 160, Acoes 150 */

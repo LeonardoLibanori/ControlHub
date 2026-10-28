@@ -487,12 +487,21 @@ async function enviarVendaDeVez() {
     const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
     const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
 
+    // Idempotência: gera ou reutiliza chave por tentativa lógica
+    const CHAVE_STORAGE_KEY = 'controlhub_venda_chave_pendente';
+    let chave = sessionStorage.getItem(CHAVE_STORAGE_KEY);
+    if (!chave) {
+        chave = crypto.randomUUID();
+        sessionStorage.setItem(CHAVE_STORAGE_KEY, chave);
+    }
+
     const data = new URLSearchParams();
     data.append("metodoPagamento", metodo);
     data.append("cpfCliente", cpf);
     data.append("codigoVendedor", vendedor);
     data.append("valorRecebido", String(valorRec).replace(',', '.'));
     data.append("valorTroco", String(valorTro).replace(',', '.'));
+    data.append("chave", chave);
 
     carrinho.forEach((item, i) => {
         const prefixo = `itens[${i}]`;
@@ -516,8 +525,6 @@ async function enviarVendaDeVez() {
         let response = await fetch('/Caixa/FinalizarVenda', {
             method: 'POST',
             body: data,
-            // BUG-30: o token anti-forgere tambem e exigido aqui (o
-            // admin-caixa.js ja enviava; esta copia do POST nao enviava).
             headers: csrfHeaders({
                 'Content-Type': 'application/x-www-form-urlencoded'
             })
@@ -538,7 +545,22 @@ async function enviarVendaDeVez() {
             });
         }
 
+        // 503 = banco ocupado (SQLITE_BUSY/LOCKED): não limpa a chave, permite retry
+        // Falha de rede (catch) também não limpa a chave
         if (!response.ok) {
+            if (response.status === 503) {
+                // Banco ocupado: mantém a chave para retry
+                const textoErro = (await response.text()).trim();
+                console.warn('[FinalizarVenda] HTTP 503 - banco ocupado, chave mantida para retry');
+                Swal.fire({
+                    title: 'Banco ocupado',
+                    text: 'O servidor está processando outra requisição. Tente novamente em instantes.',
+                    icon: 'warning',
+                    confirmButtonColor: '#f0ad4e'
+                });
+                return;
+            }
+
             // O servidor RESPONDEU (nao e falha de conexao): mostra status e
             // detalhe em vez do alerta generico "servidor nao respondeu".
             const textoErro = (await response.text()).trim();
@@ -562,9 +584,10 @@ async function enviarVendaDeVez() {
         const res = await response.json();
 
         if (res.success) {
+            // Sucesso confirmado: limpa a chave pendente
+            sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+
             // Fecha o modal custom de pagamento (.modal-overlay), nao um .modal do Bootstrap.
-            // Sem isso o overlay fica com display='flex' cobrindo a tela e o menu da sidebar
-            // fica por baixo (z-index 1050 < 9999/11000), parecendo "bugado".
             const mp = document.getElementById('modalPagamento');
             if (mp) mp.style.display = 'none';
             document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
@@ -578,52 +601,94 @@ async function enviarVendaDeVez() {
             if (cortina) cortina.classList.remove('ativo');
             if (sidebar) sidebar.classList.remove('aberto');
 
-            // ============ DIAGNOSTICO TEMPORARIO ============
-            function medir(tag) {
-                const h = document.documentElement;
-                const b = document.body;
-                const s = document.getElementById('app-sidebar');
-                const nav = s ? s.querySelector('nav') : null;
-                const bottom = s ? s.querySelector('.app-sidebar__bottom') : null;
-                const cs = (el) => el ? getComputedStyle(el) : null;
-                const r = (el) => el ? el.getBoundingClientRect() : null;
-                console.log('[' + tag + '] html:', { h: h.clientHeight, oh: h.style.overflow, ph: h.style.paddingRight, cls: h.className });
-                console.log('[' + tag + '] body:', { h: b.clientHeight, oh: b.style.overflow, ph: b.style.paddingRight, cls: b.className });
-                console.log('[' + tag + '] sidebar:', s ? { h: r(s)?.height, oh: s.style.overflow, flex: cs(s)?.flex, display: cs(s)?.display, rect: { t: r(s)?.top, b: r(s)?.bottom, h: r(s)?.height } } : 'null');
-                console.log('[' + tag + '] nav:', nav ? { flex: cs(nav)?.flex, oh: nav.style.overflow, rect: { t: r(nav)?.top, b: r(nav)?.bottom, h: r(nav)?.height } } : 'null');
-                console.log('[' + tag + '] bottom:', bottom ? { display: cs(bottom)?.flex, rect: { t: r(bottom)?.top, b: r(bottom)?.bottom, h: r(bottom)?.height } } : 'null');
-                console.log('[' + tag + '] window:', { ih: window.innerHeight, iw: window.innerWidth });
-            }
-            medir('ANTES_SWAL');
-
             Swal.fire({
                 title: 'Venda Finalizada!',
-                text: 'Sucesso ao processar a venda.',
+                text: res.repetida ? 'Requisição duplicada - venda já processada.' : 'Sucesso ao processar a venda.',
                 icon: 'success',
-                confirmButtonText: 'OK',
-                didOpen: () => {
-                    medir('DIDOPEN');
-                    console.log('[DIDOPEN] html classes:', document.documentElement.className);
-                    console.log('[DIDOPEN] body classes:', document.body.className);
-                    const swalContainer = document.querySelector('.swal2-container');
-                    console.log('[DIDOPEN] swal2-container:', swalContainer ? { zIndex: getComputedStyle(swalContainer).zIndex, display: swalContainer.style.display, rect: swalContainer.getBoundingClientRect() } : 'null');
-                }
+                confirmButtonText: 'OK'
             }).then(() => {
-                medir('APOS_FECHAR_SWAL');
                 if (res.vendaId) window.open('/Caixa/GerarCupom?id=' + res.vendaId, '_blank');
                 location.reload();
             });
         } else {
-            // Em caso de erro, tambem fecha o modal custom antes de mostrar o erro
+            // Erro de negócio (estoque, dinheiro, cupom, etc.)
+            // 409 Conflict (conteúdo diferente com mesma chave): consulta status antes de limpar a chave
+            if (response.status === 409) {
+                try {
+                    const statusResp = await fetch('/Caixa/ConsultarStatusVenda?chave=' + encodeURIComponent(chave), {
+                        headers: csrfHeaders()
+                    });
+                    if (statusResp.ok) {
+                        const statusData = await statusResp.json();
+                        if (statusData.encontrada && statusData.vendaId) {
+                            // Venda já existe: preserva a chave e oferece recuperação
+                            Swal.fire({
+                                title: 'Conflito de idempotência',
+                                html: 'Já existe uma venda com esta chave mas conteúdo diferente. A venda original permanece registrada.<br><br><b>Atenção:</b> se escolher "Abandonar", o carrinho será limpo e você precisará adicionar os itens novamente.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ver cupom da venda original',
+                                cancelButtonText: 'Abandonar e iniciar nova venda',
+                                confirmButtonColor: '#f0ad4e',
+                                cancelButtonColor: '#6c757d',
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Tenta abrir o cupom; verifica se popup foi bloqueado
+                                    const win = window.open('/Caixa/GerarCupom?id=' + statusData.vendaId, '_blank');
+                                    if (!win || win.closed || typeof win.closed === 'undefined') {
+                                        Swal.fire({
+                                            title: 'Popup bloqueado',
+                                            text: 'O navegador bloqueou a abertura do cupom. Permita popups para este site e clique novamente em "Ver cupom da venda original".',
+                                            icon: 'warning',
+                                            confirmButtonColor: '#f0ad4e'
+                                        });
+                                    }
+                                    // Chave permanece no sessionStorage para permitir replay posterior
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                    // Usuário escolhe abandonar: limpa a chave para nova tentativa lógica
+                                    sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+                                    location.reload();
+                                }
+                                // Se fechou o modal sem escolher (Esc/backdrop), chave permanece preservada
+                            });
+                            return; // Mantém a chave no sessionStorage
+                        }
+                        // Venda não encontrada: limpa a chave para permitir nova tentativa lógica
+                        sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+                    } else {
+                        // Falha na consulta: preserva a chave por segurança
+                        console.warn('[FinalizarVenda] Falha ao consultar status em 409, chave preservada');
+                        Swal.fire({
+                            title: 'Não foi possível confirmar',
+                            text: 'A consulta de status falhou. A chave foi preservada por segurança. Tente novamente.',
+                            icon: 'warning',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                    }
+                } catch (e) {
+                    // Erro de rede na consulta: preserva a chave por segurança
+                    console.warn('[FinalizarVenda] Erro de rede ao consultar status em 409, chave preservada');
+                    Swal.fire({
+                        title: 'Erro de conexão',
+                        text: 'Não foi possível consultar o status da venda. A chave foi preservada por segurança.',
+                        icon: 'warning',
+                        confirmButtonColor: '#f0ad4e'
+                    });
+                }
+                return;
+            }
+
+            // Outros erros: mantém a chave para permitir retry após correção
+            const res = await response.json();
+            if (res.message && res.message.includes('idempotência')) {
+                sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+            }
             try { fecharModal(); } catch (e) { /* noop */ }
             document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
             Swal.fire({
-                // BUG-30: o titulo era fixo em "Erro no Estoque", mas a recusa
-                // pode ser de dinheiro insuficiente (BUG-29), de cupom, de
-                // quantidade ou de estoque. A mensagem do SERVIDOR e a
-                // autoridade e aparece abaixo.
                 title: 'Venda não concluída',
                 html: (res.message || 'Não foi possível concluir a venda.').replace(/\n/g, '<br>'),
                 icon: 'error',
@@ -632,6 +697,7 @@ async function enviarVendaDeVez() {
         }
     } catch (e) {
         console.error("Erro crítico no envio:", e);
+        // Falha de rede: NÃO limpa a chave, permite retry
         Swal.fire('Erro de Comunicação', 'O servidor não respondeu. Verifique sua conexão.', 'error');
     }
 }

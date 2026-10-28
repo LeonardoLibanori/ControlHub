@@ -70,6 +70,68 @@ namespace ControleEstoqueLoja.Migrations
                     b.ToTable("HistoricoPrecos");
                 });
 
+            modelBuilder.Entity("ControleEstoqueLoja.Models.MovimentacaoEstoque", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChaveCorrelacao")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataHora")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OrigemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OrigemTipo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProdutoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("QuantidadeMovimentada")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SaldoAnterior")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SaldoPosterior")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UsuarioId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChaveCorrelacao")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MovimentacoesEstoque_ChaveCorrelacao");
+
+                    b.HasIndex("DataHora")
+                        .HasDatabaseName("IX_MovimentacoesEstoque_DataHora");
+
+                    b.HasIndex("Tipo")
+                        .HasDatabaseName("IX_MovimentacoesEstoque_Tipo");
+
+                    b.HasIndex("ProdutoId", "DataHora")
+                        .HasDatabaseName("IX_MovimentacoesEstoque_ProdutoId_DataHora");
+
+                    b.ToTable("MovimentacoesEstoque");
+                });
+
             modelBuilder.Entity("ControleEstoqueLoja.Models.Produto", b =>
                 {
                     b.Property<int>("Id")
@@ -81,6 +143,11 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.Property<string>("CodigoBarras")
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("CustoAquisicao")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.Property<decimal?>("EstoqueMinimo")
                         .HasColumnType("TEXT");
@@ -101,6 +168,62 @@ namespace ControleEstoqueLoja.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Produtos");
+                });
+
+            modelBuilder.Entity("ControleEstoqueLoja.Models.RegistroAuditoria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Acao")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataHora")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Entidade")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EntidadeId")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EntidadeNome")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UsuarioId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ValorAnterior")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ValorNovo")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Acao")
+                        .HasDatabaseName("IX_RegistrosAuditoria_Acao");
+
+                    b.HasIndex("DataHora")
+                        .HasDatabaseName("IX_RegistrosAuditoria_DataHora");
+
+                    b.HasIndex("Entidade", "EntidadeId")
+                        .HasDatabaseName("IX_RegistrosAuditoria_Entidade_EntidadeId");
+
+                    b.ToTable("RegistrosAuditoria");
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.Usuario", b =>
@@ -179,10 +302,18 @@ namespace ControleEstoqueLoja.Migrations
                     b.Property<string>("CPFCliente")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ChaveIdempotencia")
+                        .HasMaxLength(36)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CodigoVendedor")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("DataVenda")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HashConteudo")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsFechado")
@@ -207,6 +338,10 @@ namespace ControleEstoqueLoja.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChaveIdempotencia")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Vendas_ChaveIdempotencia");
+
                     b.ToTable("Vendas");
                 });
 
@@ -215,6 +350,14 @@ namespace ControleEstoqueLoja.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<long?>("CustoUnitario")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Desconto")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L);
 
                     b.Property<long>("PrecoUnitario")
                         .HasColumnType("INTEGER");
@@ -412,6 +555,17 @@ namespace ControleEstoqueLoja.Migrations
                 });
 
             modelBuilder.Entity("ControleEstoqueLoja.Models.HistoricoPreco", b =>
+                {
+                    b.HasOne("ControleEstoqueLoja.Models.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Produto");
+                });
+
+            modelBuilder.Entity("ControleEstoqueLoja.Models.MovimentacaoEstoque", b =>
                 {
                     b.HasOne("ControleEstoqueLoja.Models.Produto", "Produto")
                         .WithMany()

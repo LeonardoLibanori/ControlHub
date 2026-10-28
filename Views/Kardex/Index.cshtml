@@ -1,134 +1,801 @@
-﻿@model ControleEstoqueLoja.Controllers.KardexPaginaViewModel
+﻿
+@model ControleEstoqueLoja.Controllers.KardexPaginaViewModel
 @using ControleEstoqueLoja.Data
 @using ControleEstoqueLoja.Models
+@using System.Text
+@using System.Globalization
 
-<div class="main-container">
+@functions {
+    /// <summary>
+    /// Remove diacríticos (acentos) de uma string para comparação insensível a acentos.
+    /// </summary>
+    private static string RemoveDiacritics(string texto)
+    {
+        if (string.IsNullOrEmpty(texto)) return texto;
+        var normalized = texto.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+        foreach (var c in normalized)
+        {
+            var uc = CharUnicodeInfo.GetUnicodeCategory(c);
+            if (uc != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+        return sb.ToString().Normalize(NormalizationForm.FormC);
+    }
+}
+
+<style>
+    .kardex-page {
+        --kx-green: #16845b;
+        --kx-green-bg: #e5f6ed;
+        --kx-red: #c84450;
+        --kx-red-bg: #fdebed;
+        --kx-amber: #a66b08;
+        --kx-amber-bg: #fff3d6;
+        --kx-blue: #2563eb;
+        --kx-blue-bg: #eaf1ff;
+        --kx-border: var(--border-color, #e2e6ed);
+        --kx-surface: var(--bg-card, #fff);
+        --kx-text: var(--text-primary, #202938);
+        --kx-muted: var(--text-secondary, #697586);
+        color: var(--kx-text);
+    }
+
+    .kardex-page .kardex-subtitle {
+        color: var(--kx-muted);
+        margin-bottom: 1.5rem;
+        max-width: 850px;
+        line-height: 1.55;
+    }
+
+    .kardex-page .kardex-filter-card {
+        background: var(--kx-surface);
+        border: 1px solid var(--kx-border);
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+    }
+
+    .kardex-page .filtros-grid {
+        display: grid;
+        grid-template-columns: minmax(160px, 1.5fr) minmax(120px, .85fr)
+            minmax(135px, 1fr) minmax(135px, 1fr)
+            minmax(130px, 1fr) minmax(95px, .7fr)
+            minmax(130px, 1fr) auto;
+        gap: 13px;
+        align-items: end;
+    }
+
+    .kardex-page .campo-filtro {
+        min-width: 0;
+    }
+
+    .kardex-page .campo-filtro .form-label {
+        display: block;
+        font-size: .79rem;
+        font-weight: 650;
+        color: var(--kx-muted);
+        margin-bottom: 6px;
+    }
+
+    .kardex-page .campo-filtro .form-control {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        border: 1px solid var(--kx-border);
+        border-radius: 8px;
+        background-color: var(--kx-surface);
+        color: var(--kx-text);
+        box-shadow: none;
+    }
+
+    .kardex-page .campo-filtro .form-control:focus {
+        border-color: var(--kx-blue);
+        outline: 0;
+        box-shadow: 0 0 0 3px rgb(37 99 235 / 13%);
+    }
+
+    .kardex-page .btn-filtrar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 19px;
+        border: 1px solid #2563eb;
+        border-radius: 9px;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 650;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .kardex-page .btn-filtrar:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+        box-shadow: 0 4px 10px rgb(37 99 235 / 22%);
+    }
+
+    .kardex-page .btn-filtrar:active {
+        transform: translateY(1px);
+    }
+
+.kardex-page .btn-filtrar:focus-visible {
+        outline: 3px solid rgb(37 99 235 / 30%);
+        outline-offset: 2px;
+    }
+
+    .kardex-page .kardex-results {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 18px 0 12px;
+        color: var(--kx-muted);
+        font-size: .88rem;
+    }
+
+    .kardex-page .kardex-results strong {
+        color: var(--kx-text);
+    }
+
+    .kardex-page .tabela-card {
+        overflow: hidden;
+        border: 1px solid var(--kx-border);
+        border-radius: 14px;
+        background: var(--kx-surface);
+        box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
+    }
+
+    .kardex-page .kardex-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .kardex-page .kardex-table {
+        width: 100%;
+        min-width: 980px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 0;
+        color: var(--kx-text);
+    }
+
+    .kardex-page .kardex-table thead th {
+        padding: 14px 12px;
+        background: var(--table-header-bg, var(--bg-subtle, #f5f7fa));
+        color: var(--kx-muted);
+        border-bottom: 1px solid var(--kx-border);
+        font-size: .73rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .kardex-page .kardex-table tbody td {
+        padding: 14px 12px;
+        border-bottom: 1px solid var(--kx-border);
+        vertical-align: middle;
+        font-size: .875rem;
+        overflow-wrap: anywhere;
+    }
+
+    .kardex-page .kardex-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .kardex-page .kardex-table tbody tr {
+        transition: background-color .15s ease;
+    }
+
+    .kardex-page .kardex-table tbody tr:hover {
+        background: var(--table-hover-bg, rgb(100 116 139 / 5%));
+    }
+
+    .kardex-page .col-data { width: 150px; }
+    .kardex-page .col-produto { width: 18%; }
+    .kardex-page .col-tipo { width: 125px; }
+    .kardex-page .col-quantidade { width: 125px; }
+    .kardex-page .col-saldo { width: 155px; }
+    .kardex-page .col-origem { width: 23%; }
+    .kardex-page .col-usuario { width: 15%; }
+
+    .kardex-page .cell-data {
+        white-space: nowrap;
+        color: var(--kx-muted);
+        font-variant-numeric: tabular-nums;
+        font-size: .82rem;
+    }
+
+    .kardex-page .produto-link {
+        display: block;
+        font-weight: 650;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .kardex-page .tipo-cell {
+        white-space: nowrap;
+    }
+
+    .kardex-page .badge-tipo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 11px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        font-size: .78rem;
+        line-height: 1.2;
+        font-weight: 750;
+        white-space: nowrap;
+    }
+
+    .kardex-page .badge-tipo-entrada {
+        background: var(--kx-green-bg);
+        color: var(--kx-green);
+        border-color: rgb(22 132 91 / 22%);
+    }
+
+    .kardex-page .badge-tipo-saida {
+        background: var(--kx-red-bg);
+        color: var(--kx-red);
+        border-color: rgb(200 68 80 / 22%);
+    }
+
+    .kardex-page .badge-tipo-ajuste {
+        background: var(--kx-amber-bg);
+        color: var(--kx-amber);
+        border-color: rgb(166 107 8 / 23%);
+    }
+
+    .kardex-page .badge-tipo-neutro {
+        background: var(--kx-blue-bg);
+        color: var(--kx-blue);
+        border-color: rgb(37 99 235 / 20%);
+    }
+
+    .kardex-page .badge-tipo-reposicao {
+        background: var(--kx-amber-bg);
+        color: var(--kx-amber);
+        border-color: rgb(166 107 8 / 23%);
+    }
+
+    .kardex-page .dash-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        font-weight: 600;
+    }
+
+    .kardex-page .saldo-transicao {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        width: 100%;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .kardex-page .saldo-antes {
+        color: var(--kx-muted);
+        font-weight: 500;
+    }
+
+    .kardex-page .saldo-seta {
+        color: var(--kx-muted);
+        font-size: .9rem;
+    }
+
+    .kardex-page .saldo-depois {
+        font-weight: 750;
+    }
+
+    .kardex-page .saldo-depois-entrada { color: var(--kx-green); }
+    .kardex-page .saldo-depois-saida { color: var(--kx-red); }
+    .kardex-page .saldo-depois-ajuste { color: var(--kx-amber); }
+    .kardex-page .saldo-depois-reposicao { color: var(--kx-amber); }
+
+    .kardex-page .origem-texto {
+        display: block;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .kardex-page .usuario-texto {
+        display: block;
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+    }
+
+    .kardex-page .estado-vazio {
+        padding: 42px 20px !important;
+        text-align: center;
+        color: var(--kx-muted);
+    }
+
+    .kardex-page .estado-vazio-icon {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 1.6rem;
+        opacity: .65;
+    }
+
+    .kardex-page .kardex-paginacao {
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+        margin-top: 16px;
+    }
+
+    .kardex-page .kardex-paginacao a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 15px;
+        border: 1px solid var(--kx-border);
+        border-radius: 8px;
+        color: var(--kx-text);
+        text-decoration: none;
+        font-size: .86rem;
+        font-weight: 600;
+        background: var(--kx-surface);
+        transition: border-color .15s ease, background .15s ease;
+    }
+
+    .kardex-page .kardex-paginacao a:hover {
+        border-color: var(--kx-blue);
+        background: var(--kx-blue-bg);
+        color: var(--kx-blue);
+    }
+
+    @@media (max-width: 1450px) {
+        .kardex-page .filtros-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .kardex-page .btn-filtrar {
+            width: 100%;
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .kardex-page .filtros-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .kardex-page .campo-filtro:first-child,
+        .kardex-page .campo-filtro:nth-child(5),
+        .kardex-page .campo-filtro:nth-child(7) {
+            grid-column: span 2;
+        }
+
+        .kardex-page .btn-filtrar {
+            grid-column: span 2;
+        }
+
+        .kardex-page .kardex-filter-card {
+            padding: 13px;
+        }
+
+        .kardex-page .kardex-table {
+            min-width: 900px;
+        }
+    }
+
+    @@media (prefers-color-scheme: dark) {
+        .kardex-page .badge-tipo-entrada {
+            background: rgb(22 132 91 / 18%);
+            color: #72ddb0;
+            border-color: rgb(114 221 176 / 25%);
+        }
+
+        .kardex-page .badge-tipo-saida {
+            background: rgb(200 68 80 / 18%);
+            color: #ff9ca5;
+            border-color: rgb(255 156 165 / 25%);
+        }
+
+        .kardex-page .badge-tipo-ajuste {
+            background: rgb(166 107 8 / 18%);
+            color: #ffd27b;
+            border-color: rgb(255 210 123 / 25%);
+        }
+
+        .kardex-page .badge-tipo-neutro {
+            background: rgb(37 99 235 / 18%);
+            color: #9dbbff;
+            border-color: rgb(157 187 255 / 25%);
+        }
+
+        .kardex-page .badge-tipo-reposicao {
+            background: rgb(166 107 8 / 18%);
+            color: #ffd27b;
+            border-color: rgb(255 210 123 / 25%);
+        }
+
+        .kardex-page .saldo-depois-entrada { color: #72ddb0; }
+        .kardex-page .saldo-depois-saida { color: #ff9ca5; }
+        .kardex-page .saldo-depois-ajuste { color: #ffd27b; }
+    }
+    /* Correções visuais para o modo escuro */
+.kardex-page .kardex-filter-card {
+    background: var(--bg-card, #1e293b);
+    border: 1px solid var(--border-color, #475569);
+}
+
+.kardex-page .campo-filtro label {
+    color: var(--text-primary, #f1f5f9);
+}
+
+.kardex-page .campo-filtro input,
+.kardex-page .campo-filtro select {
+    background-color: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+}
+
+.kardex-page .campo-filtro input::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+.kardex-page .campo-filtro input:focus,
+.kardex-page .campo-filtro select:focus {
+    border-color: #60a5fa;
+    outline: 2px solid rgb(96 165 250 / 20%);
+    outline-offset: 1px;
+}
+
+/* Opções dos selects */
+.kardex-page .campo-filtro select option {
+    background-color: #0f172a;
+    color: #f1f5f9;
+}
+/* Centraliza todos os cabeçalhos e conteúdos da tabela do Kardex */
+.kardex-page .kardex-table th,
+.kardex-page .kardex-table td {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* Garante que o conteúdo da coluna Saldo fique centralizado */
+.kardex-page .kardex-table td[data-label="Saldo"] {
+    text-align: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Centraliza o elemento interno que exibe o saldo */
+.kardex-page .kardex-table td[data-label="Saldo"] > span,
+.kardex-page .kardex-table td[data-label="Saldo"] > strong {
+    display: block;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center !important;
+}
+/* Mantém a primeira coluna (Data) alinhada à esquerda */
+.kardex-page .kardex-table th:first-child,
+.kardex-page .kardex-table td:first-child {
+    text-align: left !important;
+    padding-left: 16px;
+}
+/* Legibilidade dos filtros nos dois temas */
+
+/* Tema claro: textos escuros sobre campos claros */
+.kardex-page .campo-filtro label {
+    color: #1e293b;
+}
+
+.kardex-page .campo-filtro input,
+.kardex-page .campo-filtro select {
+    color: #1e293b;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+}
+
+.kardex-page .campo-filtro input::placeholder {
+    color: #64748b;
+    opacity: 1;
+}
+
+.kardex-page .campo-filtro select option {
+    color: #1e293b;
+    background-color: #ffffff;
+}
+
+/* Tema escuro: textos claros sobre campos escuros */
+.dark-theme .kardex-page .campo-filtro input,
+.dark-theme .kardex-page .campo-filtro select {
+    color: #f8fafc !important;
+    background-color: #0f172a !important;
+    border-color: #475569 !important;
+    -webkit-text-fill-color: #f8fafc;
+}
+
+.dark-theme .kardex-page .campo-filtro input::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8;
+    opacity: 1;
+}
+
+.dark-theme .kardex-page .campo-filtro select option {
+    color: #f8fafc;
+    background-color: #0f172a;
+}
+
+/* Ícone do calendário */
+.kardex-page .campo-filtro input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
+.dark-theme .kardex-page .campo-filtro input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+/* Corrige a legibilidade do conteúdo dos filtros do Kardex */
+.kardex-page .filtros-grid input,
+.kardex-page .filtros-grid select {
+    color: #f8fafc !important;
+    background-color: #171c23 !important;
+    border-color: #cbd5e1 !important;
+    -webkit-text-fill-color: #f8fafc !important;
+}
+
+/* Placeholders: usuário, origem e datas */
+.kardex-page .filtros-grid input::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+
+/* Opções dos campos de seleção */
+.kardex-page .filtros-grid select option {
+    color: #f8fafc !important;
+    background-color: #171c23 !important;
+}
+
+/* Ícone do calendário */
+.kardex-page .filtros-grid input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+</style>
+
+<div class="main-container kardex-page">
     <h1 class="fw-bold">Kardex</h1>
-    <p class="text-muted">Movimentações de estoque a partir desta implantação. Saldos anteriores à migration não foram reconstruídos.</p>
 
-    <form method="get" asp-controller="Kardex" asp-action="Index" class="mb-4">
-        <div class="filtros-grid">
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-produto">Produto</label>
-                <select id="kardex-produto" name="produtoId" class="form-control">
-                    <option value="">Todos</option>
-                    @foreach (var produto in Model.Produtos)
-                    {
-                        <option value="@produto.Id" selected="@(Model.ProdutoId == produto.Id)">@produto.Nome</option>
-                    }
-                </select>
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-tipo">Tipo</label>
-                <select id="kardex-tipo" name="tipo" class="form-control">
-                    <option value="">Todos</option>
-                    <option value="@((int)TipoMovimentacaoEstoque.Entrada)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Entrada)">Entrada</option>
-                    <option value="@((int)TipoMovimentacaoEstoque.Saida)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Saida)">Saída</option>
-                    <option value="@((int)TipoMovimentacaoEstoque.Ajuste)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Ajuste)">Ajuste</option>
-                </select>
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-de">De</label>
-                <input id="kardex-de" type="date" name="de" class="form-control" value="@(Model.De?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-ate">Até</label>
-                <input id="kardex-ate" type="date" name="ate" class="form-control" value="@(Model.Ate?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-origem">Origem</label>
-                <input id="kardex-origem" type="text" name="origemTipo" class="form-control" value="@Model.OrigemTipo" placeholder="Venda, Reposicao..." />
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-origem-id">Id da origem</label>
-                <input id="kardex-origem-id" type="number" name="origemId" class="form-control" value="@Model.OrigemId" />
-            </div>
-            <div class="campo-filtro">
-                <label class="form-label" for="kardex-usuario">Usuário</label>
-                <input id="kardex-usuario" type="text" name="usuarioId" class="form-control" value="@Model.UsuarioId" />
-            </div>
-            <button type="submit" class="btn-filtrar">Filtrar</button>
-        </div>
-    </form>
 
-    <p class="text-muted">@Model.TotalRegistros registro(s) · página @Model.Pagina de @Model.TotalPaginas</p>
+    <div class="kardex-filter-card">
+        <form method="get" asp-controller="Kardex" asp-action="Index">
+            <div class="filtros-grid">
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-produto">Produto</label>
+                    <select id="kardex-produto" name="produtoId" class="form-control">
+                        <option value="">Todos os produtos</option>
+                        @foreach (var produto in Model.Produtos)
+                        {
+                            <option value="@produto.Id" selected="@(Model.ProdutoId == produto.Id)">
+                                @produto.Nome
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-tipo">Movimentação</label>
+                    <select id="kardex-tipo" name="tipo" class="form-control">
+                        <option value="">Todos os tipos</option>
+                        <option value="@((int)TipoMovimentacaoEstoque.Entrada)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Entrada)">↑ Entrada</option>
+                        <option value="@((int)TipoMovimentacaoEstoque.Saida)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Saida)">↓ Saída</option>
+                        <option value="@((int)TipoMovimentacaoEstoque.Ajuste)" selected="@(Model.Tipo == TipoMovimentacaoEstoque.Ajuste)">↻ Ajuste</option>
+                    </select>
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-de">Data inicial</label>
+                    <input id="kardex-de" type="date" name="de" class="form-control"
+                           value="@(Model.De?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-ate">Data final</label>
+                    <input id="kardex-ate" type="date" name="ate" class="form-control"
+                           value="@(Model.Ate?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-origem">Origem</label>
+                    <input id="kardex-origem" type="text" name="origemTipo" class="form-control"
+                           value="@Model.OrigemTipo" placeholder="Venda, Reposição..." />
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-origem-id">ID da origem</label>
+                    <input id="kardex-origem-id" type="number" name="origemId" class="form-control"
+                           value="@Model.OrigemId" />
+                </div>
+
+                <div class="campo-filtro">
+                    <label class="form-label" for="kardex-usuario">Usuário</label>
+                    <input id="kardex-usuario" type="text" name="usuarioId" class="form-control"
+                           value="@Model.UsuarioId" placeholder="Filtrar usuário..." />
+                </div>
+
+                <button type="submit" class="btn-filtrar">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m20 20-4-4"></path>
+                    </svg>
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kardex-results">
+        <span>
+            <strong>@Model.TotalRegistros</strong>
+            registro(s) encontrado(s)
+        </span>
+        <span>Página <strong>@Model.Pagina</strong> de <strong>@Model.TotalPaginas</strong></span>
+    </div>
 
     <div class="tabela-card">
-        <table class="table mb-0 tabela-responsiva">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Produto</th>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                    <th>Saldo</th>
-                    <th>Origem</th>
-                    <th>Usuário</th>
-                </tr>
-            </thead>
-            <tbody>
-            @if (Model.Itens.Count == 0)
-            {
-                <tr>
-                    <td colspan="7" class="estado-vazio">
-                        Nenhuma movimentação neste filtro.
-                    </td>
-                </tr>
-            }
-            else
-            {
-                foreach (var linha in Model.Itens)
-                {
-                    var classeTipo = linha.Tipo switch
-                    {
-                        TipoMovimentacaoEstoque.Entrada => "badge-tipo-entrada",
-                        TipoMovimentacaoEstoque.Saida => "badge-tipo-saida",
-                        TipoMovimentacaoEstoque.Ajuste => "badge-tipo-ajuste",
-                        _ => "badge-tipo-neutro"
-                    };
-                    var iconeTipo = linha.Tipo switch
-                    {
-                        TipoMovimentacaoEstoque.Entrada => "+",
-                        TipoMovimentacaoEstoque.Saida => "–",
-                        TipoMovimentacaoEstoque.Ajuste => "↻",
-                        _ => "•"
-                    };
-                    var rotuloTipo = linha.Tipo switch
-                    {
-                        TipoMovimentacaoEstoque.Entrada => "Entrada",
-                        TipoMovimentacaoEstoque.Saida => "Saída",
-                        TipoMovimentacaoEstoque.Ajuste => "Ajuste",
-                        _ => linha.Tipo.ToString()
-                    };
+        <div class="kardex-table-wrap">
+            <table class="table mb-0 tabela-responsiva tabela-responsiva--kardex kardex-table">
+                <colgroup>
+                    <col class="col-data" />
+                    <col class="col-produto" />
+                    <col class="col-tipo" />
+                    <col class="col-quantidade" />
+                    <col class="col-saldo" />
+                    <col class="col-origem" />
+                    <col class="col-usuario" />
+                </colgroup>
+                <thead>
                     <tr>
-                        <td data-label="Data">@linha.DataHora.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td data-label="Produto">
-                            <strong class="produto-link">@linha.ProdutoNome</strong>
+                        <th scope="col">Data</th>
+                        <th scope="col">Produto</th>
+                        <th scope="col">Tipo</th>
+                        <th scope="col" style="text-align:right">Quantidade</th>
+                        <th scope="col" style="text-align:right">Saldo</th>
+                        <th scope="col">Origem / motivo</th>
+                        <th scope="col">Usuário</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Itens.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="estado-vazio">
+                            <span class="estado-vazio-icon" aria-hidden="true">📋</span>
+                            <strong>Nenhuma movimentação encontrada</strong>
+                            <div>Experimente alterar os filtros para consultar outros registros.</div>
                         </td>
-                        <td data-label="Tipo">
-                            <span class="badge-tipo @classeTipo" data-icon="@iconeTipo">@rotuloTipo</span>
-                        </td>
-                        <td data-label="Quantidade" class="dash-num">@FormatoPtBr.Quantidade(linha.QuantidadeMovimentada)</td>
-                        <td data-label="Saldo" class="dash-num">
-                            <span class="td-antes">@FormatoPtBr.Quantidade(linha.SaldoAnterior)</span>
-                            <span class="text-muted">→</span>
-                            <span class="td-depois">@FormatoPtBr.Quantidade(linha.SaldoPosterior)</span>
-                        </td>
-                        <td data-label="Origem">@linha.OrigemTipo@(linha.OrigemId is null ? "" : " #" + linha.OrigemId)@(string.IsNullOrWhiteSpace(linha.Motivo) ? "" : " · " + linha.Motivo)</td>
-                        <td data-label="Usuário">@(linha.UsuarioNome ?? linha.UsuarioId ?? "—")</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
+                else
+                {
+                    foreach (var linha in Model.Itens)
+                    {
+                        var isReposicao = string.Equals(linha.OrigemTipo, "Reposição", StringComparison.OrdinalIgnoreCase);
+
+                        var classeTipo = isReposicao ? "badge-tipo-reposicao" : (linha.Tipo switch
+                        {
+                            TipoMovimentacaoEstoque.Entrada => "badge-tipo-entrada",
+                            TipoMovimentacaoEstoque.Saida => "badge-tipo-saida",
+                            TipoMovimentacaoEstoque.Ajuste => "badge-tipo-ajuste",
+                            _ => "badge-tipo-neutro"
+                        });
+
+                        var iconeTipo = isReposicao ? "↻" : (linha.Tipo switch
+                        {
+                            TipoMovimentacaoEstoque.Entrada => "↑",
+                            TipoMovimentacaoEstoque.Saida => "↓",
+                            TipoMovimentacaoEstoque.Ajuste => "↻",
+                            _ => "•"
+                        });
+
+                        var rotuloTipo = isReposicao ? "Reposição" : (linha.Tipo switch
+                        {
+                            TipoMovimentacaoEstoque.Entrada => "Entrada",
+                            TipoMovimentacaoEstoque.Saida => "Saída",
+                            TipoMovimentacaoEstoque.Ajuste => "Ajuste",
+                            _ => linha.Tipo.ToString()
+                        });
+
+                        var classeSaldo = isReposicao ? "saldo-depois-reposicao" : (linha.Tipo switch
+                        {
+                            TipoMovimentacaoEstoque.Entrada => "saldo-depois-entrada",
+                            TipoMovimentacaoEstoque.Saida => "saldo-depois-saida",
+                            TipoMovimentacaoEstoque.Ajuste => "saldo-depois-ajuste",
+                            _ => ""
+                        });
+
+                        <tr>
+                            <td data-label="Data" class="cell-data">
+                                @linha.DataHora.ToString("dd/MM/yyyy")
+                                <br />
+                                <span>@linha.DataHora.ToString("HH:mm")</span>
+                            </td>
+
+                            <td data-label="Produto">
+                                <strong class="produto-link">@linha.ProdutoNome</strong>
+                            </td>
+
+                            <td data-label="Tipo" class="tipo-cell">
+                                <span class="badge-tipo @classeTipo">
+                                    <span>@rotuloTipo</span>
+                                    <span aria-hidden="true">@iconeTipo</span>
+                                </span>
+                            </td>
+
+                            <td data-label="Quantidade" class="dash-num text-center">
+                                @FormatoPtBr.Quantidade(linha.QuantidadeMovimentada)
+                            </td>
+
+                            <td data-label="Saldo" class="dash-num">
+                                <span class="saldo-transicao">
+                                    <span class="saldo-antes">@FormatoPtBr.Quantidade(linha.SaldoAnterior)</span>
+                                    <span class="saldo-seta" aria-hidden="true">→</span>
+                                    <span class="saldo-depois @classeSaldo">@FormatoPtBr.Quantidade(linha.SaldoPosterior)</span>
+                                </span>
+                            </td>
+
+                            <td data-label="Origem / motivo">
+                                <span class="origem-texto">
+                                    <strong>@linha.OrigemTipo</strong>@(linha.OrigemId is null ? "" : " #" + linha.OrigemId)
+                                    @{
+                                        var motivo = linha.Motivo?.Trim();
+                                        var origem = linha.OrigemTipo?.Trim();
+                                        // Só exibe o motivo se não for vazio e não for igual ao OrigemTipo (ignorando acentos/caixa)
+                                        bool mostrarMotivo = !string.IsNullOrWhiteSpace(motivo)
+                                            && !string.IsNullOrWhiteSpace(origem)
+                                            && !string.Equals(motivo, origem, StringComparison.OrdinalIgnoreCase)
+                                            && !RemoveDiacritics(motivo).Equals(RemoveDiacritics(origem), StringComparison.OrdinalIgnoreCase);
+                                    }
+                                    @if (motivo != null && motivo != string.Empty && motivo != " " && motivo != "\t" && motivo != "\n" && motivo != "\r")
+                                    {
+                                        if (mostrarMotivo)
+                                        {
+                                            <span class="d-block" style="color:var(--kx-muted);font-size:.82rem;margin-top:3px">
+                                                @motivo
+                                            </span>
+                                        }
+                                    }
+                                </span>
+                            </td>
+
+                            <td data-label="Usuário">
+                                <span class="usuario-texto">@(linha.UsuarioNome ?? linha.UsuarioId ?? "—")</span>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
     </div>
 
     @if (Model.TotalPaginas > 1)
     {
-        <div class="d-flex gap-2 mt-3">
-            @if (Model.Pagina > 1)
+        <nav class="kardex-paginacao" aria-label="Paginação do Kardex">
+@if (Model.Pagina > 1)
             {
-                <a class="btn-voltar-borda" asp-action="Index"
+                <a asp-action="Index"
                    asp-route-produtoId="@Model.ProdutoId"
                    asp-route-de="@(Model.De?.ToString("yyyy-MM-dd"))"
                    asp-route-ate="@(Model.Ate?.ToString("yyyy-MM-dd"))"
@@ -136,21 +803,25 @@
                    asp-route-usuarioId="@Model.UsuarioId"
                    asp-route-origemTipo="@Model.OrigemTipo"
                    asp-route-origemId="@Model.OrigemId"
-                   asp-route-pagina="@(Model.Pagina - 1)">Anterior</a>
+                   asp-route-pagina="@(Model.Pagina - 1)">
+                     ← Anterior
+                 </a>
             }
-            @if (Model.Pagina < Model.TotalPaginas)
-            {
-                <a class="btn-voltar-borda" asp-action="Index"
-                   asp-route-produtoId="@Model.ProdutoId"
-                   asp-route-de="@(Model.De?.ToString("yyyy-MM-dd"))"
-                   asp-route-ate="@(Model.Ate?.ToString("yyyy-MM-dd"))"
-                   asp-route-tipo="@((int?)Model.Tipo)"
-                   asp-route-usuarioId="@Model.UsuarioId"
-                   asp-route-origemTipo="@Model.OrigemTipo"
-                   asp-route-origemId="@Model.OrigemId"
-                   asp-route-pagina="@(Model.Pagina + 1)">Próxima</a>
-            }
-        </div>
-    }
 
+@if (Model.Pagina < Model.TotalPaginas)
+            {
+                <a asp-action="Index"
+                   asp-route-produtoId="@Model.ProdutoId"
+                   asp-route-de="@(Model.De?.ToString("yyyy-MM-dd"))"
+                   asp-route-ate="@(Model.Ate?.ToString("yyyy-MM-dd"))"
+                   asp-route-tipo="@((int?)Model.Tipo)"
+                   asp-route-usuarioId="@Model.UsuarioId"
+                   asp-route-origemTipo="@Model.OrigemTipo"
+                   asp-route-origemId="@Model.OrigemId"
+                   asp-route-pagina="@(Model.Pagina + 1)">
+                     Próxima →
+                 </a>
+            }
+        </nav>
+    }
 </div>

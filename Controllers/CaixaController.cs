@@ -4,10 +4,13 @@ using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ControleEstoqueLoja.Controllers
 {
@@ -67,11 +70,23 @@ namespace ControleEstoqueLoja.Controllers
         [Authorize(Policy = Policies.PodeOperarPDV)]
         public async Task<IActionResult> FinalizarVenda(string metodoPagamento, string? cpfCliente, string codigoVendedor, decimal valorRecebido, decimal valorTroco, List<ItemVendaSimples> itens, string? chave = null)
         {
-            // CUPOM DO VENDEDOR E OPCIONAL (programa de recompensa por venda):
-            // valida somente quando informado; sem cupom a venda segue com o
-            // vendedor nao identificado (CodigoVendedor = null). BUG-18 mantido:
-            // valida e finaliza com o MESMO criterio (NormalizarCupom), senao o
-            // cupom validado seria rejeitado na venda.
+            // 1. Normaliza chave de idempotência
+            string chaveNormalizada;
+            if (string.IsNullOrWhiteSpace(chave))
+            {
+                chaveNormalizada = Guid.NewGuid().ToString("D");
+            }
+            else if (!Guid.TryParse(chave, out var chaveGuid))
+            {
+                return BadRequest(new { success = false, message = "Chave de idempotência inválida." });
+            }
+            else
+            {
+                chaveNormalizada = chaveGuid.ToString("D");
+            }
+
+            // 2. Validações iniciais (sem alterar estado)
+            // CUPOM DO VENDEDOR OPCIONAL (programa de recompensa por venda):
             var cupomNormalizado = NormalizarCupom(codigoVendedor);
             Vendedor? vendedor = null;
             if (!string.IsNullOrEmpty(cupomNormalizado))
@@ -85,7 +100,6 @@ namespace ControleEstoqueLoja.Controllers
                 }
             }
 
-            // FASE 1: método de pagamento é obrigatório (evita TEXT NOT NULL / HTTP 500).
             if (string.IsNullOrWhiteSpace(metodoPagamento))
             {
                 return Json(new { success = false, message = "Método de pagamento é obrigatório." });
@@ -93,130 +107,287 @@ namespace ControleEstoqueLoja.Controllers
 
             if (itens == null || !itens.Any()) return BadRequest();
 
-            var novaVenda = new Venda
-            {
-                DataVenda = DateTime.Now,
-                MetodoPagamento = metodoPagamento,
-                CPFCliente = cpfCliente,
-                // Grava normalizado (caixa unica) quando informado; null quando
-                // a venda foi fechada sem cupom (opcional).
-                CodigoVendedor = string.IsNullOrEmpty(cupomNormalizado) ? null : cupomNormalizado,
-                TotalVenda = 0,
-                ValorRecebido = 0, // recalculado abaixo a partir do total (nunca confia no POST)
-                ValorTroco = 0,
-                Itens = new List<VendaItem>()
-            };
+            // 3. Coleta e valida itens, calcula hash do conteúdo
+            var itensValidados = new List<(int ProdutoId, decimal Quantidade, decimal PrecoUnit, decimal Subtotal, Produto Produto, decimal CustoUnitario)>();
+            decimal totalVenda = 0m;
 
             foreach (var item in itens)
             {
-                // FASE 1: produto inexistente invalida a venda (sem venda vazia / sem "success").
                 if (!int.TryParse(item.ProdutoId, out int idProd))
                 {
                     return Json(new { success = false, message = "Produto inválido na venda." });
                 }
 
-                // BUG-08: um produto desativado (soft delete) nao pode mais ser vendido.
                 var produto = await _context.Produtos.FindAsync(idProd);
 
                 if (produto == null || !produto.Ativo)
                 {
                     return Json(new { success = false, message = "Produto inválido na venda." });
                 }
-                    // 1. Conversão de quantidade com validação (TryParse: nunca derruba com 500).
-                    if (!decimal.TryParse(item.Quantidade?.Replace(",", "."),
-                            NumberStyles.Number, CultureInfo.InvariantCulture, out decimal qtdVendida))
-                    {
-                        return Json(new { success = false, message = "Quantidade inválida." });
-                    }
 
-                    // FASE 1: rejeita quantidade <= 0 (negativa soma estoque; zero gera lixo no histórico).
-                    if (qtdVendida <= 0)
-                    {
-                        return Json(new { success = false, message = $"Quantidade inválida para {produto.Nome}." });
-                    }
+                if (!decimal.TryParse(item.Quantidade?.Replace(",", "."),
+                        NumberStyles.Number, CultureInfo.InvariantCulture, out decimal qtdVendida))
+                {
+                    return Json(new { success = false, message = "Quantidade inválida." });
+                }
 
-                    // Produto vendido por peso aceita quantidade fracionária em kg.
-                    if (produto.Tipo != TipoProduto.PorPeso && qtdVendida != decimal.Truncate(qtdVendida))
-                    {
-                        return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome}." });
-                    }
+                if (qtdVendida <= 0)
+                {
+                    return Json(new { success = false, message = $"Quantidade inválida para {produto.Nome}." });
+                }
 
-                    // 2. VALIDAÇÃO DE ESTOQUE COM MENSAGEM DETALHADA
-                    if (produto.Quantidade < qtdVendida)
-                    {
-                        string unidadeMedida = produto.Tipo == TipoProduto.PorPeso ? "kg" : "un";
+                if (produto.Tipo != TipoProduto.PorPeso && qtdVendida != decimal.Truncate(qtdVendida))
+                {
+                    return Json(new { success = false, message = $"Quantidade fracionada não permitida para {produto.Nome}." });
+                }
 
-                        // Retorna o erro parando o loop e avisando o vendedor exatamente o saldo
-                        return Json(new
-                        {
-                            success = false,
-                            message = $"Estoque insuficiente para {produto.Nome}. \n" +
-                                      $"Tentativa de venda: {qtdVendida}{unidadeMedida}. \n" +
-                                      $"Disponível em estoque: {produto.Quantidade}{unidadeMedida}."
-                        });
-                    }
+                decimal precoUnit = CalcularSubtotalItem(produto, 1m);
+                decimal subtotalItem = CalcularSubtotalItem(produto, qtdVendida);
 
-                    // FASE 1: o preço de venda é SEMPRE o preço de tabela (produto.Preco).
-                    // O campo item.Preco do POST é ignorado para impedir fraude via POST manual.
-                    // Para venda por peso, produto.Preco já está em R$/kg.
-                    // Regra centralizada em CalcularSubtotalItem (única fonte de verdade).
-                    decimal precoUnit = CalcularSubtotalItem(produto, 1m);
-                    decimal subtotalItem = CalcularSubtotalItem(produto, qtdVendida);
+                // Custo de aquisição vigente (snapshot)
+                decimal custoUnit = produto.CustoAquisicao;
 
-                    // 4. BAIXA NO ESTOQUE E ACÚMULO NO TOTAL DA VENDA
-                    produto.Quantidade -= qtdVendida;
-                    novaVenda.TotalVenda += subtotalItem;
-
-                    // 5. ADICIONA O ITEM À LISTA DA VENDA
-                    novaVenda.Itens.Add(new VendaItem
-                    {
-                        ProdutoId = idProd,
-                        Quantidade = qtdVendida,
-                        PrecoUnitario = precoUnit
-                    });
-
-                    // Marca o produto como alterado para o Entity Framework
-                    _context.Produtos.Update(produto);
+                itensValidados.Add((idProd, qtdVendida, precoUnit, subtotalItem, produto, custoUnit));
+                totalVenda += subtotalItem;
             }
 
-            // FASE 1: nenhum item válido -> não grava venda vazia.
-            if (!novaVenda.Itens.Any())
+            if (!itensValidados.Any())
             {
                 return Json(new { success = false, message = "Venda sem itens válidos." });
             }
 
-            // FASE 1: servidor recalcula recebido/troco a partir do total (nunca confia no POST).
-            // QA-V04 como especificação: mantém o recebido informado e recalcula troco = recebido - total.
-            // BUG-29: dinheiro insuficiente, 3 casas decimais ou valor fora da faixa
-            // armazenável são recusados AQUI, com o total já conhecido (regra 5: a fórmula
-            // do total fica no loop, não é duplicada aqui). Como o loop JÁ baixou o estoque,
-            // a rejeição precisa devolver o contexto ao estado anterior: sem isto os
-            // produtos percorridos ficariam baixados na instância do DbContext.
+            // 4. Valida pagamento (dinheiro)
             if (metodoPagamento.Equals("Dinheiro", StringComparison.OrdinalIgnoreCase))
             {
-                var motivoDinheiro = ValidarValorRecebido(valorRecebido, novaVenda.TotalVenda);
+                var motivoDinheiro = ValidarValorRecebido(valorRecebido, totalVenda);
                 if (motivoDinheiro != null)
                 {
-                    // Descarta as baixas de estoque pendentes (BUG-29): sem transação explícita,
-                    // o jeito de não deixar rastro é não salvar e soltar as entidades rastreadas.
-                    _context.ChangeTracker.Clear();
                     return Json(new { success = false, message = motivoDinheiro });
                 }
-
-                novaVenda.ValorRecebido = valorRecebido;
-                novaVenda.ValorTroco = valorRecebido - novaVenda.TotalVenda;
             }
-            else
+
+            // 5. Calcula hash determinístico do pedido normalizado
+            string hashConteudo = CalcularHashPedido(metodoPagamento, cpfCliente, cupomNormalizado, itensValidados);
+
+            // 6. Verifica idempotência ANTES da transação
+            var vendaExistente = await _context.Vendas
+                .AsNoTracking()
+                .Where(v => v.ChaveIdempotencia == chaveNormalizada)
+                .Select(v => new { v.Id, v.HashConteudo })
+                .SingleOrDefaultAsync();
+
+            if (vendaExistente != null)
             {
-                novaVenda.ValorRecebido = novaVenda.TotalVenda;
-                novaVenda.ValorTroco = 0;
+                if (vendaExistente.HashConteudo == hashConteudo)
+                {
+                    // Replay: mesma chave, mesmo conteúdo
+                    return Json(new { success = true, vendaId = vendaExistente.Id, repetida = true });
+                }
+                else
+                {
+                    // Conflito: mesma chave, conteúdo diferente
+                    return Conflict(new { success = false, message = "Chave de idempotência já utilizada com conteúdo diferente." });
+                }
             }
 
-            _context.Vendas.Add(novaVenda);
-            await _context.SaveChangesAsync();
+            // 7. Valida estoque considerando acúmulo por produto (mesmo produto em múltiplas linhas)
+            var estoquePorProduto = itensValidados
+                .GroupBy(i => i.ProdutoId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantidade));
 
-            return Json(new { success = true, vendaId = novaVenda.Id });
+            foreach (var kvp in estoquePorProduto)
+            {
+                var produto = await _context.Produtos.FindAsync(kvp.Key);
+                if (produto == null || !produto.Ativo)
+                {
+                    return Json(new { success = false, message = "Produto inválido na venda." });
+                }
+                if (produto.Quantidade < kvp.Value)
+                {
+                    string unidadeMedida = produto.Tipo == TipoProduto.PorPeso ? "kg" : "un";
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Estoque insuficiente para {produto.Nome}. \n" +
+                                  $"Tentativa de venda: {kvp.Value}{unidadeMedida}. \n" +
+                                  $"Disponível em estoque: {produto.Quantidade}{unidadeMedida}."
+                    });
+                }
+            }
+
+            // 8. Executa em transação explícita
+            IDbContextTransaction? transaction = null;
+            try
+            {
+                transaction = await _context.Database.BeginTransactionAsync();
+                // Re-carrega produtos dentro da transação para evitar concorrência
+                foreach (var kvp in estoquePorProduto)
+                {
+                    var produto = await _context.Produtos.FindAsync(kvp.Key);
+                    if (produto == null || !produto.Ativo)
+                    {
+                        await transaction.RollbackAsync();
+                        return Json(new { success = false, message = "Produto inválido na venda." });
+                    }
+                    produto.Quantidade -= kvp.Value;
+                    _context.Produtos.Update(produto);
+                }
+
+                // Cria a venda
+                var novaVenda = new Venda
+                {
+                    DataVenda = DateTime.Now,
+                    MetodoPagamento = metodoPagamento,
+                    CPFCliente = cpfCliente,
+                    CodigoVendedor = string.IsNullOrEmpty(cupomNormalizado) ? null : cupomNormalizado,
+                    TotalVenda = totalVenda,
+                    ValorRecebido = metodoPagamento.Equals("Dinheiro", StringComparison.OrdinalIgnoreCase) ? valorRecebido : totalVenda,
+                    ValorTroco = metodoPagamento.Equals("Dinheiro", StringComparison.OrdinalIgnoreCase) ? valorRecebido - totalVenda : 0m,
+                    ChaveIdempotencia = chaveNormalizada,
+                    HashConteudo = hashConteudo,
+                    Itens = new List<VendaItem>()
+                };
+
+                foreach (var iv in itensValidados)
+                {
+                    novaVenda.Itens.Add(new VendaItem
+                    {
+                        ProdutoId = iv.ProdutoId,
+                        Quantidade = iv.Quantidade,
+                        PrecoUnitario = iv.PrecoUnit,
+                        CustoUnitario = iv.CustoUnitario
+                    });
+                }
+
+                _context.Vendas.Add(novaVenda);
+
+                // Salva a venda primeiro para ter o ID e os IDs dos itens
+                await _context.SaveChangesAsync();
+
+                // 9. Registra Kardex (saída de estoque) para cada item
+                // Usa VendaItem.Id (gerado no SaveChangesAsync) para garantir unicidade
+                // mesmo quando o mesmo produto aparece em múltiplas linhas do carrinho
+                foreach (var itemVenda in novaVenda.Itens)
+                {
+                    var produto = await _context.Produtos.FindAsync(itemVenda.ProdutoId);
+                    if (produto == null)
+                    {
+                        throw new InvalidOperationException($"Produto {itemVenda.ProdutoId} não encontrado para Kardex");
+                    }
+                    var saldoAnterior = produto.Quantidade + itemVenda.Quantidade; // antes da baixa
+                    var saldoPosterior = produto.Quantidade;
+
+                    var mov = new MovimentacaoEstoque
+                    {
+                        ProdutoId = itemVenda.ProdutoId,
+                        Tipo = TipoMovimentacaoEstoque.Saida,
+                        QuantidadeMovimentada = itemVenda.Quantidade,
+                        SaldoAnterior = saldoAnterior,
+                        SaldoPosterior = saldoPosterior,
+                        DataHora = novaVenda.DataVenda,
+                        UsuarioId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                        OrigemTipo = "Venda",
+                        OrigemId = novaVenda.Id,
+                        ChaveCorrelacao = $"venda:{chaveNormalizada}:{itemVenda.Id}"
+                    };
+                    _context.MovimentacoesEstoque.Add(mov);
+                }
+
+                // 10. Registra auditoria da venda (sem CPF)
+                var auditoria = AuditoriaComercial.Criar(
+                    acao: "FinalizacaoVenda",
+                    entidade: "Venda",
+                    entidadeId: novaVenda.Id.ToString(),
+                    usuarioId: User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                    valorAnterior: null,
+                    valorNovo: $"Total: {totalVenda:N2}; Itens: {itensValidados.Count}; Pagamento: {metodoPagamento}",
+                    motivo: $"Venda finalizada via PDV",
+                    entidadeNome: $"Venda #{novaVenda.Id}"
+                );
+                _context.RegistrosAuditoria.Add(auditoria);
+
+                // Commit final
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Json(new { success = true, vendaId = novaVenda.Id, repetida = false });
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 5 || ex.SqliteErrorCode == 6) // SQLITE_BUSY, SQLITE_LOCKED
+            {
+                if (transaction != null) await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+                return StatusCode(503, new { success = false, message = "Banco de dados ocupado. Tente novamente." });
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException sqliteEx && (sqliteEx.SqliteErrorCode == 19 || sqliteEx.SqliteErrorCode == 5 || sqliteEx.SqliteErrorCode == 6)) // UNIQUE constraint or busy/locked
+            {
+                if (transaction != null) await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+
+                // Re-verifica se a venda foi criada por outra requisição concorrente
+                var vendaConcorrente = await _context.Vendas
+                    .AsNoTracking()
+                    .Where(v => v.ChaveIdempotencia == chaveNormalizada)
+                    .Select(v => new { v.Id, v.HashConteudo })
+                    .SingleOrDefaultAsync();
+
+                if (vendaConcorrente != null)
+                {
+                    if (vendaConcorrente.HashConteudo == hashConteudo)
+                    {
+                        return Json(new { success = true, vendaId = vendaConcorrente.Id, repetida = true });
+                    }
+                    else
+                    {
+                        return Conflict(new { success = false, message = "Chave de idempotência já utilizada com conteúdo diferente." });
+                    }
+                }
+
+                // Se não foi concorrência de idempotência, retorna 503 para busy/locked ou genérico
+                if (sqliteEx.SqliteErrorCode == 5 || sqliteEx.SqliteErrorCode == 6)
+                {
+                    return StatusCode(503, new { success = false, message = "Banco de dados ocupado. Tente novamente." });
+                }
+
+                return StatusCode(500, new { success = false, message = MensagemErroGenerica });
+            }
+            catch (Exception)
+            {
+                if (transaction != null) await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+                return StatusCode(500, new { success = false, message = MensagemErroGenerica });
+            }
         }
+        [HttpGet]
+[Authorize(Policy = Policies.PodeOperarPDV)]
+public async Task<IActionResult> ConsultarStatusVenda(
+    string? chave,
+    CancellationToken cancellationToken)
+{
+    if (!Guid.TryParse(chave, out var chaveGuid))
+    {
+        return BadRequest(new
+        {
+            success = false,
+            mensagem = "Chave de idempotência inválida."
+        });
+    }
+
+    var chaveNormalizada = chaveGuid.ToString("D");
+
+    var venda = await _context.Vendas
+        .AsNoTracking()
+        .Where(v => v.ChaveIdempotencia == chaveNormalizada)
+        .Select(v => new { v.Id })
+        .SingleOrDefaultAsync(cancellationToken);
+
+    return Json(new
+    {
+        success = true,
+        encontrada = venda != null,
+        vendaId = venda != null ? venda.Id : (int?)null
+    });
+}
+
 
         /// <summary>
         /// BUG-29: valida o valor recebido em uma venda em DINHEIRO. Devolve null quando
@@ -506,6 +677,41 @@ namespace ControleEstoqueLoja.Controllers
         /// </summary>
         public static string NormalizarCupom(string? codigo)
             => (codigo ?? string.Empty).Trim().ToUpper();
+
+        /// <summary>
+        /// Calcula SHA-256 de uma representação determinística do pedido normalizado.
+        /// Inclui: método de pagamento, CPF normalizado, cupom normalizado,
+        /// lista de produto/quantidade (em InvariantCulture).
+        /// NÃO inclui preço (evita fraude) nem valor recebido/troco.
+        /// A ordem dos itens é preservada.
+        /// </summary>
+        private static string CalcularHashPedido(string metodoPagamento, string? cpfCliente, string? cupomNormalizado, List<(int ProdutoId, decimal Quantidade, decimal PrecoUnit, decimal Subtotal, Produto Produto, decimal CustoUnitario)> itens)
+        {
+            var sb = new StringBuilder();
+            sb.Append(metodoPagamento?.Trim().ToUpperInvariant() ?? "");
+            sb.Append("|");
+
+            // CPF normalizado (apenas dígitos)
+            var cpfDigits = (cpfCliente ?? "").Where(char.IsDigit).ToArray();
+            sb.Append(new string(cpfDigits));
+            sb.Append("|");
+
+            sb.Append(cupomNormalizado ?? "");
+            sb.Append("|");
+
+            foreach (var item in itens)
+            {
+                sb.Append(item.ProdutoId);
+                sb.Append(":");
+                sb.Append(item.Quantidade.ToString("G", CultureInfo.InvariantCulture));
+                sb.Append(";");
+            }
+
+            var dados = sb.ToString();
+            using var sha256 = SHA256.Create();
+            var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(dados));
+            return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        }
 
         /// <summary>
         /// Saldo fisico da gaveta: vendas em DINHEIRO + suprimentos + sangrias.

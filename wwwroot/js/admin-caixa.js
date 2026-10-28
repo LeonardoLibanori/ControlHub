@@ -905,12 +905,21 @@ async function enviarVendaDeVez() {
     const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
     const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
 
+    // Idempotência: gera ou reutiliza chave por tentativa lógica
+    const CHAVE_STORAGE_KEY = 'controlhub_venda_chave_pendente';
+    let chave = sessionStorage.getItem(CHAVE_STORAGE_KEY);
+    if (!chave) {
+        chave = crypto.randomUUID();
+        sessionStorage.setItem(CHAVE_STORAGE_KEY, chave);
+    }
+
     const data = new URLSearchParams();
     data.append("metodoPagamento", metodo);
     data.append("cpfCliente", cpf);
     data.append("codigoVendedor", vendedor);
     data.append("valorRecebido", String(valorRec).replace(',', '.'));
     data.append("valorTroco", String(valorTro).replace(',', '.'));
+    data.append("chave", chave);
 
     carrinho.forEach((item, i) => {
         const prefixo = `itens[${i}]`;
@@ -953,7 +962,22 @@ async function enviarVendaDeVez() {
             });
         }
 
+        // 503 = banco ocupado (SQLITE_BUSY/LOCKED): não limpa a chave, permite retry
+        // Falha de rede (catch) também não limpa a chave
         if (!response.ok) {
+            if (response.status === 503) {
+                // Banco ocupado: mantém a chave para retry
+                const textoErro = (await response.text()).trim();
+                console.warn('[FinalizarVenda] HTTP 503 - banco ocupado, chave mantida para retry');
+                Swal.fire({
+                    title: 'Banco ocupado',
+                    text: 'O servidor está processando outra requisição. Tente novamente em instantes.',
+                    icon: 'warning',
+                    confirmButtonColor: '#f0ad4e'
+                });
+                return;
+            }
+
             // O servidor RESPONDEU (nao e falha de conexao): mostra status e
             // detalhe em vez do alerta generico "servidor nao respondeu".
             const textoErro = (await response.text()).trim();
@@ -977,16 +1001,19 @@ async function enviarVendaDeVez() {
         const res = await response.json();
 
         if (res.success) {
+            // Sucesso confirmado: limpa a chave pendente
+            sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+
             // Fecha nosso modal custom e garante que não existam backdrops bloqueando
             try { fecharModal(); } catch (e) { /* noop se não existir */ }
             document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
 
-// Abre SweetAlert garantindo z-index acima do modal
+            // Abre SweetAlert garantindo z-index acima do modal
             Swal.fire({
                 title: 'Venda finalizada!',
-                text: 'Sucesso ao processar a venda.',
+                text: res.repetida ? 'Requisição duplicada - venda já processada.' : 'Sucesso ao processar a venda.',
                 customClass: {
                     popup: 'swal-success'
                 },
@@ -1001,7 +1028,79 @@ async function enviarVendaDeVez() {
                 location.reload();
             });
         } else {
-            // Em caso de erro, também fecha o modal custom antes de mostrar o erro
+            // Erro de negócio (estoque, dinheiro, cupom, etc.)
+            // 409 Conflict (conteúdo diferente com mesma chave): consulta status antes de limpar a chave
+            if (response.status === 409) {
+                try {
+                    const statusResp = await fetch('/Caixa/ConsultarStatusVenda?chave=' + encodeURIComponent(chave), {
+                        headers: csrfHeaders()
+                    });
+                    if (statusResp.ok) {
+                        const statusData = await statusResp.json();
+                        if (statusData.encontrada && statusData.vendaId) {
+                            // Venda já existe: preserva a chave e oferece recuperação
+                            Swal.fire({
+                                title: 'Conflito de idempotência',
+                                html: 'Já existe uma venda com esta chave mas conteúdo diferente. A venda original permanece registrada.<br><br><b>Atenção:</b> se escolher "Abandonar", o carrinho será limpo e você precisará adicionar os itens novamente.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ver cupom da venda original',
+                                cancelButtonText: 'Abandonar e iniciar nova venda',
+                                confirmButtonColor: '#f0ad4e',
+                                cancelButtonColor: '#6c757d',
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Tenta abrir o cupom; verifica se popup foi bloqueado
+                                    const win = window.open('/Caixa/GerarCupom?id=' + statusData.vendaId, '_blank');
+                                    if (!win || win.closed || typeof win.closed === 'undefined') {
+                                        Swal.fire({
+                                            title: 'Popup bloqueado',
+                                            text: 'O navegador bloqueou a abertura do cupom. Permita popups para este site e clique novamente em "Ver cupom da venda original".',
+                                            icon: 'warning',
+                                            confirmButtonColor: '#f0ad4e'
+                                        });
+                                    }
+                                    // Chave permanece no sessionStorage para permitir replay posterior
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                    // Usuário escolhe abandonar: limpa a chave para nova tentativa lógica
+                                    sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+                                    location.reload();
+                                }
+                                // Se fechou o modal sem escolher (Esc/backdrop), chave permanece preservada
+                            });
+                            return; // Mantém a chave no sessionStorage
+                        }
+                        // Venda não encontrada: limpa a chave para permitir nova tentativa lógica
+                        sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+                    } else {
+                        // Falha na consulta: preserva a chave por segurança
+                        console.warn('[FinalizarVenda] Falha ao consultar status em 409, chave preservada');
+                        Swal.fire({
+                            title: 'Não foi possível confirmar',
+                            text: 'A consulta de status falhou. A chave foi preservada por segurança. Tente novamente.',
+                            icon: 'warning',
+                            confirmButtonColor: '#f0ad4e'
+                        });
+                    }
+                } catch (e) {
+                    // Erro de rede na consulta: preserva a chave por segurança
+                    console.warn('[FinalizarVenda] Erro de rede ao consultar status em 409, chave preservada');
+                    Swal.fire({
+                        title: 'Erro de conexão',
+                        text: 'Não foi possível consultar o status da venda. A chave foi preservada por segurança.',
+                        icon: 'warning',
+                        confirmButtonColor: '#f0ad4e'
+                    });
+                }
+                return;
+            }
+
+            // Outros erros: mantém a chave para permitir retry após correção
+            const res = await response.json();
+            if (res.message && res.message.includes('idempotência')) {
+                sessionStorage.removeItem(CHAVE_STORAGE_KEY);
+            }
             try { fecharModal(); } catch (e) { /* noop */ }
             document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.classList.remove('modal-open');
@@ -1026,6 +1125,7 @@ async function enviarVendaDeVez() {
         }
     } catch (e) {
         console.error("Erro crítico no envio:", e);
+        // Falha de rede: NÃO limpa a chave, permite retry
         try { fecharModal(); } catch (ex) { /* noop */ }
         document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
         document.body.classList.remove('modal-open');

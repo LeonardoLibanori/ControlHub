@@ -25,5 +25,10 @@ namespace ControleEstoqueLoja.Models
         [NotMapped]
         public List<VendaItem> ItensTemporarios { get; set; } = new List<VendaItem>();
         public string? CodigoVendedor { get; set; } // O nosso "Cupom"
+        [System.ComponentModel.DataAnnotations.MaxLength(36)]
+public string? ChaveIdempotencia { get; set; }
+
+[System.ComponentModel.DataAnnotations.MaxLength(64)]
+public string? HashConteudo { get; set; }
     }
 }

@@ -19,7 +19,7 @@ public class KardexController : Controller
         _context = context;
     }
 
-    [HttpGet]
+[HttpGet]
     [Authorize(Policy = Policies.PodeGerenciarEstoque)]
     public async Task<IActionResult> Index(
         int? produtoId,
@@ -50,8 +50,27 @@ public class KardexController : Controller
             consulta = consulta.Where(m => m.DataHora < fimExclusivo);
         }
 
-        if (tipo.HasValue)
+        if (tipo.HasValue && tipo.GetValueOrDefault() != 0)
             consulta = consulta.Where(m => m.Tipo == tipo.Value);
+
+        // Se o tipo for Ajuste, forçar OrigemTipo = "Ajuste" para evitar conflito
+        // Para outros tipos, ignorar o filtro de origem se ele conflitar com o tipo selecionado
+        // Para "Todos os tipos" (tipo null), também limpar origemTipo para não filtrar
+        if (tipo == TipoMovimentacaoEstoque.Ajuste)
+        {
+            origemTipo = "Ajuste";
+        }
+        else if (tipo.HasValue && tipo.GetValueOrDefault() != 0 && !string.IsNullOrWhiteSpace(origemTipo))
+        {
+            // Para Entrada/Saída, não aplicar filtro de origem que possa conflitar
+            // O usuário deve limpar o campo Origem manualmente se quiser filtrar por origem
+            origemTipo = null;
+        }
+        else if (!tipo.HasValue)
+        {
+            // "Todos os tipos" selecionado: limpar origemTipo para não filtrar por origem
+            origemTipo = null;
+        }
 
         if (!string.IsNullOrWhiteSpace(usuarioId))
             consulta = consulta.Where(m => m.UsuarioId == usuarioId);

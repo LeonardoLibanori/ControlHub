@@ -72,7 +72,15 @@ namespace ControleEstoqueLoja.Data
             modelBuilder.Entity<Venda>().Property(v => v.ValorRecebido).HasConversion(centavos).HasDefaultValue(0m);
             modelBuilder.Entity<Venda>().Property(v => v.ValorTroco).HasConversion(centavos).HasDefaultValue(0m);
 
-            modelBuilder.Entity<VendaItem>().Property(i => i.PrecoUnitario).HasConversion(centavos);
+            modelBuilder.Entity<VendaItem>().Property(i => i.PrecoUnitario)
+            .HasConversion(centavos);
+
+                modelBuilder.Entity<VendaItem>().Property(i => i.Desconto)
+                 .HasConversion(centavos)
+    .HasDefaultValue(0m);
+
+modelBuilder.Entity<VendaItem>().Property(i => i.CustoUnitario)
+    .HasConversion(centavos);
 
             modelBuilder.Entity<CaixaMovimentacao>().Property(m => m.Valor).HasConversion(centavos);
 
@@ -92,6 +100,83 @@ namespace ControleEstoqueLoja.Data
                 .WithMany()
                 .HasForeignKey(h => h.ProdutoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+                // Idempotência de vendas: permite identificar uma tentativa lógica
+// e impede que a mesma chave seja gravada em duas vendas.
+modelBuilder.Entity<Venda>(entity =>
+{
+    entity.Property(v => v.ChaveIdempotencia)
+        .HasMaxLength(36);
+
+    entity.Property(v => v.HashConteudo)
+        .HasMaxLength(64);
+
+    entity.HasIndex(v => v.ChaveIdempotencia)
+        .IsUnique()
+        .HasDatabaseName("IX_Vendas_ChaveIdempotencia");
+});
+modelBuilder.Entity<MovimentacaoEstoque>()
+    .HasOne(m => m.Produto)
+    .WithMany()
+    .HasForeignKey(m => m.ProdutoId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+        
+            // Kardex: preservar os limites e índices definidos na migration histórica.
+            modelBuilder.Entity<MovimentacaoEstoque>(entity =>
+            {
+                entity.Property(m => m.UsuarioId).HasMaxLength(450);
+                entity.Property(m => m.Motivo).HasMaxLength(200);
+                entity.Property(m => m.OrigemTipo).HasMaxLength(40);
+                entity.Property(m => m.ChaveCorrelacao).HasMaxLength(80);
+
+                entity.HasIndex(m => m.ChaveCorrelacao)
+                    .IsUnique()
+                    .HasDatabaseName("IX_MovimentacoesEstoque_ChaveCorrelacao");
+
+                entity.HasIndex(m => m.DataHora)
+                    .HasDatabaseName("IX_MovimentacoesEstoque_DataHora");
+
+                entity.HasIndex(m => new { m.ProdutoId, m.DataHora })
+                    .HasDatabaseName("IX_MovimentacoesEstoque_ProdutoId_DataHora");
+
+                entity.HasIndex(m => m.Tipo)
+                    .HasDatabaseName("IX_MovimentacoesEstoque_Tipo");
+
+                entity.HasOne(m => m.Produto)
+                    .WithMany()
+                    .HasForeignKey(m => m.ProdutoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Auditoria: preservar os limites e índices definidos historicamente.
+            modelBuilder.Entity<RegistroAuditoria>(entity =>
+            {
+                entity.Property(a => a.UsuarioId).HasMaxLength(450);
+                entity.Property(a => a.Acao).HasMaxLength(80).IsRequired();
+                entity.Property(a => a.Entidade).HasMaxLength(80).IsRequired();
+                entity.Property(a => a.EntidadeId).HasMaxLength(80);
+                entity.Property(a => a.ValorAnterior).HasMaxLength(200);
+                entity.Property(a => a.ValorNovo).HasMaxLength(200);
+                entity.Property(a => a.Motivo).HasMaxLength(200);
+
+                entity.HasIndex(a => a.Acao)
+                    .HasDatabaseName("IX_RegistrosAuditoria_Acao");
+
+                entity.HasIndex(a => a.DataHora)
+                    .HasDatabaseName("IX_RegistrosAuditoria_DataHora");
+
+                entity.HasIndex(a => new { a.Entidade, a.EntidadeId })
+                    .HasDatabaseName("IX_RegistrosAuditoria_Entidade_EntidadeId");
+            });
+
+            // Custo de aquisição armazenado em centavos, com default compatível
+            // com a migration histórica de Etapa 4.
+            modelBuilder.Entity<Produto>()
+                .Property(p => p.CustoAquisicao)
+                .HasDefaultValue(0m);
+
+        
         }
     }
 }

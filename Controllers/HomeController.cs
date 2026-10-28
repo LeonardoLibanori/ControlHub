@@ -635,7 +635,40 @@ namespace ControleEstoqueLoja.Controllers
 
                 // 8. Releitura no momento da escrita + soma em decimal + único SaveChangesAsync
                 var produtoDb = await _context.Produtos.FirstAsync<Produto>(p => p.Id == id && p.Ativo);
+                var saldoAnterior = produtoDb.Quantidade;
                 produtoDb.Quantidade += qtd;
+
+                var mov = new MovimentacaoEstoque
+                {
+                    ProdutoId = produtoDb.Id,
+                    Tipo = TipoMovimentacaoEstoque.Ajuste,
+                    QuantidadeMovimentada = qtd,
+                    SaldoAnterior = saldoAnterior,
+                    SaldoPosterior = produtoDb.Quantidade,
+                    DataHora = DateTime.Now,
+                    UsuarioId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                    OrigemTipo = "Ajuste",
+                    OrigemId = null,
+                    ChaveCorrelacao = $"ajuste:{Guid.NewGuid():D}"
+                };
+                _context.MovimentacoesEstoque.Add(mov);
+
+                // Auditoria do ajuste
+                var formatarValor = new Func<decimal, string>(v => 
+                    v % 1 == 0 ? v.ToString("N0") : v.ToString("N3").TrimEnd('0').TrimEnd(','));
+                var qtdFormatada = formatarValor(qtd);
+                var auditoria = AuditoriaComercial.Criar(
+                    acao: AcoesAuditoria.AjusteEstoque,
+                    entidade: "Produto",
+                    entidadeId: produtoDb.Id.ToString(),
+                    usuarioId: User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                    valorAnterior: formatarValor(saldoAnterior),
+                    valorNovo: formatarValor(produtoDb.Quantidade),
+                    motivo: $"Ajuste de estoque: +{qtdFormatada}",
+                    entidadeNome: produtoDb.Nome
+                );
+                _context.RegistrosAuditoria.Add(auditoria);
+
                 await _context.SaveChangesAsync();
 
                 var unidade = produtoDb.Tipo == TipoProduto.PorPeso ? "kg" : "un";

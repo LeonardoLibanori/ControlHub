@@ -29,7 +29,7 @@
 
         <div class="mb-3">
             <label id="labelPreco" class="form-label fw-bold">Preço por kg (R$/kg)</label>
-            <div class="input-group">
+            <div class="input-group input-group-unidade">
                 <span class="input-group-text">R$</span>
                 <input type="text" id="precoVisual" value="@Model.Preco.ToString("N2")" class="form-control" required />
             </div>
@@ -37,10 +37,19 @@
         </div>
 
         <div class="mb-3">
+            <label class="form-label fw-bold">Custo de aquisição (R$)</label>
+            <div class="input-group input-group-unidade">
+                <span class="input-group-text">R$</span>
+                <input type="text" id="custoVisual" value="@Model.CustoAquisicao.ToString("N2")" class="form-control" />
+            </div>
+            <input type="hidden" name="custoAquisicao" id="custoReal" value="@((Model.CustoAquisicao * 100).ToString("0"))">
+        </div>
+
+        <div class="mb-3">
             <label class="form-label fw-bold">Estoque mínimo (alerta)</label>
-            <div class="input-group">
-                <input type="number" name="estoqueMinimo" value="@(Model.EstoqueMinimo?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "")" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
+            <div class="input-group input-group-unidade">
                 <span class="input-group-text">@(Model.Tipo == TipoProduto.PorPeso ? "kg" : "un")</span>
+                <input type="number" name="estoqueMinimo" value="@(Model.EstoqueMinimo?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "")" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
             </div>
         </div>
 

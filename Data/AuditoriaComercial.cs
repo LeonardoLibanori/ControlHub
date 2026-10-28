@@ -93,7 +93,7 @@ public static class AuditoriaComercial
             AcoesAuditoria.ReposicaoEstoque => new AcaoApresentacao
             {
                 Rotulo = "Reposição de estoque",
-                Icone = "↻",
+                Icone = "↑",
                 ClasseCss = "badge-acao-reposicao"
             },
             AcoesAuditoria.CadastroProduto => new AcaoApresentacao
@@ -123,13 +123,13 @@ public static class AuditoriaComercial
             AcoesAuditoria.Suprimento => new AcaoApresentacao
             {
                 Rotulo = "Suprimento de caixa",
-                Icone = "+",
+                Icone = "↑",
                 ClasseCss = "badge-acao-suprimento"
             },
             AcoesAuditoria.Sangria => new AcaoApresentacao
             {
                 Rotulo = "Sangria de caixa",
-                Icone = "–",
+                Icone = "↓",
                 ClasseCss = "badge-acao-sangria"
             },
             AcoesAuditoria.FechamentoCaixa => new AcaoApresentacao

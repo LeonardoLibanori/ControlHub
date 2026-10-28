@@ -1,4 +1,4 @@
-@using ControleEstoqueLoja.Models
+﻿@using ControleEstoqueLoja.Models
 @{
     ViewData["Title"] = "Novo Produto";
 }
@@ -24,8 +24,8 @@
 
             <div class="mb-3">
                 <label class="form-label fw-bold">Código de barras (bipe o produto)</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light"></span>
+                <div class="input-group input-group-unidade">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                     <input type="text"
                            name="codigoBarras"
                            id="inputCodigo"
@@ -49,31 +49,57 @@
 
             <div class="mb-3">
                 <label id="labelPreco" class="form-label fw-bold">Preço unitário (R$)</label>
-                <div class="input-group">
+                <div class="input-group input-group-unidade">
                     <span class="input-group-text">R$</span>
                     <input type="text" id="precoVisual" class="form-control" placeholder="0,00" required />
+</div>
+            <input type="hidden" name="preco" id="precoReal">
+        </div>
+
+        <div class="mb-3">
+                <label class="form-label fw-bold">Custo de aquisição (R$)</label>
+                <div class="input-group input-group-unidade">
+                    <span class="input-group-text">R$</span>
+                    <input type="text" id="custoVisual" class="form-control" placeholder="0,00" />
                 </div>
-                <input type="hidden" name="preco" id="precoReal">
+                <input type="hidden" name="custoAquisicao" id="custoReal">
             </div>
 
             <div class="mb-4">
-                <label id="labelQuantidade" class="form-label fw-bold">Quantidade inicial</label>
-                <div class="input-group">
-                    <input type="number" id="quantidadeVisual" class="form-control" min="0" step="any" required />
-                    <span id="unidadeQuantidade" class="input-group-text">un</span>
-                </div>
-                <input type="hidden" name="quantidade" id="quantidadeReal" />
-            </div>
+    <label id="labelQuantidade" class="form-label fw-bold">
+        Quantidade inicial
+    </label>
+    <div class="input-group input-group-unidade">
+        <span id="unidadeQuantidade" class="input-group-text">un</span>
+        <input type="number"
+               id="quantidadeVisual"
+               class="form-control"
+               min="0"
+               step="any"
+               required />
+    </div>
+    <input type="hidden" name="quantidade" id="quantidadeReal" />
+</div>
 
-            <div class="mb-3">
-                <label id="labelEstoqueMinimo" class="form-label fw-bold">Estoque mínimo (alerta, un)</label>
-                <div class="input-group">
-                    <input type="number" id="estoqueMinimoVisual" class="form-control" min="0" step="any" placeholder="0 = sem alerta" />
-                    <span id="unidadeEstoqueMinimo" class="input-group-text">un</span>
-                </div>
-                <input type="hidden" name="estoqueMinimo" id="estoqueMinimoReal" />
-                <small class="text-muted">Zerado ou vazio = este produto nunca avisa "estoque baixo".</small>
-            </div>
+<div class="mb-3">
+    <label id="labelEstoqueMinimo" class="form-label fw-bold">
+        Estoque mínimo (alerta)
+    </label>
+    <div class="input-group input-group-unidade">
+        <span id="unidadeEstoqueMinimo" class="input-group-text">un</span>
+        <input type="number"
+               id="estoqueMinimoVisual"
+               class="form-control"
+               min="0"
+               step="any"
+               placeholder="0 = sem alerta" />
+    </div>
+    <input type="hidden" name="estoqueMinimo" id="estoqueMinimoReal" />
+    <small class="text-muted">
+        Zerado ou vazio = este produto nunca avisa "estoque baixo".
+    </small>
+</div>
+
 
             <button type="submit" class="btn btn-primary w-100">Salvar produto</button>
         </form>

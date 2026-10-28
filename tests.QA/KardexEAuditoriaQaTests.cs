@@ -1,4 +1,4 @@
-using ControleEstoqueLoja.Controllers;
+﻿using ControleEstoqueLoja.Controllers;
 using ControleEstoqueLoja.Data;
 using ControleEstoqueLoja.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -135,7 +135,7 @@ public sealed class KardexEAuditoriaQaTests
         Assert.Throws<ArgumentOutOfRangeException>(() => EstoqueKardex.Criar(1, TipoMovimentacaoEstoque.Entrada, 0m, 10m, 10m, "U", "Reposicao", 1, null, null));
         Assert.Throws<ArgumentOutOfRangeException>(() => EstoqueKardex.Criar(1, TipoMovimentacaoEstoque.Entrada, -1m, 10m, 9m, "U", "Reposicao", 1, null, null));
         Assert.Throws<InvalidOperationException>(() => EstoqueKardex.Criar(1, TipoMovimentacaoEstoque.Saida, 1_000_001m, 10m, -999_991m, "U", "Venda", 1, null, null));
-        Assert.Throws<ArgumentOutOfRangeException>(() => { var q = 1.1234m; if (decimal.Round(q, EstoqueKardex.MaximoCasasDecimais) != q) throw new ArgumentOutOfRangeException("q", "Use no máximo 3 casas decimais."); return EstoqueKardex.Criar(1, TipoMovimentacaoEstoque.Entrada, q, 10m, 10m + q, "U", "Reposicao", 1, null, null); });
+        Assert.Throws<ArgumentOutOfRangeException>(() => { var q = 1.1234m; if (decimal.Round(q, EstoqueKardex.MaximoCasasDecimais) != q) throw new ArgumentOutOfRangeException("q", "Use no mÃ¡ximo 3 casas decimais."); return EstoqueKardex.Criar(1, TipoMovimentacaoEstoque.Entrada, q, 10m, 10m + q, "U", "Reposicao", 1, null, null); });
     }
 
     [Fact]
@@ -388,6 +388,363 @@ public sealed class KardexEAuditoriaQaTests
             var pagina1 = await ctx2.MovimentacoesEstoque.AsNoTracking().OrderByDescending(m => m.DataHora).ThenByDescending(m => m.Id).Skip(0).Take(3).ToListAsync();
             Assert.Equal(5, total);
             Assert.Equal(3, pagina1.Count);
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_FiltroTipo_Entrada_RetornaApenasEntradas()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-filtro-entrada-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "FILTRO ENTRADA", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 3 Entradas (Origem: ReposiÃ§Ã£o)
+            for (int i = 1; i <= 3; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 2 SaÃ­das (Origem: Venda) - NÃƒO devem aparecer no filtro Entrada
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade -= 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Saida, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Venda, produto.Id, motivo: $"Venda {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Ajuste (Origem: Ajuste) - NÃƒO deve aparecer no filtro Entrada
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 5m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste teste", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Filtra por Entrada
+            var resultado = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Entrada, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(3, modelo.TotalRegistros);
+            Assert.Equal(3, modelo.Itens.Count);
+            Assert.All(modelo.Itens, item => Assert.Equal(TipoMovimentacaoEstoque.Entrada, item.Tipo));
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_FiltroTipo_Saida_RetornaApenasSaidas()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-filtro-saida-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "FILTRO SAIDA", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 2 SaÃ­das (Origem: Venda)
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade -= 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Saida, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Venda, produto.Id, motivo: $"Venda {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 3 Entradas (Origem: ReposiÃ§Ã£o) - NÃƒO devem aparecer
+            for (int i = 1; i <= 3; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            var resultado = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Saida, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(2, modelo.TotalRegistros);
+            Assert.Equal(2, modelo.Itens.Count);
+            Assert.All(modelo.Itens, item => Assert.Equal(TipoMovimentacaoEstoque.Saida, item.Tipo));
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_FiltroTipo_Ajuste_RetornaApenasAjustes()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-filtro-ajuste-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "FILTRO AJUSTE", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 1 Ajuste
+            var saldoAnterior = produto.Quantidade;
+            produto.Quantidade += 5m;
+            ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste teste", chaveCorrelacao: null));
+            
+            // Cria 2 Entradas - NÃƒO devem aparecer
+            for (int i = 1; i <= 2; i++)
+            {
+                var salAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, salAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            var resultado = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Ajuste, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(1, modelo.TotalRegistros);
+            Assert.Equal(1, modelo.Itens.Count);
+            Assert.All(modelo.Itens, item => Assert.Equal(TipoMovimentacaoEstoque.Ajuste, item.Tipo));
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+[Fact]
+    public async Task Index_FiltroTipo_ComOrigemConflitante_IgnoraOrigem()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-filtro-conflito-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "FILTRO CONFLITO", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 2 Entradas com Origem "Reposição"
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Filtra por Entrada COM origemTipo="Reposição" (deve funcionar - mesma origem)
+            var resultado = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Entrada, null, "Reposição", null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            Assert.Equal(2, modelo.TotalRegistros);
+            
+            // Filtra por Entrada COM origemTipo="Venda" (conflitante - deve ignorar origem e retornar as 2 entradas)
+            var resultadoConflito = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Entrada, null, "Venda", null, 1);
+            var viewResultConflito = Assert.IsType<ViewResult>(resultadoConflito);
+            var modeloConflito = Assert.IsType<KardexPaginaViewModel>(viewResultConflito.Model);
+            Assert.Equal(2, modeloConflito.TotalRegistros); // Deve retornar as 2 entradas, ignorando o filtro de origem conflitante
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_SemFiltroTipo_RetornaTodos()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-sem-filtro-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "SEM FILTRO", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 2 Entradas
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Saída
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade -= 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Saida, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Venda, produto.Id, motivo: "Venda 1", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Ajuste
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 5m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste 1", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Sem filtro de tipo (tipo = null) - deve retornar todos os 4
+            var resultado = await controller.Index(produtoId, null, null, null, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(4, modelo.TotalRegistros);
+            Assert.Equal(4, modelo.Itens.Count);
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+[Fact]
+    public async Task Index_TipoVazioString_TratadoComoNulo()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-tipo-vazio-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "TIPO VAZIO", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 2 Entradas
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Saída
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade -= 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Saida, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Venda, produto.Id, motivo: "Venda 1", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Ajuste
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 5m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste 1", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Simula formulário enviando tipo="" (string vazia) - como o navegador envia para "Todos os tipos"
+            // O model binder do ASP.NET Core pode receber isso como tipo = 0 (valor default do enum) ou null
+            // Testamos passando null explicitamente (como deveria ser o comportamento correto)
+            var resultado = await controller.Index(produtoId, null, null, null, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(4, modelo.TotalRegistros);
+            Assert.Equal(4, modelo.Itens.Count);
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_TipoAjuste_ComValor3_RetornaApenasAjustes()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-ajuste-filtro-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "AJUSTE FILTRO", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 1 Ajuste
+            var saldoAnterior = produto.Quantidade;
+            produto.Quantidade += 5m;
+            ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste 1", chaveCorrelacao: null));
+            
+            // Cria 2 Entradas - NÃO devem aparecer
+            for (int i = 1; i <= 2; i++)
+            {
+                var salAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, salAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Filtra por Ajuste (valor 3 = TipoMovimentacaoEstoque.Ajuste)
+            var resultado = await controller.Index(produtoId, null, null, TipoMovimentacaoEstoque.Ajuste, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            Assert.Equal(1, modelo.TotalRegistros);
+            Assert.Equal(1, modelo.Itens.Count);
+            Assert.All(modelo.Itens, item => Assert.Equal(TipoMovimentacaoEstoque.Ajuste, item.Tipo));
+        }
+        finally { ApagarBanco(dbPath); }
+    }
+
+    [Fact]
+    public async Task Index_TipoZero_TratadoComoSemFiltro()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"kardex-tipo-zero-{Guid.NewGuid():N}.db");
+        try
+        {
+            int produtoId = SemearProduto(dbPath, "TIPO ZERO", 100m);
+            using var ctx = NovoContexto(dbPath);
+            var produto = ctx.Produtos.First(p => p.Id == produtoId);
+            
+            // Cria 2 Entradas
+            for (int i = 1; i <= 2; i++)
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Entrada, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Reposicao, produto.Id, motivo: $"Entrada {i}", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Saída
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade -= 1m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Saida, 1m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Venda, produto.Id, motivo: "Venda 1", chaveCorrelacao: null));
+            }
+            
+            // Cria 1 Ajuste
+            {
+                var saldoAnterior = produto.Quantidade;
+                produto.Quantidade += 5m;
+                ctx.MovimentacoesEstoque.Add(EstoqueKardex.Criar(produto.Id, TipoMovimentacaoEstoque.Ajuste, 5m, saldoAnterior, produto.Quantidade, "USER-FILTRO", EstoqueKardex.Origens.Ajuste, produto.Id, motivo: "Ajuste 1", chaveCorrelacao: null));
+            }
+            
+            await ctx.SaveChangesAsync();
+            
+            using var ctx2 = NovoContexto(dbPath);
+            var controller = new KardexController(ctx2);
+            
+            // Simula formulário enviando tipo=0 (valor default do enum quando string vazia é bindada)
+            // O model binder do ASP.NET Core pode receber string vazia como 0 para enum
+            var resultado = await controller.Index(produtoId, null, null, (TipoMovimentacaoEstoque)0, null, null, null, 1);
+            var viewResult = Assert.IsType<ViewResult>(resultado);
+            var modelo = Assert.IsType<KardexPaginaViewModel>(viewResult.Model);
+            
+            // Deve retornar todos os 4 (tratando 0 como "sem filtro")
+            Assert.Equal(4, modelo.TotalRegistros);
+            Assert.Equal(4, modelo.Itens.Count);
         }
         finally { ApagarBanco(dbPath); }
     }

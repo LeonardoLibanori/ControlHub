@@ -40,7 +40,9 @@
         var minReal = q('#estoqueMinimoReal');
         var labelMin = q('#labelEstoqueMinimo');
         var unidadeMin = q('#unidadeEstoqueMinimo');
-        var inputCodigo = q('#inputCodigo');
+        var custoVisual = q('#custoVisual');
+        var custoReal = q('#custoReal');
+
 
         // O Novo produto tem #quantidadeVisual; o Editar nao.
         var eNovo = !!qtdVisual;
@@ -94,6 +96,16 @@
         if (visual && !visual.__pfLigado) {
             visual.__pfLigado = true;
             visual.addEventListener('input', function () { formatarMoeda(visual); });
+        }
+        if (custoVisual && !custoVisual.__pfLigado) {
+            custoVisual.__pfLigado = true;
+            custoVisual.addEventListener('input', function () {
+                if (!custoReal) return;
+                var valor = custoVisual.value.replace(/\D/g, '');
+                if (valor === '') { custoVisual.value = ''; custoReal.value = ''; return; }
+                custoVisual.value = (parseInt(valor) / 100).toFixed(2).replace('.', ',');
+                custoReal.value = valor;
+            });
         }
         if (eNovo) {
             if (qtdVisual && !qtdVisual.__pfLigado) {
