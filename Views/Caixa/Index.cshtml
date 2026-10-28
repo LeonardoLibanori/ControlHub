@@ -371,7 +371,7 @@ function adicionarItemAoCarrinho() {
     document.getElementById("campoBusca").focus();
 }
 
-// 3) confirmarItem - adiciona propriedade estoque e normaliza strings
+// 3) confirmarItem - adiciona produto ao carrinho (usa campoQtd da página principal)
 function confirmarItem() {
     const campoQtd = document.getElementById("campoQtd");
     const qtdDigitada = (campoQtd.value || "0").toString().replace(',', '.');
@@ -410,7 +410,7 @@ function confirmarItem() {
 
     itemAtual = null;
     document.getElementById("campoBusca").value = "";
-    campoQtd.value = "";
+    document.getElementById("campoQtd").value = "";
     document.getElementById("displayNome").innerText = "AGUARDANDO PRODUTO...";
     document.getElementById("exibirPreco").innerText = "R$ 0,00";
     document.getElementById("campoBusca").focus();
@@ -475,33 +475,53 @@ function abrirModalPagamento() {
 }
 
 // 5) enviarVendaDeVez - normaliza shape e formatação antes de enviar
-async function enviarVendaDeVez() {
-    if (carrinho.length === 0) {
-        Swal.fire('Carrinho Vazio', 'Adicione produtos antes de finalizar.', 'warning');
-        return;
-    }
+    async function enviarVendaDeVez() {
+        if (carrinho.length === 0) {
+            Swal.fire('Carrinho Vazio', 'Adicione produtos antes de finalizar.', 'warning');
+            return;
+        }
 
-    const metodo = metodoSelecionado;
-    const cpf = document.getElementById("cpfClienteInput")?.value || "";
-    const vendedor = typeof codigoVendedorInformado !== 'undefined' ? codigoVendedorInformado : "";
-    const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
-    const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
+        const metodo = metodoSelecionado;
+        const cpf = document.getElementById("cpfClienteInput")?.value || "";
+        const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
+        const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
 
-    // Idempotência: gera ou reutiliza chave por tentativa lógica
-    const CHAVE_STORAGE_KEY = 'controlhub_venda_chave_pendente';
-    let chave = sessionStorage.getItem(CHAVE_STORAGE_KEY);
-    if (!chave) {
-        chave = crypto.randomUUID();
-        sessionStorage.setItem(CHAVE_STORAGE_KEY, chave);
-    }
+        // Valida cupom do vendedor se preenchido (caso o usuário não tenha saído do campo)
+        let vendedor = codigoVendedorInformado || "";
+        const cupomInput = document.getElementById('cupomVendedorInput');
+        const cupomValor = cupomInput?.value?.trim() || "";
+        if (cupomValor && !codigoVendedorInformado) {
+            // Usuário preencheu o cupom mas não saiu do campo - valida agora
+            try {
+                const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(cupomValor)}`);
+                const data = await resp.json();
+                if (data.exists) {
+                    codigoVendedorInformado = cupomValor.toUpperCase();
+                } else {
+                    Swal.fire('Cupom inválido', 'Cupom não encontrado ou inativo.', 'error');
+                    return;
+                }
+            } catch (e) {
+                Swal.fire('Erro', 'Erro ao validar cupom.', 'error');
+                return;
+            }
+        }
 
-    const data = new URLSearchParams();
-    data.append("metodoPagamento", metodo);
-    data.append("cpfCliente", cpf);
-    data.append("codigoVendedor", vendedor);
-    data.append("valorRecebido", String(valorRec).replace(',', '.'));
-    data.append("valorTroco", String(valorTro).replace(',', '.'));
-    data.append("chave", chave);
+        // Idempotência: gera ou reutiliza chave por tentativa lógica
+        const CHAVE_STORAGE_KEY = 'controlhub_venda_chave_pendente';
+        let chave = sessionStorage.getItem(CHAVE_STORAGE_KEY);
+        if (!chave) {
+            chave = crypto.randomUUID();
+            sessionStorage.setItem(CHAVE_STORAGE_KEY, chave);
+        }
+
+        const data = new URLSearchParams();
+        data.append("metodoPagamento", metodo);
+        data.append("cpfCliente", cpf);
+        data.append("codigoVendedor", codigoVendedorInformado || "");
+        data.append("valorRecebido", String(valorRec).replace(',', '.'));
+        data.append("valorTroco", String(valorTro).replace(',', '.'));
+        data.append("chave", chave);
 
     carrinho.forEach((item, i) => {
         const prefixo = `itens[${i}]`;

@@ -409,7 +409,7 @@ async function confirmarZeramentoFinal() {
         }
         let resultado = (parseInt(valor) / 100).toFixed(2).replace(".", ",");
         input.value = "R$ " + resultado;
-} 
+}
 
 // --- ESTA É A FUNÇÃO QUE ESTAVA FALTANDO ---
 async function buscarProdutoPorCodigo(codigo) {
@@ -446,7 +446,7 @@ async function buscarProdutoPorCodigo(codigo) {
                 campoQtd.value = itemAtual.unidade === "kg" ? "" : "1";
                 campoQtd.focus();
                 campoQtd.select();
-            }
+}
 
             // Guarda o estoque visível (opcional)
             const modalEstoque = document.getElementById("modalEstoqueDisponivel");
@@ -901,9 +901,29 @@ async function enviarVendaDeVez() {
 
     const metodo = metodoSelecionado;
     const cpf = document.getElementById("cpfClienteInput")?.value || "";
-    const vendedor = typeof codigoVendedorInformado !== 'undefined' ? codigoVendedorInformado : "";
     const valorRec = document.getElementById("valorRecebidoInput")?.value || "0";
     const valorTro = document.getElementById("valorTrocoInput")?.value || "0";
+
+    // Valida cupom do vendedor se preenchido (caso o usuário não tenha saído do campo)
+    let vendedor = codigoVendedorInformado || "";
+    const cupomInput = document.getElementById('cupomVendedorInput');
+    const cupomValor = cupomInput?.value?.trim() || "";
+    if (cupomValor && !codigoVendedorInformado) {
+        // Usuário preencheu o cupom mas não saiu do campo - valida agora
+        try {
+            const resp = await fetch(`/Caixa/ValidarCupom?codigo=${encodeURIComponent(cupomInput.value.trim())}`);
+            const data = await resp.json();
+            if (data.exists) {
+                codigoVendedorInformado = cupomInput.value.trim().toUpperCase();
+            } else {
+                Swal.fire('Cupom inválido', 'Cupom não encontrado ou inativo.', 'error');
+                return;
+            }
+        } catch (e) {
+            Swal.fire('Erro', 'Erro ao validar cupom.', 'error');
+            return;
+        }
+    }
 
     // Idempotência: gera ou reutiliza chave por tentativa lógica
     const CHAVE_STORAGE_KEY = 'controlhub_venda_chave_pendente';
@@ -916,7 +936,7 @@ async function enviarVendaDeVez() {
     const data = new URLSearchParams();
     data.append("metodoPagamento", metodo);
     data.append("cpfCliente", cpf);
-    data.append("codigoVendedor", vendedor);
+    data.append("codigoVendedor", codigoVendedorInformado || "");
     data.append("valorRecebido", String(valorRec).replace(',', '.'));
     data.append("valorTroco", String(valorTro).replace(',', '.'));
     data.append("chave", chave);
